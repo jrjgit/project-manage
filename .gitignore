@@ -1,0 +1,20 @@
+# Editor / IDE
+.claude/
+.superpowers/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Backend build artifacts
+backend/management.exe
+backend/management.exe~
+backend/*.exe
+
+# Database
+backend/management.db
+backend/*.db
+
+# OS
+.DS_Store
+Thumbs.db
