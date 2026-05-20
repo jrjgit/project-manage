@@ -43,7 +43,7 @@ const props = defineProps({ tasks: Array })
 const emit = defineEmits(['status-change', 'task-click'])
 
 const row1Keys = ['pending', 'assigned_lead', 'developing', 'developed']
-const row2Keys = ['pending_test', 'testing', 'passed', 'rejected', 'closed']
+const row2Keys = ['pending_test', 'testing', 'passed', 'rejected']
 
 function buildCols(keys) {
   return keys.map((key) => ({

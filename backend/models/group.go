@@ -10,5 +10,6 @@ type Group struct {
 	PM        User      `json:"pm,omitempty" gorm:"foreignKey:PMID"`
 	DevLeadID uint      `json:"dev_lead_id" gorm:"not null;index"`
 	DevLead   User      `json:"dev_lead,omitempty" gorm:"foreignKey:DevLeadID"`
+	LeadRole  string    `json:"lead_role" gorm:"default:'dev'"` // dev | test
 	CreatedAt time.Time `json:"created_at"`
 }

@@ -21,7 +21,7 @@
           </div>
         </section>
 
-        <section v-if="actionGroups.length || canAssignDev || canAssignTesterLead || canAssignTester" class="section-card">
+        <section v-if="actionGroups.length || canAssignDev || canManageDevAssignees || canEditTester" class="section-card">
           <div class="section-title">可执行操作</div>
 
           <div v-if="canAssignDev" class="action-block">
@@ -33,21 +33,32 @@
             </div>
           </div>
 
-          <div v-if="canAssignTesterLead" class="action-block">
-            <div class="action-block-title">分配测试组长并进入测试</div>
-            <div class="action-block-copy">项目经理指定测试组长后，任务会进入测试阶段。</div>
+          <div v-if="canManageDevAssignees" class="action-block">
+            <div class="action-block-title">管理开发分配</div>
+            <div class="action-block-copy">添加或移除任务开发人员，并指定开发端。</div>
             <div class="action-row">
-              <n-select v-model:value="selectedTesterLead" :options="testerLeadOptions" placeholder="选择测试组长" style="width: 220px;" />
-              <n-button type="primary" :loading="actionLoading" @click="assignTesterLeadAndTest">分配并开始测试</n-button>
+              <n-select v-model:value="selectedDevToAdd" :options="availableDevOptions" placeholder="添加开发人员" style="width: 140px;" />
+              <n-select v-model:value="selectedDevPlatform" :options="platformOptions" placeholder="端" style="width: 110px;" />
+              <n-button :loading="actionLoading" @click="addDevAssignee">添加</n-button>
+            </div>
+            <div class="assignee-list">
+              <div v-for="a in taskAssignees" :key="a.id" class="assignee-item">
+                <span class="assignee-name">{{ a.user?.name }}</span>
+                <n-tag v-if="a.platform" size="tiny" type="info">{{ a.platform }}</n-tag>
+                <n-tag size="tiny" :type="a.status === 'developed' ? 'success' : a.status === 'developing' ? 'warning' : 'default'">
+                  {{ a.status === 'developed' ? '已完成' : a.status === 'developing' ? '开发中' : '待开始' }}
+                </n-tag>
+                <n-button text size="tiny" type="error" @click="removeDevAssignee(a.user_id)">移除</n-button>
+              </div>
             </div>
           </div>
 
-          <div v-if="canAssignTester" class="action-block">
-            <div class="action-block-title">分配测试人员</div>
-            <div class="action-block-copy">测试组长把当前测试任务明确分配给测试人员。</div>
+          <div v-if="canEditTester" class="action-block">
+            <div class="action-block-title">指派测试人员</div>
+            <div class="action-block-copy">项目经理可为任务指定测试负责人。</div>
             <div class="action-row">
               <n-select v-model:value="selectedTester" :options="testerOptions" placeholder="选择测试人员" style="width: 220px;" />
-              <n-button :loading="actionLoading" @click="assignTester">确认分配</n-button>
+              <n-button :loading="actionLoading" @click="saveTester">确认指派</n-button>
             </div>
           </div>
 
@@ -74,7 +85,15 @@
               <div class="info-item"><span>项目</span><strong>{{ task.project?.name || '-' }}</strong></div>
               <div class="info-item"><span>创建人</span><strong>{{ task.creator?.name || '-' }}</strong></div>
               <div class="info-item"><span>开发组长</span><strong>{{ task.dev_lead?.name || '-' }}</strong></div>
-              <div class="info-item"><span>当前开发</span><strong>{{ task.assignee?.name || '-' }}</strong></div>
+              <div class="info-item">
+                <span>当前开发</span>
+                <strong>
+                  <template v-if="taskAssignees.length">
+                    {{ taskAssignees.map(a => a.user?.name).filter(Boolean).join('、') }}
+                  </template>
+                  <template v-else>{{ task.assignee?.name || '-' }}</template>
+                </strong>
+              </div>
               <div class="info-item"><span>测试组长</span><strong>{{ task.tester_lead?.name || '-' }}</strong></div>
               <div class="info-item"><span>测试人员</span><strong>{{ task.tester?.name || '-' }}</strong></div>
               <div class="info-item"><span>截止日期</span><strong>{{ formatDate(task.deadline) || '-' }}</strong></div>
@@ -120,7 +139,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
-import { getTask, getTaskHistory, changeTaskStatus, updateTask } from '@/api/tasks'
+import { getTask, getTaskHistory, changeTaskStatus, updateTask, addTaskAssignee, removeTaskAssignee } from '@/api/tasks'
 import { getUsers } from '@/api/users'
 import { priorityMeta, taskStatusMeta } from '@/constants/statusMeta'
 import {
@@ -143,12 +162,22 @@ const authStore = useAuthStore()
 const task = ref(null)
 const histories = ref([])
 const users = ref([])
+const taskAssignees = ref([])
 const showRejectModal = ref(false)
 const rejectReason = ref('')
 const selectedTester = ref(null)
 const selectedDev = ref(null)
+const selectedDevToAdd = ref(null)
+const selectedDevPlatform = ref('')
 const selectedTesterLead = ref(null)
 const actionLoading = ref(false)
+const platformOptions = [
+  { label: 'iOS', value: 'iOS' },
+  { label: 'Android', value: 'Android' },
+  { label: '后台', value: '后台' },
+  { label: '前端', value: '前端' },
+  { label: '其他', value: '其他' }
+]
 
 const statusMeta = computed(() => taskStatusMeta[task.value?.status] || { label: task.value?.status || '-', tone: 'default' })
 const priorityMetaItem = computed(() => priorityMeta[task.value?.priority] || { label: task.value?.priority || '-', tone: 'default' })
@@ -158,13 +187,33 @@ const testerLeadOptions = computed(() => users.value.filter((user) => user.role 
 const testerOptions = computed(() => users.value.filter((user) => user.role === 'tester').map((user) => ({ label: user.name, value: user.id })))
 
 const canAssignDev = computed(() => authStore.userInfo?.role === 'dev_lead' && task.value?.status === 'assigned_lead')
-const canAssignTesterLead = computed(() => authStore.userInfo?.role === 'pm' && task.value?.status === 'pending_test')
-const canAssignTester = computed(() => authStore.userInfo?.role === 'tester_lead' && task.value?.status === 'testing')
+const canManageDevAssignees = computed(() =>
+  authStore.userInfo?.role === 'dev_lead' &&
+  ['assigned_lead', 'developing'].includes(task.value?.status)
+)
+const canEditTester = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'assigned_lead', 'developing', 'developed', 'pending_test'].includes(task.value?.status))
+
+const availableDevOptions = computed(() => {
+  const existingIds = taskAssignees.value.map((a) => a.user_id)
+  return users.value
+    .filter((u) => u.role === 'dev' && !existingIds.includes(u.id))
+    .map((u) => ({ label: u.name, value: u.id }))
+})
+
+const myAssigneeRecord = computed(() => {
+  return taskAssignees.value.find((a) => a.user_id === authStore.userInfo?.id)
+})
 
 const summaryText = computed(() => {
   const parts = [task.value?.project?.name, statusMeta.value.label]
-  if (task.value?.assignee?.name) parts.push(`当前开发：${task.value.assignee.name}`)
-  else if (task.value?.tester?.name) parts.push(`当前测试：${task.value.tester.name}`)
+  if (taskAssignees.value.length > 0) {
+    const names = taskAssignees.value.map((a) => a.user?.name).filter(Boolean)
+    parts.push(`当前开发：${names.join('、')}`)
+  } else if (task.value?.assignee?.name) {
+    parts.push(`当前开发：${task.value.assignee.name}`)
+  } else if (task.value?.tester?.name) {
+    parts.push(`当前测试：${task.value.tester.name}`)
+  }
   return parts.filter(Boolean).join(' · ')
 })
 
@@ -173,7 +222,7 @@ const nextActionMap = {
   assigned_lead: '开发组长需要指定开发负责人并让任务开始进入开发。',
   developing: '开发负责人完成实现后，将任务推进到开发完成。',
   developed: '系统会把任务加入测试池，等待测试侧接手。',
-  pending_test: '项目经理需要指定测试组长并让任务进入测试。',
+  pending_test: '测试人员开始执行验证，给出通过或打回结果。',
   testing: '测试人员执行验证，并给出通过或打回结果。',
   passed: '项目经理确认结果后关闭任务。',
   rejected: '开发负责人根据打回原因重新进入开发。',
@@ -186,11 +235,21 @@ const availableActions = computed(() => {
   const status = task.value?.status
   const actions = []
 
+  // dev 逻辑：有 taskAssignees 时根据自己的记录判断，没有时按原逻辑
   if (role.value === 'dev' && (status === 'assigned_lead' || status === 'rejected')) {
-    actions.push({ label: status === 'rejected' ? '重新进入开发' : '开始开发', status: 'developing', type: 'primary' })
+    const canStart = !myAssigneeRecord.value || myAssigneeRecord.value.status === 'pending'
+    if (canStart) {
+      actions.push({ label: status === 'rejected' ? '重新进入开发' : '开始开发', status: 'developing', type: 'primary' })
+    }
   }
   if (role.value === 'dev' && status === 'developing') {
-    actions.push({ label: '标记开发完成', status: 'developed', type: 'primary' })
+    const canComplete = !myAssigneeRecord.value || myAssigneeRecord.value.status !== 'developed'
+    if (canComplete) {
+      actions.push({ label: '标记开发完成', status: 'developed', type: 'primary' })
+    }
+  }
+  if (role.value === 'tester' && status === 'pending_test') {
+    actions.push({ label: '开始测试', status: 'testing', type: 'primary' })
   }
   if (role.value === 'tester' && status === 'testing') {
     actions.push({ label: '测试通过', status: 'passed', type: 'primary' })
@@ -198,9 +257,6 @@ const availableActions = computed(() => {
   }
   if (role.value === 'pm' && status === 'pending') {
     actions.push({ label: '分配开发组长', status: 'assigned_lead', type: 'primary' })
-  }
-  if (role.value === 'pm' && status === 'pending_test') {
-    actions.push({ label: '分配测试组长并进入测试', status: 'testing', type: 'primary' })
   }
   if (role.value === 'pm' && (status === 'passed' || status === 'rejected')) {
     actions.push({ label: '关闭任务', status: 'closed', type: 'default' })
@@ -234,7 +290,15 @@ async function loadUsers() {
 
 async function loadDetail() {
   try {
-    task.value = await getTask(props.taskId)
+    const res = await getTask(props.taskId)
+    if (res.task) {
+      task.value = res.task
+      taskAssignees.value = res.assignees || []
+    } else {
+      // 兼容旧格式
+      task.value = res
+      taskAssignees.value = []
+    }
   } catch (error) {
     console.error(error)
   }
@@ -254,14 +318,17 @@ function executeAction(action) {
     showRejectModal.value = true
     return
   }
-  if (action.status === 'developing' && authStore.userInfo?.role === 'dev' && !task.value.assignee_id) {
-    actionLoading.value = true
-    updateTask(props.taskId, { assignee_id: authStore.userInfo.id }).then(() => {
-      doChangeStatus(action.status, '')
-    }).finally(() => {
-      actionLoading.value = false
-    })
-    return
+  if (action.status === 'developing' && authStore.userInfo?.role === 'dev') {
+    // 多开发场景：如果没有 TaskAssignee 记录，先创建一个
+    if (!myAssigneeRecord.value && taskAssignees.value.length === 0) {
+      actionLoading.value = true
+      addTaskAssignee(props.taskId, { user_id: authStore.userInfo.id }).then(() => {
+        doChangeStatus(action.status, '')
+      }).finally(() => {
+        actionLoading.value = false
+      })
+      return
+    }
   }
   doChangeStatus(action.status, '')
 }
@@ -275,6 +342,7 @@ async function assignDevAndStart() {
   actionLoading.value = true
   try {
     await updateTask(props.taskId, { assignee_id: selectedDev.value })
+    await addTaskAssignee(props.taskId, { user_id: selectedDev.value })
     await doChangeStatus('developing', '')
     selectedDev.value = null
   } catch (error) {
@@ -284,25 +352,45 @@ async function assignDevAndStart() {
   }
 }
 
-async function assignTesterLeadAndTest() {
+async function addDevAssignee() {
   if (actionLoading.value) return
-  if (!selectedTesterLead.value) {
-    window.$message.warning('请选择测试组长')
+  if (!selectedDevToAdd.value) {
+    window.$message.warning('请选择要添加的开发人员')
     return
   }
   actionLoading.value = true
   try {
-    await updateTask(props.taskId, { tester_lead_id: selectedTesterLead.value })
-    await doChangeStatus('testing', '')
-    selectedTesterLead.value = null
+    await addTaskAssignee(props.taskId, { user_id: selectedDevToAdd.value, platform: selectedDevPlatform.value || '' })
+    window.$message.success('添加成功')
+    selectedDevToAdd.value = null
+    selectedDevPlatform.value = ''
+    await loadDetail()
+    emit('refresh')
   } catch (error) {
     console.error(error)
+    window.$message.error('添加失败')
   } finally {
     actionLoading.value = false
   }
 }
 
-async function assignTester() {
+async function removeDevAssignee(userId) {
+  if (actionLoading.value) return
+  actionLoading.value = true
+  try {
+    await removeTaskAssignee(props.taskId, userId)
+    window.$message.success('移除成功')
+    await loadDetail()
+    emit('refresh')
+  } catch (error) {
+    console.error(error)
+    window.$message.error('移除失败')
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+async function saveTester() {
   if (actionLoading.value) return
   if (!selectedTester.value) {
     window.$message.warning('请选择测试人员')
@@ -311,7 +399,7 @@ async function assignTester() {
   actionLoading.value = true
   try {
     await updateTask(props.taskId, { tester_id: selectedTester.value })
-    window.$message.success('分配成功')
+    window.$message.success('指派成功')
     selectedTester.value = null
     await loadDetail()
     emit('refresh')
@@ -466,6 +554,30 @@ function formatDate(value) {
 
 .action-row.wrap {
   flex-wrap: wrap;
+}
+
+.assignee-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.assignee-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+.assignee-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  flex: 1;
 }
 
 .detail-grid {

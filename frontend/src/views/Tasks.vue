@@ -1,5 +1,16 @@
 <template>
   <AppLayout>
+    <template #actions>
+      <n-button v-if="authStore.isPM" type="primary" class="action-btn" @click="showCreateDialog = true">
+        <template #icon>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </template>
+        创建任务
+      </n-button>
+    </template>
+
     <div class="tasks-page">
       <section class="toolbar section-card">
         <div class="toolbar-row">
@@ -12,12 +23,6 @@
               <n-radio-button value="board">看板</n-radio-button>
               <n-radio-button value="list">列表</n-radio-button>
             </n-radio-group>
-            <n-button v-if="authStore.isPM" type="primary" size="small" class="create-btn" @click="showCreateDialog = true">
-              <template #icon>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              </template>
-              创建任务
-            </n-button>
           </div>
         </div>
         <div class="toolbar-row secondary">
@@ -175,11 +180,18 @@ function matchesView(task, params = {}) {
   if (params.mine === 'verify-pool') return ['pending_test', 'testing'].includes(task.status)
   if (params.mine === 'todo') {
     if (authStore.isDevLead) return task.dev_lead_id === authStore.userInfo?.id && task.status === 'assigned_lead'
-    if (authStore.isDev) return task.assignee_id === authStore.userInfo?.id && ['assigned_lead', 'rejected'].includes(task.status)
+    if (authStore.isDev) {
+      const isMyTask = task.assignee_id === authStore.userInfo?.id ||
+        (task.assignees || []).some(a => a.user_id === authStore.userInfo?.id)
+      return isMyTask && ['assigned_lead', 'developing', 'rejected'].includes(task.status)
+    }
     if (authStore.isTester) return task.tester_id === authStore.userInfo?.id && ['pending_test', 'testing', 'rejected'].includes(task.status)
   }
   if (params.mine === 'all') {
-    if (authStore.isDev) return task.assignee_id === authStore.userInfo?.id
+    if (authStore.isDev) {
+      return task.assignee_id === authStore.userInfo?.id ||
+        (task.assignees || []).some(a => a.user_id === authStore.userInfo?.id)
+    }
     if (authStore.isTester) return task.tester_id === authStore.userInfo?.id
   }
   return true

@@ -2,21 +2,23 @@ package services
 
 import (
 	"fmt"
-	"log"
-	"os/exec"
 
-	"management/config"
+	"management/internal/notifier"
 	"management/models"
 )
 
 // NotificationService 通知服务
 type NotificationService struct {
-	cfg *config.Config
+	emailNotifier   notifier.Notifier
+	nanobotNotifier notifier.Notifier
 }
 
 // NewNotificationService 创建通知服务
-func NewNotificationService(cfg *config.Config) *NotificationService {
-	return &NotificationService{cfg: cfg}
+func NewNotificationService(email notifier.Notifier, nanobot notifier.Notifier) *NotificationService {
+	return &NotificationService{
+		emailNotifier:   email,
+		nanobotNotifier: nanobot,
+	}
 }
 
 // EmitTaskEvent 发射任务状态变更事件并触发通知
@@ -87,39 +89,22 @@ func (s *NotificationService) buildBugMessage(bug *models.Bug, oldStatus, newSta
 	return base + "。请及时处理。"
 }
 
-// sendToTargets 向目标用户发送通知（只发企业微信）
+// sendToTargets 向目标用户发送通知（邮件 + nanobot）
 func (s *NotificationService) sendToTargets(operator *models.User, targets []models.User, message string) {
 	for _, target := range targets {
 		// 跳过自己通知自己
 		if operator != nil && operator.ID == target.ID {
 			continue
 		}
-		// 只发企业微信
-		if target.WechatID == "" {
-			continue
+
+		// 邮件通知
+		if s.emailNotifier != nil && target.Email != "" {
+			_ = s.emailNotifier.Notify(target.Email, message)
 		}
 
-		instruction := fmt.Sprintf("请通过企业微信给 @%s 发送消息：%s", target.Name, message)
-		s.executeNanobot(instruction)
-	}
-}
-
-// executeNanobot 执行nanobot命令（当前为日志模拟）
-func (s *NotificationService) executeNanobot(instruction string) {
-	// 日志模拟模式
-	log.Printf("[NOTIFY] %s", instruction)
-
-	// 真实调用（解除下面注释即可启用）
-	// cmd := exec.Command(s.cfg.NanobotPath, "agent", "-m", instruction)
-	// if err := cmd.Run(); err != nil {
-	//     log.Printf("[NOTIFY ERROR] failed to execute nanobot: %v", err)
-	// }
-}
-
-// executeNanobotReal 实际调用nanobot（预留）
-func (s *NotificationService) executeNanobotReal(instruction string) {
-	cmd := exec.Command(s.cfg.NanobotPath, "agent", "-m", instruction)
-	if err := cmd.Run(); err != nil {
-		log.Printf("[NOTIFY ERROR] failed to execute nanobot: %v", err)
+		// nanobot 通知（通过群聊@个人）
+		if s.nanobotNotifier != nil && target.Name != "" {
+			_ = s.nanobotNotifier.Notify(target.Name, message)
+		}
 	}
 }

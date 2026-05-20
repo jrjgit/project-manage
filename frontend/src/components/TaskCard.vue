@@ -12,7 +12,11 @@
         <span v-if="task.project?.name" class="project-name">{{ task.project.name }}</span>
       </div>
       <div class="card-meta">
-        <span v-if="task.assignee" class="assignee">
+        <span v-if="task.assignees?.length" class="assignee">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          {{ task.assignees.map(a => a.user?.name || a.user_name).filter(Boolean).join('、') }}
+        </span>
+        <span v-else-if="task.assignee" class="assignee">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           {{ task.assignee.name }}
         </span>

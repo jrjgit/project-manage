@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"management/config"
 	"management/db"
+	"management/internal/notifier"
 	"management/models"
 )
 
@@ -24,10 +25,13 @@ func TestListTasks_DevSeesOnlyAssignedTasks(t *testing.T) {
 	devLead := createTaskTestUser(t, "dev-lead", models.RoleDevLead, &groupID)
 
 	project := createTaskTestProject(t, "Alpha", pm.ID)
-	createTaskRecord(t, models.Task{Title: "Assigned To Dev", Status: models.TaskDeveloping, ProjectID: project.ID, CreatorID: pm.ID, AssigneeID: &dev.ID, DevLeadID: &devLead.ID})
+	task1 := createTaskRecord(t, models.Task{Title: "Assigned To Dev", Status: models.TaskDeveloping, ProjectID: project.ID, CreatorID: pm.ID, AssigneeID: &dev.ID, DevLeadID: &devLead.ID})
 	createTaskRecord(t, models.Task{Title: "Assigned To Other Dev", Status: models.TaskDeveloping, ProjectID: project.ID, CreatorID: pm.ID, AssigneeID: &otherDev.ID, DevLeadID: &devLead.ID})
 
-	h := NewTaskHandler(&config.Config{})
+	// ListTasks for RoleDev 查询 task_assignees 关联表，需要补充关联记录
+	createTaskTestAssignee(t, task1.ID, dev.ID, "iOS")
+
+	h := NewTaskHandler(&config.Config{}, notifier.NewLogNotifier(), notifier.NewLogNotifier())
 	r := gin.New()
 	r.GET("/tasks", func(c *gin.Context) {
 		c.Set("userID", dev.ID)
@@ -73,7 +77,7 @@ func TestChangeTaskStatus_DevelopedCreatesPendingTestHistory(t *testing.T) {
 		AssigneeID: &dev.ID,
 	})
 
-	h := NewTaskHandler(&config.Config{})
+	h := NewTaskHandler(&config.Config{}, notifier.NewLogNotifier(), notifier.NewLogNotifier())
 	if err := h.ChangeTaskStatus(task.ID, models.TaskDeveloped, dev.ID, "ready for qa"); err != nil {
 		t.Fatalf("expected status change to succeed: %v", err)
 	}
@@ -145,4 +149,18 @@ func createTaskRecord(t *testing.T, task models.Task) models.Task {
 		t.Fatalf("create task %s: %v", task.Title, err)
 	}
 	return task
+}
+
+func createTaskTestAssignee(t *testing.T, taskID, userID uint, platform string) models.TaskAssignee {
+	t.Helper()
+	ta := models.TaskAssignee{
+		TaskID:   taskID,
+		UserID:   userID,
+		Platform: platform,
+		Status:   "developing",
+	}
+	if err := db.DB.Create(&ta).Error; err != nil {
+		t.Fatalf("create task assignee task=%d user=%d: %v", taskID, userID, err)
+	}
+	return ta
 }

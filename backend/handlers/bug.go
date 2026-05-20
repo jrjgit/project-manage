@@ -11,6 +11,7 @@ import (
 	"management/config"
 	"management/db"
 	"management/dto"
+	"management/internal/notifier"
 	"management/models"
 	"management/services"
 )
@@ -21,9 +22,9 @@ type BugHandler struct {
 }
 
 // NewBugHandler 创建BugHandler
-func NewBugHandler(cfg *config.Config) *BugHandler {
+func NewBugHandler(cfg *config.Config, email notifier.Notifier, nanobot notifier.Notifier) *BugHandler {
 	return &BugHandler{
-		notifier: services.NewNotificationService(cfg),
+		notifier: services.NewNotificationService(email, nanobot),
 	}
 }
 

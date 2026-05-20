@@ -24,31 +24,50 @@ type LoginResponse struct {
 
 // ========== Task DTOs ==========
 
+type TaskAssigneeItem struct {
+	UserID   uint   `json:"user_id" binding:"required"`
+	Platform string `json:"platform"`
+}
+
 type CreateTaskRequest struct {
-	Title       string     `json:"title" binding:"required"`
-	Description string     `json:"description"`
-	Priority    string     `json:"priority" binding:"oneof=low medium high critical"`
-	ProjectID   uint       `json:"project_id" binding:"required"`
-	DevLeadID   uint       `json:"dev_lead_id" binding:"required"`
-	AssigneeID  *uint      `json:"assignee_id"`
-	Deadline    *string    `json:"deadline"`
+	Title       string           `json:"title" binding:"required"`
+	Description string           `json:"description"`
+	Priority    string           `json:"priority" binding:"oneof=low medium high critical"`
+	ProjectID   uint             `json:"project_id" binding:"required"`
+	DevLeadID   uint             `json:"dev_lead_id" binding:"required"`
+	AssigneeID  *uint            `json:"assignee_id"`
+	AssigneeIDs []uint           `json:"assignee_ids"`
+	Assignees   []TaskAssigneeItem `json:"assignees"`
+	TesterID    *uint            `json:"tester_id"`
+	Deadline    *string          `json:"deadline"`
 }
 
 type UpdateTaskRequest struct {
-	Title       string  `json:"title"`
-	Description string  `json:"description"`
-	Priority    string  `json:"priority"`
-	ProjectID   uint    `json:"project_id"`
-	DevLeadID   uint    `json:"dev_lead_id"`
-	AssigneeID  *uint   `json:"assignee_id"`
-	TesterLeadID *uint  `json:"tester_lead_id"`
-	TesterID    *uint   `json:"tester_id"`
-	Deadline    *string `json:"deadline"`
+	Title        string  `json:"title"`
+	Description  string  `json:"description"`
+	Priority     string  `json:"priority"`
+	ProjectID    uint    `json:"project_id"`
+	DevLeadID    uint    `json:"dev_lead_id"`
+	AssigneeID   *uint   `json:"assignee_id"`
+	TesterLeadID *uint   `json:"tester_lead_id"`
+	TesterID     *uint   `json:"tester_id"`
+	Deadline     *string `json:"deadline"`
 }
 
 type ChangeTaskStatusRequest struct {
 	NewStatus string `json:"new_status" binding:"required"`
 	Comment   string `json:"comment"`
+}
+
+// ========== TaskAssignee DTOs ==========
+
+type AddTaskAssigneeRequest struct {
+	UserID   uint   `json:"user_id" binding:"required"`
+	Platform string `json:"platform"`
+}
+
+type RemoveTaskAssigneeRequest struct {
+	UserID uint `json:"user_id" binding:"required"`
 }
 
 // ========== Bug DTOs ==========
@@ -91,11 +110,13 @@ type UpdateProjectRequest struct {
 type CreateGroupRequest struct {
 	Name      string `json:"name" binding:"required"`
 	DevLeadID uint   `json:"dev_lead_id" binding:"required"`
+	LeadRole  string `json:"lead_role" binding:"oneof=dev test"`
 }
 
 type UpdateGroupRequest struct {
 	Name      string `json:"name" binding:"required"`
 	DevLeadID uint   `json:"dev_lead_id"`
+	LeadRole  string `json:"lead_role" binding:"oneof=dev test"`
 }
 
 type AddMemberRequest struct {

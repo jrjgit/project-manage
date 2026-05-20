@@ -15,6 +15,9 @@ backend/*.exe
 backend/management.db
 backend/*.db
 
+# Environment variables (contains secrets)
+.env
+
 # OS
 .DS_Store
 Thumbs.db

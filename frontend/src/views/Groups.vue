@@ -27,11 +27,11 @@
             @click="selectGroup(g)"
           >
             <div class="group-row-main">
-              <div class="group-name">{{ g.name }}</div>
+              <div class="group-name">{{ g.name }} <n-tag size="tiny" :type="g.lead_role === 'test' ? 'success' : 'info'">{{ g.lead_role === 'test' ? '测试组' : '开发组' }}</n-tag></div>
               <div class="group-lead">组长: {{ g.dev_lead?.name }}</div>
             </div>
             <div class="group-actions">
-              <span class="member-count">{{ g.member_count }} 名开发</span>
+              <span class="member-count">{{ g.member_count }} 名{{ g.lead_role === 'test' ? '测试' : '开发' }}</span>
               <n-button text size="tiny" type="error" @click.stop="confirmDelete(g)">删除</n-button>
             </div>
           </div>
@@ -41,7 +41,7 @@
           <div class="panel-header">
             <h3>{{ selectedGroup.name }} — 成员</h3>
           </div>
-          <div v-if="selectedMembers.length === 0" class="empty-state">该组暂无开发人员。</div>
+          <div v-if="selectedMembers.length === 0" class="empty-state">该组暂无{{ selectedGroup.lead_role === 'test' ? '测试' : '开发' }}人员。</div>
           <div v-for="m in selectedMembers" :key="m.id" class="member-row">
             <div class="member-info">
               <span class="member-name">{{ m.name }}</span>
@@ -52,8 +52,8 @@
           <div class="add-member-row">
             <n-select
               v-model:value="newMemberId"
-              :options="availableDevOptions"
-              placeholder="选择开发人员..."
+              :options="availableMemberOptions"
+              :placeholder="selectedGroup.lead_role === 'test' ? '选择测试人员...' : '选择开发人员...'"
               size="small"
               style="flex:1"
             />
@@ -72,8 +72,11 @@
         <n-form-item label="组名" required>
           <n-input v-model:value="createForm.name" placeholder="如：前端组" />
         </n-form-item>
+        <n-form-item label="组类型" required>
+          <n-select v-model:value="createForm.lead_role" :options="[{label:'开发组',value:'dev'},{label:'测试组',value:'test'}]" placeholder="选择组类型" />
+        </n-form-item>
         <n-form-item label="组长" required>
-          <n-select v-model:value="createForm.dev_lead_id" :options="devLeadOptions" placeholder="选择开发组长" />
+          <n-select v-model:value="createForm.dev_lead_id" :options="leadOptions" :placeholder="createForm.lead_role === 'test' ? '选择测试组长' : '选择开发组长'" />
         </n-form-item>
       </n-form>
       <template #action>
@@ -89,7 +92,7 @@ import { ref, computed, onMounted } from 'vue'
 import { getGroups, getGroup, createGroup, deleteGroup, addMember, removeMember } from '@/api/groups'
 import { getUsers } from '@/api/users'
 import AppLayout from '@/components/AppLayout.vue'
-import { NButton, NModal, NForm, NFormItem, NInput, NSelect } from 'naive-ui'
+import { NButton, NModal, NForm, NFormItem, NInput, NSelect, NTag } from 'naive-ui'
 
 const groups = ref([])
 const users = ref([])
@@ -98,18 +101,20 @@ const selectedMembers = ref([])
 const newMemberId = ref(null)
 const showCreate = ref(false)
 const creating = ref(false)
-const createForm = ref({ name: '', dev_lead_id: null })
+const createForm = ref({ name: '', dev_lead_id: null, lead_role: 'dev' })
 
 const roleMap = { pm: '项目经理', dev_lead: '开发组长', dev: '开发', tester_lead: '测试组长', tester: '测试' }
 
-const devLeadOptions = computed(() =>
-  users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id }))
-)
+const leadOptions = computed(() => {
+  const expectedRole = createForm.value.lead_role === 'test' ? 'tester_lead' : 'dev_lead'
+  return users.value.filter(u => u.role === expectedRole).map(u => ({ label: u.name, value: u.id }))
+})
 
-const availableDevOptions = computed(() => {
+const availableMemberOptions = computed(() => {
   const existingIds = selectedMembers.value.map(m => m.id)
+  const expectedRole = selectedGroup.value?.lead_role === 'test' ? 'tester' : 'dev'
   return users.value
-    .filter(u => u.role === 'dev' && !existingIds.includes(u.id))
+    .filter(u => u.role === expectedRole && !existingIds.includes(u.id))
     .map(u => ({ label: u.name, value: u.id }))
 })
 
@@ -137,10 +142,10 @@ async function selectGroup(g) {
 async function handleCreate() {
   creating.value = true
   try {
-    await createGroup({ name: createForm.value.name, dev_lead_id: createForm.value.dev_lead_id })
+    await createGroup({ name: createForm.value.name, dev_lead_id: createForm.value.dev_lead_id, lead_role: createForm.value.lead_role })
     window.$message.success('小组创建成功')
     showCreate.value = false
-    createForm.value = { name: '', dev_lead_id: null }
+    createForm.value = { name: '', dev_lead_id: null, lead_role: 'dev' }
     await loadGroups()
   } catch (e) {
     window.$message.error('创建失败')

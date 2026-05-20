@@ -7,14 +7,19 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 	"management/config"
 	"management/db"
 	"management/handlers"
+	"management/internal/notifier"
 	"management/middlewares"
 	"management/models"
 )
 
 func main() {
+	// 优先加载 .env 文件（如果存在），不覆盖已设置的环境变量
+	_ = config.LoadEnvFile(".env")
+
 	cfg := config.Load()
 
 	if err := db.Init(cfg); err != nil {
@@ -38,9 +43,31 @@ func main() {
 		c.Next()
 	})
 
+	// 初始化邮件通知器
+	var emailNotifier notifier.Notifier
+	if cfg.NotifyEmailEnable && cfg.SMTPHost != "" {
+		emailNotifier = notifier.NewEmailNotifier(cfg)
+	}
+
+	// 初始化 nanobot 通知器
+	var nanobotNotifier notifier.Notifier
+	if cfg.NotifyNanobotEnable && cfg.NanobotPath != "" {
+		nanobotNotifier = notifier.NewNanobotNotifier(cfg)
+	}
+
+	// 异步包装
+	if cfg.NotifyAsync {
+		if emailNotifier != nil {
+			emailNotifier = notifier.NewAsyncNotifier(emailNotifier, 100)
+		}
+		if nanobotNotifier != nil {
+			nanobotNotifier = notifier.NewAsyncNotifier(nanobotNotifier, 100)
+		}
+	}
+
 	authHandler := handlers.NewAuthHandler(cfg)
-	taskHandler := handlers.NewTaskHandler(cfg)
-	bugHandler := handlers.NewBugHandler(cfg)
+	taskHandler := handlers.NewTaskHandler(cfg, emailNotifier, nanobotNotifier)
+	bugHandler := handlers.NewBugHandler(cfg, emailNotifier, nanobotNotifier)
 	userHandler := handlers.NewUserHandler()
 	projectHandler := handlers.NewProjectHandler()
 	groupHandler := handlers.NewGroupHandler()
@@ -60,6 +87,8 @@ func main() {
 			authorized.PUT("/tasks/:id", taskHandler.UpdateTask)
 			authorized.PATCH("/tasks/:id/status", taskHandler.ChangeTaskStatusHandler)
 			authorized.GET("/tasks/:id/history", taskHandler.GetTaskHistory)
+		authorized.POST("/tasks/:id/assignees", middlewares.RoleRequired(models.RolePM, models.RoleDevLead), taskHandler.AddTaskAssignee)
+		authorized.DELETE("/tasks/:id/assignees/:user_id", middlewares.RoleRequired(models.RolePM, models.RoleDevLead), taskHandler.RemoveTaskAssignee)
 
 			authorized.GET("/bugs", bugHandler.ListBugs)
 			authorized.POST("/bugs", middlewares.RoleRequired(models.RoleTester, models.RoleTesterLead), bugHandler.CreateBug)
@@ -68,7 +97,7 @@ func main() {
 			authorized.PATCH("/bugs/:id/status", bugHandler.ChangeBugStatusHandler)
 			authorized.GET("/bugs/:id/history", bugHandler.GetBugHistory)
 
-			authorized.GET("/users", middlewares.RoleRequired(models.RolePM, models.RoleDevLead, models.RoleTester, models.RoleTesterLead), userHandler.ListUsers)
+			authorized.GET("/users", middlewares.RoleRequired(models.RolePM, models.RoleDevLead, models.RoleDev, models.RoleTester, models.RoleTesterLead), userHandler.ListUsers)
 			authorized.GET("/users/:id", middlewares.RoleRequired(models.RolePM), userHandler.GetUser)
 			authorized.PUT("/users/:id/role", middlewares.RoleRequired(models.RolePM), userHandler.UpdateUserRole)
 
@@ -117,5 +146,20 @@ func createDefaultAdmin() {
 	db.DB.Model(&models.User{}).Where("role = ?", models.RolePM).Count(&count)
 	if count == 0 {
 		log.Println("No PM user found, creating default admin (admin/admin123)")
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		if err != nil {
+			log.Printf("failed to hash default admin password: %v", err)
+			return
+		}
+		admin := models.User{
+			Name:     "admin",
+			Password: string(hashedPassword),
+			Role:     models.RolePM,
+		}
+		if result := db.DB.Create(&admin); result.Error != nil {
+			log.Printf("failed to create default admin: %v", result.Error)
+			return
+		}
+		log.Printf("Default admin created successfully, id=%d", admin.ID)
 	}
 }

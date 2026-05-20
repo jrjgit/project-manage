@@ -14,7 +14,7 @@
         <n-select v-model:value="form.severity" :options="severityOptions" />
       </n-form-item>
       <n-form-item label="指派给" path="assignee_id">
-        <n-select v-model:value="form.assignee_id" :options="devOptions" placeholder="选择修复人" />
+        <n-select v-model:value="form.assignee_id" :options="bugDevOptions" placeholder="选择修复人" />
       </n-form-item>
     </n-form>
     <template #action>
@@ -54,7 +54,26 @@ const rules = {
 }
 
 const taskOptions = computed(() => tasks.value.map(t => ({ label: t.title, value: t.id })))
-const devOptions = computed(() => users.value.filter(u => u.role === 'dev').map(u => ({ label: u.name, value: u.id })))
+
+const bugDevOptions = computed(() => {
+  if (!form.value.task_id) return []
+  const task = tasks.value.find(t => t.id === form.value.task_id)
+  if (!task) return []
+  // 优先使用 task.assignees（多开发关联表）
+  if (task.assignees && task.assignees.length > 0) {
+    return task.assignees.map(a => {
+      const name = a.user?.name || ''
+      const platform = a.platform ? `（${a.platform}端）` : ''
+      return { label: `${name}${platform}`, value: a.user_id }
+    })
+  }
+  // 兼容旧格式：从全局 dev 列表找
+  if (task.assignee) {
+    return [{ label: task.assignee.name, value: task.assignee.id }]
+  }
+  return users.value.filter(u => u.role === 'dev').map(u => ({ label: u.name, value: u.id }))
+})
+
 const severityOptions = [
   { label: '低', value: 'low' },
   { label: '中', value: 'medium' },
@@ -70,6 +89,10 @@ watch(show, async (val) => {
       users.value = await getUsers()
     } catch (e) { console.error(e) }
   }
+})
+
+watch(() => form.value.task_id, () => {
+  form.value.assignee_id = null
 })
 
 async function submit() {

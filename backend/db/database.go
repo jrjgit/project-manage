@@ -30,5 +30,6 @@ func Init(cfg *config.Config) error {
 		&models.TaskStatusHistory{},
 		&models.BugStatusHistory{},
 		&models.Group{},
+		&models.TaskAssignee{},
 	)
 }

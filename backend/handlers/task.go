@@ -11,6 +11,7 @@ import (
 	"management/config"
 	"management/db"
 	"management/dto"
+	"management/internal/notifier"
 	"management/models"
 	"management/services"
 )
@@ -21,9 +22,9 @@ type TaskHandler struct {
 }
 
 // NewTaskHandler 创建TaskHandler
-func NewTaskHandler(cfg *config.Config) *TaskHandler {
+func NewTaskHandler(cfg *config.Config, email notifier.Notifier, nanobot notifier.Notifier) *TaskHandler {
 	return &TaskHandler{
-		notifier: services.NewNotificationService(cfg),
+		notifier: services.NewNotificationService(email, nanobot),
 	}
 }
 
@@ -60,7 +61,7 @@ func isValidTaskTransition(role, from, to string) bool {
 			if from == models.TaskDeveloping && to == models.TaskDeveloped && role != models.RoleDev {
 				return false
 			}
-			if from == models.TaskPendingTest && to == models.TaskTesting && role != models.RolePM {
+			if from == models.TaskPendingTest && to == models.TaskTesting && (role != models.RolePM && role != models.RoleTester) {
 				return false
 			}
 			if from == models.TaskTesting && (to == models.TaskPassed || to == models.TaskRejected) && role != models.RoleTester {
@@ -276,7 +277,7 @@ func (h *TaskHandler) ListTasks(c *gin.Context) {
 	}
 
 	var tasks []models.Task
-	query := db.DB.Model(&models.Task{}).Preload("Project").Preload("Creator").Preload("Assignee").Preload("DevLead").Preload("TesterLead").Preload("Tester")
+	query := db.DB.Model(&models.Task{}).Preload("Project").Preload("Creator").Preload("Assignee").Preload("DevLead").Preload("TesterLead").Preload("Tester").Preload("TaskAssignees.User")
 
 	switch userRole {
 	case models.RolePM:
@@ -290,8 +291,8 @@ func (h *TaskHandler) ListTasks(c *gin.Context) {
 			query = query.Where("dev_lead_id = ?", userID)
 		}
 	case models.RoleDev:
-		// 开发：只看分配给自己的
-		query = query.Where("assignee_id = ?", userID)
+		// 开发：看自己被分配到的任务（通过 task_assignees 关联表）
+		query = query.Where("id IN (?)", db.DB.Model(&models.TaskAssignee{}).Select("task_id").Where("user_id = ?", userID))
 	case models.RoleTesterLead:
 		// 测试组长：看测试相关任务
 		query = query.Where("tester_lead_id = ? OR status IN ?", userID, []string{models.TaskPendingTest, models.TaskTesting, models.TaskPassed, models.TaskRejected})
@@ -351,13 +352,54 @@ func (h *TaskHandler) CreateTask(c *gin.Context) {
 		DevLeadID:   &req.DevLeadID,
 		Deadline:    deadline,
 	}
+	// 兼容单 assignee
 	if req.AssigneeID != nil {
 		task.AssigneeID = req.AssigneeID
+	}
+	if req.TesterID != nil {
+		task.TesterID = req.TesterID
 	}
 
 	if err := db.DB.Create(&task).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// 优先使用新的 assignees（带 platform）
+	if len(req.Assignees) > 0 {
+		for _, a := range req.Assignees {
+			ta := models.TaskAssignee{
+				TaskID:   task.ID,
+				UserID:   a.UserID,
+				Platform: a.Platform,
+				Status:   "pending",
+			}
+			db.DB.Create(&ta)
+		}
+		if task.AssigneeID == nil {
+			db.DB.Model(&task).Update("assignee_id", req.Assignees[0].UserID)
+		}
+	} else if len(req.AssigneeIDs) > 0 {
+		// 兼容旧格式 assignee_ids
+		for _, uid := range req.AssigneeIDs {
+			ta := models.TaskAssignee{
+				TaskID: task.ID,
+				UserID: uid,
+				Status: "pending",
+			}
+			db.DB.Create(&ta)
+		}
+		if task.AssigneeID == nil {
+			db.DB.Model(&task).Update("assignee_id", req.AssigneeIDs[0])
+		}
+	} else if req.AssigneeID != nil {
+		// 如果只传了单个 assignee_id，也创建关联记录
+		ta := models.TaskAssignee{
+			TaskID: task.ID,
+			UserID: *req.AssigneeID,
+			Status: "pending",
+		}
+		db.DB.Create(&ta)
 	}
 
 	c.JSON(http.StatusCreated, task)
@@ -377,7 +419,13 @@ func (h *TaskHandler) GetTask(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, task)
+	// 加载多开发关联
+	var taskAssignees []models.TaskAssignee
+	db.DB.Where("task_id = ?", id).Preload("User").Find(&taskAssignees)
+	c.JSON(http.StatusOK, gin.H{
+		"task":       task,
+		"assignees":  taskAssignees,
+	})
 }
 
 // UpdateTask 更新任务基本信息
@@ -477,6 +525,41 @@ func (h *TaskHandler) ChangeTaskStatusHandler(c *gin.Context) {
 	}
 
 	operatorID := c.GetUint("userID")
+	userRole := c.GetString("userRole")
+
+	// 获取当前任务状态
+	var currentTask models.Task
+	db.DB.First(&currentTask, id)
+
+	// 多开发场景：dev 开始开发时（任务已在 developing），只更新自己的 TaskAssignee 状态
+	if req.NewStatus == models.TaskDeveloping && userRole == models.RoleDev && currentTask.Status == models.TaskDeveloping {
+		db.DB.Model(&models.TaskAssignee{}).Where("task_id = ? AND user_id = ?", id, operatorID).Update("status", "developing")
+		c.JSON(http.StatusOK, gin.H{"message": "started developing"})
+		return
+	}
+
+	// 多开发场景：dev 标记 developed 时，先更新自己的 TaskAssignee
+	if req.NewStatus == models.TaskDeveloped && userRole == models.RoleDev {
+		var taskAssignees []models.TaskAssignee
+		db.DB.Where("task_id = ?", id).Find(&taskAssignees)
+		if len(taskAssignees) > 0 {
+			// 更新自己的 TaskAssignee 状态
+			db.DB.Model(&models.TaskAssignee{}).Where("task_id = ? AND user_id = ?", id, operatorID).Update("status", "developed")
+			// 检查是否全部完成
+			var pendingCount int64
+			db.DB.Model(&models.TaskAssignee{}).Where("task_id = ? AND status != ?", id, "developed").Count(&pendingCount)
+			if pendingCount > 0 {
+				c.JSON(http.StatusOK, gin.H{"message": "development completed, waiting for other developers"})
+				return
+			}
+			// 全部完成，继续流转任务状态
+		}
+	}
+
+	// 多开发场景：dev 开始开发时（任务从 assigned_lead -> developing），更新自己的 TaskAssignee 状态
+	if req.NewStatus == models.TaskDeveloping && userRole == models.RoleDev {
+		db.DB.Model(&models.TaskAssignee{}).Where("task_id = ? AND user_id = ?", id, operatorID).Update("status", "developing")
+	}
 
 	if err := h.ChangeTaskStatus(uint(id), req.NewStatus, operatorID, req.Comment); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -506,4 +589,67 @@ func (h *TaskHandler) GetTaskHistory(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, histories)
+}
+
+// AddTaskAssignee 为任务添加开发人员
+func (h *TaskHandler) AddTaskAssignee(c *gin.Context) {
+	taskID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task id"})
+		return
+	}
+
+	var req dto.AddTaskAssigneeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 检查是否已存在
+	var existing models.TaskAssignee
+	if db.DB.Where("task_id = ? AND user_id = ?", taskID, req.UserID).First(&existing).Error == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user already assigned to this task"})
+		return
+	}
+
+	ta := models.TaskAssignee{
+		TaskID:   uint(taskID),
+		UserID:   req.UserID,
+		Platform: req.Platform,
+		Status:   "pending",
+	}
+	if err := db.DB.Create(&ta).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 如果没有主 assignee，设为第一个
+	var task models.Task
+	if db.DB.First(&task, taskID).Error == nil && task.AssigneeID == nil {
+		db.DB.Model(&task).Update("assignee_id", req.UserID)
+	}
+
+	c.JSON(http.StatusCreated, ta)
+}
+
+// RemoveTaskAssignee 移除任务的开发人员
+func (h *TaskHandler) RemoveTaskAssignee(c *gin.Context) {
+	taskID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid task id"})
+		return
+	}
+
+	userID, err := strconv.ParseUint(c.Param("user_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	if err := db.DB.Where("task_id = ? AND user_id = ?", taskID, userID).Delete(&models.TaskAssignee{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "assignee removed"})
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"management/config"
 	"management/db"
+	"management/internal/notifier"
 	"management/models"
 )
 
@@ -22,7 +23,7 @@ func TestChangeBugStatus_FixedMustMoveToPendingVerify(t *testing.T) {
 	task := createBugTestTask(t, models.Task{Title: "Task For Bug", Status: models.TaskTesting, ProjectID: project.ID, CreatorID: pm.ID})
 	bug := createBugRecord(t, models.Bug{Title: "Bug A", Status: models.BugFixing, TaskID: task.ID, CreatorID: tester.ID, AssigneeID: &dev.ID, Severity: "high"})
 
-	h := NewBugHandler(&config.Config{})
+	h := NewBugHandler(&config.Config{}, notifier.NewLogNotifier(), notifier.NewLogNotifier())
 	err := h.ChangeBugStatus(bug.ID, models.BugFixed, dev.ID, "patched and ready")
 	if err != nil {
 		t.Fatalf("expected fixed transition to succeed before asserting semantics: %v", err)
@@ -48,7 +49,7 @@ func TestChangeBugStatus_TesterCanCloseFromPendingVerify(t *testing.T) {
 	task := createBugTestTask(t, models.Task{Title: "Task For Verify", Status: models.TaskTesting, ProjectID: project.ID, CreatorID: pm.ID})
 	bug := createBugRecord(t, models.Bug{Title: "Bug Verify", Status: models.BugPendingVerify, TaskID: task.ID, CreatorID: tester.ID, AssigneeID: &dev.ID, Severity: "medium"})
 
-	h := NewBugHandler(&config.Config{})
+	h := NewBugHandler(&config.Config{}, notifier.NewLogNotifier(), notifier.NewLogNotifier())
 	if err := h.ChangeBugStatus(bug.ID, models.BugClosed, tester.ID, "verified"); err != nil {
 		t.Fatalf("expected tester to close from pending_verify, got error: %v", err)
 	}

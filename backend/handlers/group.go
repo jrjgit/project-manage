@@ -34,7 +34,11 @@ func (h *GroupHandler) ListGroups(c *gin.Context) {
 	result := make([]GroupWithCount, 0)
 	for _, g := range groups {
 		var count int64
-		db.DB.Model(&models.User{}).Where("group_id = ? AND role = ?", g.ID, models.RoleDev).Count(&count)
+		expectedRole := models.RoleDev
+		if g.LeadRole == "test" {
+			expectedRole = models.RoleTester
+		}
+		db.DB.Model(&models.User{}).Where("group_id = ? AND role = ?", g.ID, expectedRole).Count(&count)
 		result = append(result, GroupWithCount{
 			Group:       g,
 			MemberCount: count,
@@ -54,10 +58,15 @@ func (h *GroupHandler) CreateGroup(c *gin.Context) {
 
 	userID := c.GetUint("userID")
 
+	leadRole := req.LeadRole
+	if leadRole == "" {
+		leadRole = "dev"
+	}
 	group := models.Group{
 		Name:      req.Name,
 		PMID:      userID,
 		DevLeadID: req.DevLeadID,
+		LeadRole:  leadRole,
 	}
 
 	if err := db.DB.Create(&group).Error; err != nil {
@@ -111,6 +120,7 @@ func (h *GroupHandler) UpdateGroup(c *gin.Context) {
 	updates := map[string]interface{}{
 		"name":        req.Name,
 		"dev_lead_id": req.DevLeadID,
+		"lead_role":   req.LeadRole,
 	}
 
 	// 如果更换了组长，更新新旧组长的 group_id
@@ -173,6 +183,22 @@ func (h *GroupHandler) AddMember(c *gin.Context) {
 	var user models.User
 	if err := db.DB.First(&user, req.UserID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+
+	// 获取组信息以校验角色匹配
+	var group models.Group
+	if err := db.DB.First(&group, groupID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "group not found"})
+		return
+	}
+
+	expectedRole := models.RoleDev
+	if group.LeadRole == "test" {
+		expectedRole = models.RoleTester
+	}
+	if user.Role != expectedRole {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "member role does not match group type"})
 		return
 	}
 

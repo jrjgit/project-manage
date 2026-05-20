@@ -21,7 +21,7 @@ export const taskPrimaryViews = {
   ],
   tester: [
     { key: 'todo', label: '我的待办', params: { mine: 'todo' } },
-    { key: 'mine', label: '我的参与', params: { mine: 'all' } },
+    { key: 'pending', label: '待测试', params: { status: 'pending_test' } },
     { key: 'all', label: '全部任务', params: {} }
   ]
 }
