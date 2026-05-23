@@ -85,6 +85,7 @@ const allMenus = [
   { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon },
   { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon },
   { key: 'bugs', label: 'Bug管理', path: '/bugs', icon: BugIcon },
+  { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon },
   { key: 'users', label: '用户管理', path: '/users', icon: UsersIcon, pmOnly: true },
   { key: 'groups', label: '小组管理', path: '/groups', icon: GroupIcon, pmOnly: true }
 ]
@@ -110,6 +111,10 @@ const pageMeta = computed(() => {
     bugs: {
       title: 'Bug 管理',
       subtitle: '优先处理待修复、待验证与重新打开的问题。'
+    },
+    requirements: {
+      title: '需求管理',
+      subtitle: '运维需求与项目需求清单'
     },
     users: {
       title: '用户管理',
@@ -187,6 +192,15 @@ function GroupIcon(props) {
     h('path', { d: 'M8 8h8' }),
     h('path', { d: 'M8 12h8' }),
     h('path', { d: 'M8 16h5' })
+  ])
+}
+function FileTextIcon(props) {
+  return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', ...props }, [
+    h('path', { d: 'M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z' }),
+    h('polyline', { points: '14 2 14 8 20 8' }),
+    h('line', { x1: '16', y1: '13', x2: '8', y2: '13' }),
+    h('line', { x1: '16', y1: '17', x2: '8', y2: '17' }),
+    h('polyline', { points: '10 9 9 9 8 9' })
   ])
 }
 </script>
