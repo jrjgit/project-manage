@@ -21,7 +21,10 @@ request.interceptors.request.use(
 
 request.interceptors.response.use(
   (response) => {
-    return response.data
+    const body = response.data
+    // Result<T> wrapper: { data: ... } → unwrap
+    if (body && body.data !== undefined) return body.data
+    return body
   },
   (error) => {
     const msg = error.response?.data?.error || error.message || '请求失败'
