@@ -59,6 +59,12 @@ const routes = [
     name: 'RequirementDetail',
     component: () => import('@/views/RequirementDetail.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/iterations',
+    name: 'Iterations',
+    component: () => import('@/views/Iterations.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 
