@@ -86,8 +86,12 @@ const allMenus = [
   { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon },
   { key: 'bugs', label: 'Bug管理', path: '/bugs', icon: BugIcon },
   { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon },
+  { key: 'iterations', label: '发布迭代', path: '/iterations', icon: MilestoneIcon },
+  { key: 'revenue', label: '营收统计', path: '/revenue', icon: ChartBarIcon },
+  { key: 'performance', label: '人员绩效', path: '/performance', icon: TrendingUpIcon },
   { key: 'users', label: '用户管理', path: '/users', icon: UsersIcon, pmOnly: true },
-  { key: 'groups', label: '小组管理', path: '/groups', icon: GroupIcon, pmOnly: true }
+  { key: 'groups', label: '小组管理', path: '/groups', icon: GroupIcon, pmOnly: true },
+  { key: 'dictionary', label: '基础字典', path: '/dictionary', icon: BookOpenIcon, pmOnly: true }
 ]
 
 const visibleMenus = computed(() =>
@@ -116,6 +120,18 @@ const pageMeta = computed(() => {
       title: '需求管理',
       subtitle: '运维需求与项目需求清单'
     },
+    iterations: {
+      title: '发布迭代',
+      subtitle: '管理发布迭代与版本计划'
+    },
+    revenue: {
+      title: '营收统计看板',
+      subtitle: '年度需求产值统计'
+    },
+    performance: {
+      title: '人员绩效统计',
+      subtitle: '个人任务完成情况'
+    },
     users: {
       title: '用户管理',
       subtitle: '维护角色配置与协作分工。'
@@ -123,6 +139,10 @@ const pageMeta = computed(() => {
     groups: {
       title: '小组管理',
       subtitle: '创建和管理开发小组，分配组长与成员。'
+    },
+    dictionary: {
+      title: '基础数据字典',
+      subtitle: '系统配置字典维护'
     }
   }
   const name = route.name?.toLowerCase()
@@ -201,6 +221,33 @@ function FileTextIcon(props) {
     h('line', { x1: '16', y1: '13', x2: '8', y2: '13' }),
     h('line', { x1: '16', y1: '17', x2: '8', y2: '17' }),
     h('polyline', { points: '10 9 9 9 8 9' })
+  ])
+}
+function MilestoneIcon(props) {
+  return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', ...props }, [
+    h('path', { d: 'M12 12v8' }),
+    h('path', { d: 'M16 16l-4-4-4 4' }),
+    h('circle', { cx: '12', cy: '8', r: '6' }),
+    h('path', { d: 'M12 5v3' })
+  ])
+}
+function ChartBarIcon(props) {
+  return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', ...props }, [
+    h('path', { d: 'M3 3v16a2 2 0 0 0 2 2h16' }),
+    h('rect', { x: '7', y: '13', width: '4', height: '6', rx: '1' }),
+    h('rect', { x: '15', y: '8', width: '4', height: '11', rx: '1' })
+  ])
+}
+function TrendingUpIcon(props) {
+  return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', ...props }, [
+    h('polyline', { points: '22 7 13.5 15.5 8.5 10.5 2 17' }),
+    h('polyline', { points: '16 7 22 7 22 13' })
+  ])
+}
+function BookOpenIcon(props) {
+  return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', ...props }, [
+    h('path', { d: 'M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z' }),
+    h('path', { d: 'M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z' })
   ])
 }
 </script>
