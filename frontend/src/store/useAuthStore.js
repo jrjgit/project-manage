@@ -4,7 +4,8 @@ import { login, register } from '@/api/auth'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || '')
-  const userInfo = ref(JSON.parse(localStorage.getItem('userInfo') || 'null'))
+  const raw = localStorage.getItem('userInfo')
+  const userInfo = ref((raw && raw !== 'undefined') ? JSON.parse(raw) : null)
 
   const role = computed(() => userInfo.value?.role || '')
   const isLoggedIn = computed(() => !!token.value)
