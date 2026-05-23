@@ -1,0 +1,4 @@
+import request from './request'
+
+export const getRevenueStats = (year) => request.get('/statistics/revenue', { params: { year } })
+export const getPerformanceStats = (year, month) => request.get('/statistics/performance', { params: { year, month } })

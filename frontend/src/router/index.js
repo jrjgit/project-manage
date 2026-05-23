@@ -65,6 +65,24 @@ const routes = [
     name: 'Iterations',
     component: () => import('@/views/Iterations.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/revenue',
+    name: 'RevenueDashboard',
+    component: () => import('@/views/RevenueDashboard.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/performance',
+    name: 'PerformanceStats',
+    component: () => import('@/views/PerformanceStats.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/dictionary',
+    name: 'Dictionary',
+    component: () => import('@/views/Dictionary.vue'),
+    meta: { requiresAuth: true, requiresPM: true }
   }
 ]
 
