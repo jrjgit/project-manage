@@ -1,22 +1,30 @@
 # Editor / IDE
 .claude/
 .superpowers/
+.idea/
+*.iml
+
+# Environment variables (contains secrets)
+.env
+
+# Java Backend (backend-java)
+backend-java/target/
+backend-java/*.class
+backend-java/*.jar
+backend-java/*.log
+backend-java/*.err
+backend-java/uploads/
+backend-java/Check*.java
+backend-java/Check*.class
+backend-java/FixDb.java
+backend-java/FixDb.class
 
 # Frontend
 frontend/node_modules/
 frontend/dist/
 
-# Backend build artifacts
-backend/management.exe
-backend/management.exe~
-backend/*.exe
-
 # Database
-backend/management.db
-backend/*.db
-
-# Environment variables (contains secrets)
-.env
+*.db
 
 # OS
 .DS_Store

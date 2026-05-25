@@ -68,7 +68,7 @@
         </div>
       </section>
 
-      <!-- Monthly created revenue table -->
+      <!-- Monthly created bar chart -->
       <section class="section-card chart-section">
         <div class="section-header gradient-header" style="background: linear-gradient(135deg, #eef2ff, #ffffff);">
           <div>
@@ -76,19 +76,12 @@
             <h3>月度接收产值</h3>
           </div>
         </div>
-        <div class="table-wrap">
-          <n-data-table
-            :columns="monthlyCreatedColumns"
-            :data="monthlyCreated"
-            :bordered="false"
-            :single-line="false"
-            striped
-            :pagination="false"
-          />
+        <div class="chart-wrap">
+          <BarChart :data="monthlyCreated" color="#6366f1" />
         </div>
       </section>
 
-      <!-- Monthly done revenue table -->
+      <!-- Monthly done bar chart -->
       <section class="section-card chart-section">
         <div class="section-header gradient-header" style="background: linear-gradient(135deg, #ecfdf5, #ffffff);">
           <div>
@@ -96,15 +89,8 @@
             <h3>月度完成产值</h3>
           </div>
         </div>
-        <div class="table-wrap">
-          <n-data-table
-            :columns="monthlyDoneColumns"
-            :data="monthlyDone"
-            :bordered="false"
-            :single-line="false"
-            striped
-            :pagination="false"
-          />
+        <div class="chart-wrap">
+          <BarChart :data="monthlyDone" color="#10b981" />
         </div>
       </section>
     </div>
@@ -115,7 +101,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { getRevenueStats } from '@/api/statistics'
 import AppLayout from '@/components/AppLayout.vue'
-import { NSelect, NDataTable } from 'naive-ui'
+import { NSelect } from 'naive-ui'
+import BarChart from '@/components/BarChart.vue'
 
 const selectedYear = ref(new Date().getFullYear())
 const stats = ref({})
@@ -127,16 +114,6 @@ const yearOptions = Array.from({ length: 7 }, (_, i) => {
   return { label: `${y}年`, value: y }
 })
 
-const monthlyCreatedColumns = [
-  { title: '月份', key: 'month', width: 100 },
-  { title: '接收数量', key: 'count', width: 100 }
-]
-
-const monthlyDoneColumns = [
-  { title: '月份', key: 'month', width: 100 },
-  { title: '完成数量', key: 'count', width: 100 }
-]
-
 async function loadData() {
   try {
     const res = await getRevenueStats(selectedYear.value)
@@ -147,12 +124,12 @@ async function loadData() {
       testing_count: res.testing_count
     }
     monthlyCreated.value = (res.monthly_created || []).map((item) => ({
-      month: `${item.month}月`,
-      count: item.count
+      label: `${item.month}月`,
+      value: item.count
     }))
     monthlyDone.value = (res.monthly_done || []).map((item) => ({
-      month: `${item.month}月`,
-      count: item.count
+      label: `${item.month}月`,
+      value: item.count
     }))
   } catch (e) {
     window.$message?.error('加载营收统计失败')
@@ -290,7 +267,7 @@ onMounted(loadData)
   color: #0f172a;
 }
 
-.table-wrap {
+.chart-wrap {
   padding: 8px;
 }
 

@@ -10,3 +10,14 @@ export const getOpsRequirements = () => request.get('/requirements/ops')
 export const getProjectRequirements = () => request.get('/requirements/project')
 export const addToRelease = (id, iterationId) => request.put(`/requirements/${id}/release`, { iteration_id: iterationId })
 export const removeFromRelease = (id) => request.delete(`/requirements/${id}/release`)
+
+// Document APIs
+export const uploadRequirementDocument = (id, file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post(`/requirements/${id}/document`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+export const downloadRequirementDocument = (id) => request.get(`/requirements/${id}/document`, { responseType: 'blob' })
+export const deleteRequirementDocument = (id) => request.delete(`/requirements/${id}/document`)

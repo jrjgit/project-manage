@@ -1,0 +1,418 @@
+package com.management.task;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.management.common.exception.BusinessException;
+import com.management.common.jwt.JwtUserDetails;
+import com.management.common.notification.NotificationService;
+import com.management.common.workflow.WorkflowService;
+import com.management.project.entity.Project;
+import com.management.project.mapper.ProjectMapper;
+import com.management.task.dto.*;
+import com.management.task.entity.*;
+import com.management.task.mapper.*;
+import com.management.user.entity.User;
+import com.management.user.mapper.UserMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class TaskService {
+    private final TaskMapper taskMapper;
+    private final TaskAssigneeMapper taskAssigneeMapper;
+    private final TaskStatusHistoryMapper historyMapper;
+    private final UserMapper userMapper;
+    private final ProjectMapper projectMapper;
+    private final WorkflowService workflowService;
+    private final NotificationService notificationService;
+
+    /** 获取当前用户 */
+    public JwtUserDetails currentUser() {
+        return (JwtUserDetails) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+    }
+
+    /** 按角色过滤查询任务列表 */
+    public List<Task> listTasks(String projectId, String status, String priority) {
+        JwtUserDetails u = currentUser();
+        LambdaQueryWrapper<Task> q = new LambdaQueryWrapper<>();
+
+        switch (u.getRole()) {
+            case "pm":
+                break;
+            case "dev_lead":
+                if (u.getGroupId() != null) {
+                    q.and(w -> w.eq(Task::getDevLeadId, u.getUserId())
+                            .or().inSql(Task::getAssigneeId,
+                                    "SELECT id FROM users WHERE group_id = " + u.getGroupId()));
+                } else {
+                    q.eq(Task::getDevLeadId, u.getUserId());
+                }
+                break;
+            case "dev":
+                q.inSql(Task::getId,
+                        "SELECT task_id FROM task_assignees WHERE user_id = " + u.getUserId());
+                break;
+            case "tester_lead":
+                q.and(w -> w.eq(Task::getTesterLeadId, u.getUserId())
+                        .or().in(Task::getStatus, List.of("pending_test", "testing", "passed", "rejected")));
+                break;
+            case "tester":
+                q.and(w -> w.eq(Task::getTesterId, u.getUserId())
+                        .or().eq(Task::getCreatorId, u.getUserId()));
+                break;
+            default:
+                q.apply("1=0");
+        }
+
+        if (projectId != null && !projectId.isBlank()) q.eq(Task::getProjectId, projectId);
+        if (status != null && !status.isBlank()) q.eq(Task::getStatus, status);
+        if (priority != null && !priority.isBlank()) q.eq(Task::getPriority, priority);
+
+        q.orderByDesc(Task::getUpdatedAt);
+        List<Task> tasks = taskMapper.selectList(q);
+        for (Task t : tasks) {
+            fillAssociations(t);
+        }
+        return tasks;
+    }
+
+    /** 获取任务详情（含 assignees） */
+    public TaskDetail getTask(Long id) {
+        Task task = taskMapper.selectById(id);
+        if (task == null) throw new BusinessException(404, "task not found");
+        fillAssociations(task);
+
+        List<TaskAssignee> assignees = taskAssigneeMapper.selectList(
+                new LambdaUpdateWrapper<TaskAssignee>().eq(TaskAssignee::getTaskId, id));
+        for (TaskAssignee ta : assignees) {
+            ta.setUser(userMapper.selectById(ta.getUserId()));
+        }
+
+        TaskDetail detail = new TaskDetail();
+        detail.setTask(task);
+        detail.setAssignees(assignees);
+        return detail;
+    }
+
+    /** 获取状态历史 */
+    public List<TaskStatusHistory> getTaskHistory(Long id) {
+        List<TaskStatusHistory> list = historyMapper.selectList(
+                new LambdaQueryWrapper<TaskStatusHistory>()
+                        .eq(TaskStatusHistory::getTaskId, id)
+                        .orderByDesc(TaskStatusHistory::getChangedAt));
+        for (TaskStatusHistory h : list) {
+            h.setUser(userMapper.selectById(h.getChangedBy()));
+        }
+        return list;
+    }
+
+    /** 填充关联对象 */
+    private void fillAssociations(Task t) {
+        if (t.getProjectId() != null) {
+            Project p = projectMapper.selectById(t.getProjectId());
+            if (p != null) { p.setPm(userMapper.selectById(p.getPmId())); t.setProject(p); }
+        }
+        if (t.getCreatorId() != null) t.setCreator(userMapper.selectById(t.getCreatorId()));
+        if (t.getAssigneeId() != null) t.setAssignee(userMapper.selectById(t.getAssigneeId()));
+        if (t.getDevLeadId() != null) t.setDevLead(userMapper.selectById(t.getDevLeadId()));
+        if (t.getTesterLeadId() != null) t.setTesterLead(userMapper.selectById(t.getTesterLeadId()));
+        if (t.getTesterId() != null) t.setTester(userMapper.selectById(t.getTesterId()));
+    }
+
+    /** Task 详情 DTO */
+    @lombok.Data
+    public static class TaskDetail {
+        private Task task;
+        private List<TaskAssignee> assignees;
+    }
+
+    /** 创建任务（仅 PM） */
+    @Transactional
+    public Task createTask(CreateTaskRequest req) {
+        Long userId = currentUser().getUserId();
+
+        LocalDateTime deadline = null;
+        if (req.getDeadline() != null && !req.getDeadline().isBlank()) {
+            String d = req.getDeadline().trim();
+            if (d.contains("T")) {
+                deadline = LocalDateTime.parse(d, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            } else {
+                deadline = LocalDate.parse(d, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
+            }
+        }
+
+        Task task = new Task();
+        task.setTitle(req.getTitle());
+        task.setDescription(req.getDescription());
+        task.setStatus("pending");
+        task.setPriority(req.getPriority() != null ? req.getPriority() : "medium");
+        task.setProjectId(req.getProjectId());
+        task.setCreatorId(userId);
+        task.setDevLeadId(req.getDevLeadId());
+        task.setDeadline(deadline);
+        if (req.getAssigneeId() != null) task.setAssigneeId(req.getAssigneeId());
+        if (req.getTesterId() != null) task.setTesterId(req.getTesterId());
+        taskMapper.insert(task);
+
+        // 处理多指派人
+        if (req.getAssignees() != null && !req.getAssignees().isEmpty()) {
+            for (var item : req.getAssignees()) {
+                TaskAssignee ta = new TaskAssignee();
+                ta.setTaskId(task.getId());
+                ta.setUserId(item.getUserId());
+                ta.setPlatform(item.getPlatform());
+                ta.setStatus("pending");
+                taskAssigneeMapper.insert(ta);
+            }
+            if (task.getAssigneeId() == null) {
+                task.setAssigneeId(req.getAssignees().get(0).getUserId());
+                taskMapper.updateById(task);
+            }
+        } else if (req.getAssigneeIds() != null && !req.getAssigneeIds().isEmpty()) {
+            for (Long uid : req.getAssigneeIds()) {
+                TaskAssignee ta = new TaskAssignee();
+                ta.setTaskId(task.getId());
+                ta.setUserId(uid);
+                ta.setStatus("pending");
+                taskAssigneeMapper.insert(ta);
+            }
+            if (task.getAssigneeId() == null) {
+                task.setAssigneeId(req.getAssigneeIds().get(0));
+                taskMapper.updateById(task);
+            }
+        } else if (req.getAssigneeId() != null) {
+            TaskAssignee ta = new TaskAssignee();
+            ta.setTaskId(task.getId());
+            ta.setUserId(req.getAssigneeId());
+            ta.setStatus("pending");
+            taskAssigneeMapper.insert(ta);
+        }
+
+        fillAssociations(task);
+        log.info("Task created: id={}, title={}", task.getId(), task.getTitle());
+        return task;
+    }
+
+    /** 更新任务基本信息 */
+    public Task updateTask(Long id, UpdateTaskRequest req) {
+        Task task = taskMapper.selectById(id);
+        if (task == null) throw new BusinessException(404, "task not found");
+
+        Long oldTesterId = task.getTesterId();
+
+        if (req.getTitle() != null && !req.getTitle().isBlank()) task.setTitle(req.getTitle());
+        if (req.getDescription() != null) task.setDescription(req.getDescription());
+        if (req.getPriority() != null && !req.getPriority().isBlank()) task.setPriority(req.getPriority());
+        if (req.getProjectId() != null) task.setProjectId(req.getProjectId());
+        if (req.getDevLeadId() != null) task.setDevLeadId(req.getDevLeadId());
+        if (req.getAssigneeId() != null) task.setAssigneeId(req.getAssigneeId());
+        if (req.getTesterLeadId() != null) task.setTesterLeadId(req.getTesterLeadId());
+        if (req.getTesterId() != null) task.setTesterId(req.getTesterId());
+        if (req.getDeadline() != null && !req.getDeadline().isBlank()) {
+            String d = req.getDeadline().trim();
+            if (d.contains("T")) {
+                task.setDeadline(LocalDateTime.parse(d, DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            } else {
+                task.setDeadline(LocalDate.parse(d, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay());
+            }
+        }
+        taskMapper.updateById(task);
+
+        // tester_id 变化时通知新 tester
+        if (req.getTesterId() != null && oldTesterId != null && !req.getTesterId().equals(oldTesterId)) {
+            User newTester = userMapper.selectById(req.getTesterId());
+            if (newTester != null) {
+                JwtUserDetails op = currentUser();
+                notificationService.emitTaskEvent(task, task.getStatus(), task.getStatus(),
+                        op.getName(), List.of(newTester), "您被分配为测试人员");
+            }
+        }
+
+        fillAssociations(task);
+        return task;
+    }
+
+    /** 变更任务状态（核心状态机逻辑） */
+    @Transactional
+    public void changeStatus(Long taskId, ChangeTaskStatusRequest req) {
+        Long operatorId = currentUser().getUserId();
+        String role = currentUser().getRole();
+        String newStatus = req.getNewStatus();
+
+        Task task = taskMapper.selectById(taskId);
+        if (task == null) throw new BusinessException("任务不存在");
+
+        String oldStatus = task.getStatus();
+
+        // rejected 必须有原因
+        if ("rejected".equals(newStatus) && (req.getComment() == null || req.getComment().isBlank())) {
+            throw new BusinessException("reject reason is required");
+        }
+
+        // 多开发场景处理
+        if ("developing".equals(newStatus) && "dev".equals(role) && "developing".equals(task.getStatus())) {
+            taskAssigneeMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<TaskAssignee>()
+                    .eq(TaskAssignee::getTaskId, taskId)
+                    .eq(TaskAssignee::getUserId, operatorId)
+                    .set(TaskAssignee::getStatus, "developing"));
+            return;
+        }
+        if ("developed".equals(newStatus) && "dev".equals(role)) {
+            List<TaskAssignee> assignees = taskAssigneeMapper.selectList(
+                    new LambdaUpdateWrapper<TaskAssignee>().eq(TaskAssignee::getTaskId, taskId));
+            if (!assignees.isEmpty()) {
+                taskAssigneeMapper.update(null, new LambdaUpdateWrapper<TaskAssignee>()
+                        .eq(TaskAssignee::getTaskId, taskId)
+                        .eq(TaskAssignee::getUserId, operatorId)
+                        .set(TaskAssignee::getStatus, "developed"));
+                long pending = taskAssigneeMapper.selectCount(new LambdaUpdateWrapper<TaskAssignee>()
+                        .eq(TaskAssignee::getTaskId, taskId).ne(TaskAssignee::getStatus, "developed"));
+                if (pending > 0) return; // 还有人没完成
+            }
+        }
+
+        // 校验流转合法性
+        if (!workflowService.isAllowed(role, oldStatus, newStatus, "task")) {
+            throw new BusinessException(
+                    String.format("角色 %s 不能将任务从 %s 变更为 %s", role, oldStatus, newStatus));
+        }
+
+        // 更新状态
+        task.setStatus(newStatus);
+        taskMapper.updateById(task);
+
+        // 记录历史
+        TaskStatusHistory history = new TaskStatusHistory();
+        history.setTaskId(taskId);
+        history.setFromStatus(oldStatus);
+        history.setToStatus(newStatus);
+        history.setChangedBy(operatorId);
+        history.setComment(req.getComment());
+        historyMapper.insert(history);
+
+        log.info("Task {} status changed: {} -> {} by user {} ({})",
+                taskId, oldStatus, newStatus, operatorId, role);
+
+        // 通知目标
+        String operatorName = currentUser().getName();
+        List<User> targets = resolveTaskNotifyTargets(task, oldStatus, newStatus);
+        notificationService.emitTaskEvent(task, oldStatus, newStatus, operatorName, targets, req.getComment());
+
+        // 关键：developed -> pending_test 自动跳转
+        if ("developed".equals(newStatus)) {
+            task.setStatus("pending_test");
+            taskMapper.updateById(task);
+
+            TaskStatusHistory autoHistory = new TaskStatusHistory();
+            autoHistory.setTaskId(taskId);
+            autoHistory.setFromStatus("developed");
+            autoHistory.setToStatus("pending_test");
+            autoHistory.setChangedBy(operatorId);
+            autoHistory.setComment("系统自动将任务加入测试池");
+            historyMapper.insert(autoHistory);
+
+            if (task.getTesterLeadId() != null) {
+                User testerLead = userMapper.selectById(task.getTesterLeadId());
+                if (testerLead != null) {
+                    notificationService.emitTaskEvent(task, "developed", "pending_test",
+                            null, List.of(testerLead), "任务已加入测试池");
+                }
+            }
+        }
+
+        // rejected 时保存原因到任务
+        if ("rejected".equals(newStatus)) {
+            taskMapper.update(null, new LambdaUpdateWrapper<Task>()
+                    .eq(Task::getId, taskId).set(Task::getRejectReason, req.getComment()));
+        }
+
+        // dev 开始开发时更新 TaskAssignee
+        if ("developing".equals(newStatus) && "dev".equals(role)) {
+            taskAssigneeMapper.update(null, new LambdaUpdateWrapper<TaskAssignee>()
+                    .eq(TaskAssignee::getTaskId, taskId)
+                    .eq(TaskAssignee::getUserId, operatorId)
+                    .set(TaskAssignee::getStatus, "developing"));
+        }
+    }
+
+    /** 根据状态流转确定通知目标（对等 Go resolveTaskNotifyTargets） */
+    private List<User> resolveTaskNotifyTargets(Task task, String oldStatus, String newStatus) {
+        List<User> targets = new ArrayList<>();
+        String key = oldStatus + "->" + newStatus;
+
+        switch (key) {
+            case "pending->assigned_lead":
+                if (task.getDevLeadId() != null) addUser(targets, task.getDevLeadId());
+                break;
+            case "assigned_lead->developing":
+                if (task.getAssigneeId() != null) addUser(targets, task.getAssigneeId());
+                break;
+            case "developing->developed":
+                if (task.getTesterLeadId() != null) addUser(targets, task.getTesterLeadId());
+                break;
+            case "pending_test->testing":
+                if (task.getTesterLeadId() != null) addUser(targets, task.getTesterLeadId());
+                if (task.getTesterId() != null) addUser(targets, task.getTesterId());
+                break;
+            case "testing->passed":
+                Project p = projectMapper.selectById(task.getProjectId());
+                if (p != null) addUser(targets, p.getPmId());
+                if (task.getAssigneeId() != null) addUser(targets, task.getAssigneeId());
+                if (task.getDevLeadId() != null) addUser(targets, task.getDevLeadId());
+                break;
+            case "testing->rejected":
+                if (task.getAssigneeId() != null) addUser(targets, task.getAssigneeId());
+                if (task.getDevLeadId() != null) addUser(targets, task.getDevLeadId());
+                break;
+            case "rejected->developing":
+                if (task.getTesterId() != null) addUser(targets, task.getTesterId());
+                if (task.getTesterLeadId() != null) addUser(targets, task.getTesterLeadId());
+                break;
+        }
+        return targets;
+    }
+
+    private void addUser(List<User> targets, Long userId) {
+        User u = userMapper.selectById(userId);
+        if (u != null) targets.add(u);
+    }
+
+    /** 添加指派人 */
+    public TaskAssignee addAssignee(Long taskId, AddTaskAssigneeRequest req) {
+        TaskAssignee existing = taskAssigneeMapper.selectOne(new LambdaUpdateWrapper<TaskAssignee>()
+                .eq(TaskAssignee::getTaskId, taskId).eq(TaskAssignee::getUserId, req.getUserId()));
+        if (existing != null) throw new BusinessException("user already assigned to this task");
+
+        TaskAssignee ta = new TaskAssignee();
+        ta.setTaskId(taskId);
+        ta.setUserId(req.getUserId());
+        ta.setPlatform(req.getPlatform());
+        ta.setStatus("pending");
+        taskAssigneeMapper.insert(ta);
+
+        Task task = taskMapper.selectById(taskId);
+        if (task != null && task.getAssigneeId() == null) {
+            task.setAssigneeId(req.getUserId());
+            taskMapper.updateById(task);
+        }
+        return ta;
+    }
+
+    /** 移除指派人 */
+    public void removeAssignee(Long taskId, Long userId) {
+        taskAssigneeMapper.delete(new LambdaUpdateWrapper<TaskAssignee>()
+                .eq(TaskAssignee::getTaskId, taskId).eq(TaskAssignee::getUserId, userId));
+    }
+}

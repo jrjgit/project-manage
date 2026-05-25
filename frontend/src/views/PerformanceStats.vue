@@ -26,29 +26,37 @@
         </div>
       </section>
 
-      <!-- Performance table -->
-      <section class="section-card">
+      <!-- Performance bar charts -->
+      <section class="section-card chart-section">
         <div class="list-header">
-          <h3>个人完成量排行</h3>
+          <h3>进行中任务</h3>
         </div>
-        <n-data-table
-          :columns="columns"
-          :data="sortedData"
-          :pagination="{ pageSize: 20 }"
-          :bordered="false"
-          :single-line="false"
-          striped
-        />
+        <BarChart :data="inProgressData" color="#3b82f6" />
+      </section>
+
+      <section class="section-card chart-section">
+        <div class="list-header">
+          <h3>已延期任务</h3>
+        </div>
+        <BarChart :data="overdueData" color="#ef4444" />
+      </section>
+
+      <section class="section-card chart-section">
+        <div class="list-header">
+          <h3>绩效产能</h3>
+        </div>
+        <BarChart :data="doneData" color="#10b981" />
       </section>
     </div>
   </AppLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, h } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { getPerformanceStats } from '@/api/statistics'
 import AppLayout from '@/components/AppLayout.vue'
-import { NSelect, NDataTable, NTag } from 'naive-ui'
+import { NSelect } from 'naive-ui'
+import BarChart from '@/components/BarChart.vue'
 
 const selectedYear = ref(new Date().getFullYear())
 const selectedMonth = ref(new Date().getMonth() + 1)
@@ -64,79 +72,25 @@ const monthOptions = Array.from({ length: 12 }, (_, i) => ({
   value: i + 1
 }))
 
-const sortedData = computed(() => {
-  return [...performanceData.value].sort((a, b) => (b.done || 0) - (a.done || 0))
-})
-
-const columns = [
-  { title: '用户名', key: 'userName', width: 120 },
-  {
-    title: '进行中',
-    key: 'inProgress',
-    width: 100,
-    render(row) {
-      const val = row.inProgress || 0
-      return h('div', { style: 'display: flex; align-items: center; gap: 8px;' }, [
-        h('div', {
-          style: {
-            height: '18px',
-            width: `${Math.min(val * 20, 120)}px`,
-            borderRadius: '4px',
-            background: 'linear-gradient(90deg, #3b82f6, #60a5fa)',
-            transition: 'width 0.3s ease'
-          }
-        }),
-        h('span', null, val)
-      ])
-    }
-  },
-  {
-    title: '逾期',
-    key: 'overdue',
-    width: 100,
-    render(row) {
-      const val = row.overdue || 0
-      return h('div', { style: 'display: flex; align-items: center; gap: 8px;' }, [
-        h('div', {
-          style: {
-            height: '18px',
-            width: `${Math.min(val * 20, 120)}px`,
-            borderRadius: '4px',
-            background: `linear-gradient(90deg, #ef4444, #f87171)`,
-            transition: 'width 0.3s ease'
-          }
-        }),
-        val > 0
-          ? h(NTag, { type: 'error', size: 'small', round: true }, { default: () => val })
-          : h('span', null, val)
-      ])
-    }
-  },
-  {
-    title: '已完成',
-    key: 'done',
-    width: 120,
-    render(row) {
-      const val = row.done || 0
-      return h('div', { style: 'display: flex; align-items: center; gap: 8px;' }, [
-        h('div', {
-          style: {
-            height: '18px',
-            width: `${Math.min(val * 20, 120)}px`,
-            borderRadius: '4px',
-            background: 'linear-gradient(90deg, #10b981, #34d399)',
-            transition: 'width 0.3s ease'
-          }
-        }),
-        h('span', { style: 'font-weight: 600;' }, val)
-      ])
-    }
-  }
-]
+const inProgressData = computed(() =>
+  performanceData.value.map(d => ({ label: d.userName, value: d.inProgress || 0 }))
+)
+const overdueData = computed(() =>
+  performanceData.value.map(d => ({ label: d.userName, value: d.overdue || 0 }))
+)
+const doneData = computed(() =>
+  [...performanceData.value].sort((a, b) => (b.done || 0) - (a.done || 0)).map(d => ({ label: d.userName, value: d.done || 0 }))
+)
 
 async function loadData() {
   try {
-    performanceData.value = await getPerformanceStats(selectedYear.value, selectedMonth.value)
+    const res = await getPerformanceStats(selectedYear.value, selectedMonth.value)
+    performanceData.value = (res.users || []).map(u => ({
+      userName: u.user_name,
+      inProgress: u.in_progress,
+      overdue: u.overdue,
+      done: u.done
+    }))
   } catch (e) {
     window.$message?.error('加载绩效统计失败')
   }
@@ -198,5 +152,10 @@ onMounted(loadData)
   font-size: 16px;
   font-weight: 700;
   color: #0f172a;
+}
+
+.chart-section {
+  padding: 0;
+  overflow: hidden;
 }
 </style>

@@ -78,7 +78,7 @@
               autofocus
             />
             <span v-else class="hero-field-value" @click="startEdit('iteration_id')">
-              {{ req.iteration_id ? `迭代 #${req.iteration_id}` : '未纳入' }}
+              {{ req.iteration_name || (req.iteration_id ? `迭代 #${req.iteration_id}` : '未纳入') }}
             </span>
           </div>
         </div>
@@ -102,6 +102,20 @@
             />
           </section>
 
+          <!-- Relevant / 需求方案 -->
+          <section class="section-card">
+            <div class="section-header">
+              <h3>需求方案</h3>
+            </div>
+            <n-input
+              v-model:value="localRelevant"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 8 }"
+              placeholder="添加需求方案..."
+              @blur="saveRelevant"
+            />
+          </section>
+
           <!-- Notes -->
           <section class="section-card">
             <div class="section-header">
@@ -114,6 +128,61 @@
               placeholder="添加备注..."
               @blur="saveNotes"
             />
+          </section>
+
+          <!-- Document -->
+          <section class="section-card">
+            <div class="section-header">
+              <h3>需求文档</h3>
+            </div>
+            <div v-if="req.document_name" class="document-row">
+              <div class="document-info">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;flex-shrink:0">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                  <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                <span class="document-name">{{ req.document_name }}</span>
+                <span v-if="req.document_size" class="document-size">({{ formatSize(req.document_size) }})</span>
+              </div>
+              <n-space>
+                <n-button size="small" @click="handleDownloadDocument">
+                  <template #icon>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                  </template>
+                  下载
+                </n-button>
+                <n-button v-if="authStore.isPM" size="small" type="error" ghost @click="handleDeleteDocument">
+                  <template #icon>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
+                      <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                  </template>
+                  删除
+                </n-button>
+              </n-space>
+            </div>
+            <div v-else-if="authStore.isPM" class="document-upload">
+              <n-upload
+                :show-file-list="false"
+                :custom-request="handleCustomUpload"
+                accept="*/*"
+              >
+                <n-button size="small" :loading="documentLoading">
+                  <template #icon>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                  </template>
+                  上传文档
+                </n-button>
+              </n-upload>
+            </div>
+            <div v-else class="empty-state">暂无文档</div>
           </section>
         </div>
 
@@ -291,12 +360,16 @@ import {
   getRequirement,
   updateRequirement,
   addToRelease,
-  removeFromRelease
+  removeFromRelease,
+  uploadRequirementDocument,
+  downloadRequirementDocument,
+  deleteRequirementDocument
 } from '@/api/requirements'
+import { getIterations } from '@/api/iterations'
 import { requirementStatusMeta } from '@/constants/requirementMeta'
 import { priorityMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
-import { NButton, NModal, NInput, NSelect, NSpace, NTag, NProgress } from 'naive-ui'
+import { NButton, NModal, NInput, NSelect, NSpace, NTag, NProgress, NUpload } from 'naive-ui'
 
 const route = useRoute()
 const router = useRouter()
@@ -304,9 +377,11 @@ const authStore = useAuthStore()
 
 const req = ref({})
 const users = ref([])
+const iterations = ref([])
 const editingField = ref(null)
 const localDescription = ref('')
 const localNotes = ref('')
+const localRelevant = ref('')
 
 const expandedTerminal = ref(null)
 const showIntegrationBugs = ref(false)
@@ -314,6 +389,7 @@ const showBusinessBugs = ref(false)
 const showIterationSelector = ref(false)
 const selectedIterationId = ref(null)
 const releasing = ref(false)
+const documentLoading = ref(false)
 
 const statusMeta = computed(() => requirementStatusMeta[req.value.status] || null)
 
@@ -327,11 +403,7 @@ const priorityOptions = Object.entries(priorityMeta).map(([value, meta]) => ({
 }))
 
 const iterationOptions = computed(() => {
-  const opts = []
-  for (let i = 1; i <= 20; i++) {
-    opts.push({ label: `迭代 #${i}`, value: i })
-  }
-  return opts
+  return iterations.value.map((it) => ({ label: it.name, value: String(it.id) }))
 })
 
 const terminalDevProgress = computed(() => {
@@ -400,6 +472,66 @@ async function saveNotes() {
   }
 }
 
+async function saveRelevant() {
+  if (localRelevant.value === req.value.relevant) return
+  try {
+    await updateRequirement(req.value.id, { relevant: localRelevant.value })
+    req.value.relevant = localRelevant.value
+  } catch (e) {
+    window.$message?.error('保存需求方案失败')
+  }
+}
+
+function formatSize(bytes) {
+  if (!bytes) return '0 B'
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+async function handleCustomUpload({ file, onFinish, onError }) {
+  documentLoading.value = true
+  try {
+    await uploadRequirementDocument(req.value.id, file.file)
+    window.$message?.success('上传成功')
+    await loadReq()
+    onFinish()
+  } catch (e) {
+    window.$message?.error('上传失败')
+    onError()
+  }
+  documentLoading.value = false
+}
+
+async function handleDownloadDocument() {
+  try {
+    const res = await downloadRequirementDocument(req.value.id)
+    const blob = new Blob([res])
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = req.value.document_name || 'document'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  } catch (e) {
+    window.$message?.error('下载失败')
+  }
+}
+
+async function handleDeleteDocument() {
+  try {
+    await deleteRequirementDocument(req.value.id)
+    window.$message?.success('删除成功')
+    req.value.document_name = null
+    req.value.document_path = null
+    req.value.document_size = null
+  } catch (e) {
+    window.$message?.error('删除失败')
+  }
+}
+
 function toggleTerminalTasks(terminal) {
   expandedTerminal.value = expandedTerminal.value === terminal ? null : terminal
 }
@@ -441,6 +573,13 @@ async function loadUsers() {
   try { users.value = await getUsers() } catch (e) {}
 }
 
+async function loadIterations() {
+  try {
+    const data = await getIterations()
+    iterations.value = data || []
+  } catch (e) {}
+}
+
 async function loadReq() {
   const id = route.params.id
   if (!id) return
@@ -449,6 +588,7 @@ async function loadReq() {
     req.value = data
     localDescription.value = data.description || ''
     localNotes.value = data.notes || ''
+    localRelevant.value = data.relevant || ''
   } catch (e) {
     window.$message?.error('加载需求详情失败')
   }
@@ -464,6 +604,7 @@ watch(
 onMounted(() => {
   loadReq()
   loadUsers()
+  loadIterations()
 })
 </script>
 
@@ -725,6 +866,39 @@ onMounted(() => {
   text-align: center;
   font-size: 13px;
   color: #94a3b8;
+}
+
+.document-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+}
+
+.document-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.document-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.document-size {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
 }
 
 @media (max-width: 1100px) {
