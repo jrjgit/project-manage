@@ -133,10 +133,10 @@
           </section>
 
           <!-- Features -->
-          <section class="section-card">
+          <section v-if="authStore.isDevLead" class="section-card">
             <div class="section-header">
               <h3>功能点 ({{ features.length }})</h3>
-              <n-button v-if="authStore.isPM" size="tiny" text @click="showCreateFeature = true">
+              <n-button size="tiny" text @click="showCreateFeature = true">
                 <template #icon>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </template>
@@ -148,7 +148,7 @@
                 <div class="feature-header">
                   <span class="feature-title">{{ f.title }}</span>
                   <n-tag :type="featureStatusTag(f.status)" size="tiny" round>{{ featureStatusLabel[f.status] || f.status }}</n-tag>
-                  <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteFeature(f)">删除</n-button>
+                  <n-button text size="tiny" type="error" @click="handleDeleteFeature(f)">删除</n-button>
                 </div>
                 <div v-if="f.assignments?.length" class="assignment-list">
                   <div v-for="a in f.assignments" :key="a.id" class="assignment-item">
@@ -157,11 +157,11 @@
                     <n-tag :type="a.status === 'done' ? 'success' : a.status === 'developing' ? 'warning' : 'default'" size="tiny" round>
                       {{ a.status === 'done' ? '已完成' : a.status === 'developing' ? '开发中' : '待开始' }}
                     </n-tag>
-                    <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteAssignment(a)">移除</n-button>
+                    <n-button text size="tiny" type="error" @click="handleDeleteAssignment(a)">移除</n-button>
                   </div>
                 </div>
                 <div class="feature-actions">
-                  <n-button v-if="authStore.isDevLead" text size="tiny" @click="openAssign(f)">
+                  <n-button text size="tiny" @click="openAssign(f)">
                     <template #icon>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </template>
