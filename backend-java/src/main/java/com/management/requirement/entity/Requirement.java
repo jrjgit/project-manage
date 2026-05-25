@@ -41,6 +41,9 @@ public class Requirement {
     private String bizTestTotal;
     private String bizTestPrice;
     private LocalDateTime releaseTime;
+    private Long devLeadId;
+    @TableField(exist = false)
+    private User devLead;
     private String iterationId;
     private String documentPath;
     private String documentName;

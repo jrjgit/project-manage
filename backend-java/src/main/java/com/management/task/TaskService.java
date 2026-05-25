@@ -180,6 +180,7 @@ public class TaskService {
         if (req.getTesterId() != null) task.setTesterId(req.getTesterId());
         if (req.getRequirementId() != null) task.setRequirementId(req.getRequirementId());
         if (req.getFeatureId() != null) task.setFeatureId(req.getFeatureId());
+        if (req.getTerminal() != null) task.setTerminal(req.getTerminal());
         taskMapper.insert(task);
 
         // 处理多指派人

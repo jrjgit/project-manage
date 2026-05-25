@@ -33,6 +33,8 @@ public class RequirementDetailDTO {
     private String bizTestTotal;
     private String bizTestPrice;
     private String releaseTime;
+    private Long devLeadId;
+    private Object devLead;
     private String iterationId;
     private String iterationName;
     private String documentPath;

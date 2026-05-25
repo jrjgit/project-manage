@@ -75,6 +75,14 @@ public class RequirementController {
         return Result.ok(Map.of("message", "deleted"));
     }
 
+    @PutMapping("/{id}/assign-lead")
+    @PreAuthorize("hasRole('PM')")
+    public Result<Map<String, String>> assignDevLead(@PathVariable Long id,
+                                                      @RequestBody Map<String, Long> body) {
+        requirementService.assignDevLead(id, body.get("dev_lead_id"));
+        return Result.ok(Map.of("message", "dev lead assigned"));
+    }
+
     @PutMapping("/{id}/release")
     @PreAuthorize("hasRole('PM')")
     public Result<Map<String, String>> addToRelease(@PathVariable Long id,

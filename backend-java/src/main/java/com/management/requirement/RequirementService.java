@@ -275,6 +275,8 @@ public class RequirementService {
         dto.setBizTestPrice(r.getBizTestPrice());
         dto.setReleaseTime(r.getReleaseTime() != null ? r.getReleaseTime().toString() : null);
         dto.setIterationId(r.getIterationId());
+        dto.setDevLeadId(r.getDevLeadId());
+        dto.setDevLead(r.getDevLead());
         dto.setIterationName(r.getIterationName());
         dto.setDocumentPath(r.getDocumentPath());
         dto.setDocumentName(r.getDocumentName());
@@ -284,12 +286,23 @@ public class RequirementService {
         return dto;
     }
 
+    public void assignDevLead(Long id, Long devLeadId) {
+        Requirement r = requirementMapper.selectById(id);
+        if (r == null) throw new BusinessException(404, "需求不存在");
+        r.setDevLeadId(devLeadId);
+        if ("planned".equals(r.getStatus())) {
+            r.setStatus("assigned");
+        }
+        requirementMapper.updateById(r);
+    }
+
     private void fillAssociations(Requirement r) {
         if (r.getProjectId() != null) {
             var p = projectMapper.selectById(r.getProjectId());
             if (p != null) { p.setPm(userMapper.selectById(p.getPmId())); r.setProject(p); }
         }
         if (r.getPersonId() != null) r.setPerson(userMapper.selectById(r.getPersonId()));
+        if (r.getDevLeadId() != null) r.setDevLead(userMapper.selectById(r.getDevLeadId()));
         if (r.getIterationId() != null) {
             try {
                 var it = iterationMapper.selectById(Long.parseLong(r.getIterationId()));

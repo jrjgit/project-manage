@@ -22,6 +22,7 @@ public class CreateTaskRequest {
     private String deadline;
     private Long requirementId;
     private Long featureId;
+    private String terminal;
 
     @Data
     public static class TaskAssigneeItem {

@@ -65,6 +65,22 @@
             </span>
           </div>
           <div class="hero-field">
+            <span class="hero-field-label">开发组长</span>
+            <n-select
+              v-if="editingField === 'dev_lead_id'"
+              v-model:value="req.dev_lead_id"
+              :options="devLeadOptions"
+              size="small"
+              style="width:160px"
+              @blur="saveAssignDevLead(); editingField = null"
+              @keyup.enter="saveAssignDevLead(); editingField = null"
+              autofocus
+            />
+            <span v-else class="hero-field-value" @click="startEdit('dev_lead_id')">
+              {{ req.dev_lead?.name || '点击指派' }}
+            </span>
+          </div>
+          <div class="hero-field">
             <span class="hero-field-label">发布迭代</span>
             <n-select
               v-if="editingField === 'iteration_id'"
@@ -146,11 +162,25 @@
                 <div class="feature-header">
                   <span class="feature-title">{{ f.title }}</span>
                   <n-tag :type="featureStatusTag(f.status)" size="tiny" round>{{ f.status }}</n-tag>
-                  <n-button v-if="authStore.isPM" text size="tiny" type="error" @click="handleDeleteFeature(f)">删除</n-button>
+                  <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteFeature(f)">删除</n-button>
                 </div>
-                <div class="feature-meta">
-                  <span v-if="f.developer">开发: {{ f.developer?.name }}</span>
-                  <span v-if="f.tester">测试: {{ f.tester?.name }}</span>
+                <div v-if="f.assignments?.length" class="assignment-list">
+                  <div v-for="a in f.assignments" :key="a.id" class="assignment-item">
+                    <span class="assignment-terminal">{{ a.terminal }}</span>
+                    <span class="assignment-dev">{{ a.developer?.name }}</span>
+                    <n-tag :type="a.status === 'done' ? 'success' : a.status === 'developing' ? 'warning' : 'default'" size="tiny" round>
+                      {{ a.status === 'done' ? '已完成' : a.status === 'developing' ? '开发中' : '待开始' }}
+                    </n-tag>
+                    <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteAssignment(a)">移除</n-button>
+                  </div>
+                </div>
+                <div class="feature-actions">
+                  <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" @click="openAssign(f)">
+                    <template #icon>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </template>
+                    分配开发
+                  </n-button>
                 </div>
               </div>
             </div>
@@ -384,6 +414,27 @@
       </template>
     </n-modal>
 
+    <!-- Assign Developer to Feature Modal -->
+    <n-modal v-model:show="showAssignModal" preset="card" style="width: 420px" title="分配开发人员" :mask-closable="false">
+      <n-form :model="assignForm" label-placement="top">
+        <n-form-item label="功能点">
+          <n-input :value="assigningFeature?.title" disabled />
+        </n-form-item>
+        <n-form-item label="终端" path="terminal" :rule="{ required: true, message: '请选择终端' }">
+          <n-select v-model:value="assignForm.terminal" :options="platformOptions" placeholder="选择终端" />
+        </n-form-item>
+        <n-form-item label="开发人员" path="developer_id" :rule="{ required: true, message: '请选择开发人员' }">
+          <n-select v-model:value="assignForm.developer_id" :options="devOptions" placeholder="选择开发人员" filterable />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showAssignModal = false">取消</n-button>
+          <n-button type="primary" :loading="assignLoading" :disabled="!assignForm.terminal || !assignForm.developer_id" @click="handleCreateAssignment">确定</n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
     <!-- Iteration Selector Modal -->
     <n-modal v-model:show="showIterationSelector" preset="card" style="width: 400px" title="选择发布迭代">
       <n-select
@@ -417,7 +468,11 @@ import {
   deleteRequirementDocument,
   getFeatures,
   createFeature,
-  deleteFeature
+  deleteFeature,
+  assignDevLead,
+  getFeatureAssignments,
+  createFeatureAssignment,
+  deleteFeatureAssignment
 } from '@/api/requirements'
 import { getIterations } from '@/api/iterations'
 import { requirementStatusMeta } from '@/constants/requirementMeta'
@@ -442,6 +497,23 @@ const features = ref([])
 const showCreateFeature = ref(false)
 const creatingFeature = ref(false)
 const createFeatureForm = ref({ title: '', description: '', developer_id: null, tester_id: null })
+const showAssignModal = ref(false)
+const assignLoading = ref(false)
+const assigningFeature = ref(null)
+const assignForm = ref({ terminal: null, developer_id: null })
+
+const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
+const devOptions = computed(() => users.value.filter(u => u.role === 'dev').map(u => ({ label: u.name, value: u.id })))
+const platformOptions = [
+  { label: 'iOS', value: 'iOS' },
+  { label: 'Android', value: 'Android' },
+  { label: '鸿蒙', value: '鸿蒙' },
+  { label: '小程序', value: '小程序' },
+  { label: 'H5', value: 'H5' },
+  { label: '后台', value: '后台' },
+  { label: '前端', value: '前端' },
+  { label: '其他', value: '其他' }
+]
 const showIntegrationBugs = ref(false)
 const showBusinessBugs = ref(false)
 const showIterationSelector = ref(false)
@@ -638,12 +710,65 @@ async function loadIterations() {
   } catch (e) {}
 }
 
+async function saveAssignDevLead() {
+  if (!req.value.dev_lead_id) return
+  try {
+    await assignDevLead(req.value.id, req.value.dev_lead_id)
+    window.$message?.success('开发组长已指派')
+  } catch (e) {
+    window.$message?.error('指派失败')
+  }
+}
+
+async function loadAssignments(f) {
+  try {
+    f.assignments = await getFeatureAssignments(f.id)
+  } catch (e) { f.assignments = [] }
+}
+
 async function loadFeatures() {
   const id = route.params.id
   if (!id) return
   try {
-    features.value = await getFeatures(id)
+    const data = await getFeatures(id)
+    for (const f of data) {
+      await loadAssignments(f)
+    }
+    features.value = data
   } catch (e) { console.error(e) }
+}
+
+function openAssign(f) {
+  assigningFeature.value = f
+  assignForm.value = { terminal: null, developer_id: null }
+  showAssignModal.value = true
+}
+
+async function handleCreateAssignment() {
+  if (!assignForm.value.terminal || !assignForm.value.developer_id) return
+  assignLoading.value = true
+  try {
+    await createFeatureAssignment(assigningFeature.value.id, {
+      terminal: assignForm.value.terminal,
+      developer_id: assignForm.value.developer_id
+    })
+    window.$message?.success('分配成功，任务已自动创建')
+    showAssignModal.value = false
+    await loadFeatures()
+  } catch (e) {
+    window.$message?.error('分配失败')
+  }
+  assignLoading.value = false
+}
+
+async function handleDeleteAssignment(a) {
+  try {
+    await deleteFeatureAssignment(a.id)
+    window.$message?.success('已移除分配')
+    await loadFeatures()
+  } catch (e) {
+    window.$message?.error('移除失败')
+  }
 }
 
 async function loadReq() {
@@ -1037,6 +1162,38 @@ onMounted(() => {
   gap: 12px;
   font-size: 12px;
   color: #64748b;
+}
+
+.assignment-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.assignment-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.assignment-terminal {
+  font-weight: 600;
+  color: #6366f1;
+  min-width: 40px;
+}
+
+.assignment-dev {
+  flex: 1;
+  color: #334155;
+}
+
+.feature-actions {
+  margin-top: 6px;
 }
 
 @media (max-width: 1100px) {

@@ -24,6 +24,12 @@ export const deleteRequirementDocument = (id) => request.delete(`/requirements/$
 
 // Feature APIs
 export const getFeatures = (requirementId) => request.get(`/requirements/${requirementId}/features`)
+export const assignDevLead = (id, devLeadId) => request.put(`/requirements/${id}/assign-lead`, { dev_lead_id: devLeadId })
+
+// Feature Assignment APIs
+export const getFeatureAssignments = (featureId) => request.get(`/features/${featureId}/assignments`)
+export const createFeatureAssignment = (featureId, data) => request.post(`/features/${featureId}/assignments`, data)
+export const deleteFeatureAssignment = (id) => request.delete(`/feature-assignments/${id}`)
 export const createFeature = (requirementId, data) => request.post(`/requirements/${requirementId}/features`, data)
 export const updateFeature = (id, data) => request.put(`/features/${id}`, data)
 export const changeFeatureStatus = (id, status) => request.patch(`/features/${id}/status`, { status })
