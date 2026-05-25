@@ -52,7 +52,6 @@ public class RequirementService {
                 .getAuthentication().getPrincipal();
     }
 
-    /** 创建需求，自动生成编号 */
     @Transactional
     public Requirement create(CreateRequirementRequest req) {
         Requirement r = new Requirement();
@@ -79,7 +78,11 @@ public class RequirementService {
         r.setNumber("TEMP");
         requirementMapper.insert(r);
         r.setRequirementId("REQ-" + java.time.Year.now().getValue() + "-" + String.format("%03d", r.getId()));
-        r.setNumber(r.getRequirementId());
+        if (req.getNumber() != null && !req.getNumber().isBlank()) {
+            r.setNumber(req.getNumber());
+        } else {
+            r.setNumber(r.getRequirementId());
+        }
         requirementMapper.updateById(r);
         fillAssociations(r);
         log.info("Requirement created: id={}, title={}", r.getRequirementId(), r.getTitle());

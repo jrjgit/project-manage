@@ -56,6 +56,9 @@ public class FeatureAssignmentService {
         Requirement requirement = requirementMapper.selectById(feature.getRequirementId());
         if (requirement == null) throw new BusinessException(404, "需求不存在");
 
+        feature.setStatus("pending_dev");
+        featureMapper.updateById(feature);
+
         FeatureAssignment a = new FeatureAssignment();
         a.setFeatureId(req.getFeatureId());
         a.setTerminal(req.getTerminal());

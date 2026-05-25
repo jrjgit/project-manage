@@ -99,10 +99,12 @@ public class DataInitializer implements ApplicationRunner {
             rule("requirement", "pm", "pending_release",  "released"),
             rule("requirement", "pm", "pending_release",  "business_test"),
             // === feature status rules ===
-            rule("feature", "pm",     "planned",      "developing"),
-            rule("feature", "dev",    "developing",    "pending_test"),
-            rule("feature", "tester", "pending_test", "closed"),
-            rule("feature", "pm",     "pending_test", "closed")
+            rule("feature", "pm",       "planned",      "developing"),
+            rule("feature", "dev_lead", "planned",      "pending_dev"),
+            rule("feature", "dev",      "pending_dev",  "developing"),
+            rule("feature", "dev",      "developing",   "pending_test"),
+            rule("feature", "tester",   "pending_test", "closed"),
+            rule("feature", "pm",       "pending_test", "closed")
         );
         for (WorkflowRule rule : rules) {
             workflowRuleMapper.insert(rule);

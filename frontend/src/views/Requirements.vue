@@ -89,6 +89,9 @@
     <!-- Create Modal -->
     <n-modal v-model:show="showCreateModal" preset="card" style="width: 560px" title="创建需求" :mask-closable="false">
       <n-form :model="createForm" label-placement="top">
+        <n-form-item label="需求编号">
+          <n-input v-model:value="createForm.number" placeholder="留空则自动生成" />
+        </n-form-item>
         <n-form-item label="需求标题" path="title" :rule="{ required: true, message: '请输入需求标题' }">
           <n-input v-model:value="createForm.title" placeholder="输入需求标题" />
         </n-form-item>
@@ -158,7 +161,8 @@ const createForm = ref({
   person_id: null,
   system: null,
   priority: 'medium',
-  source: 'internal'
+  source: 'internal',
+  number: ''
 })
 
 const filterSystem = ref(null)
@@ -212,13 +216,13 @@ const filteredProjectRequirements = computed(() => {
 const columns = [
   {
     title: '需求编号',
-    key: 'id',
-    width: 100,
+    key: 'number',
+    width: 140,
     render(row) {
       return h('a', {
         style: { color: '#6366f1', cursor: 'pointer', fontWeight: '600', textDecoration: 'none' },
         onClick: () => router.push(`/requirements/${row.id}`)
-      }, `REQ-${String(row.id).padStart(4, '0')}`)
+      }, row.number || `REQ-${String(row.id).padStart(4, '0')}`)
     }
   },
   {
@@ -354,15 +358,16 @@ async function handleCreate() {
     await createRequirement(createForm.value)
     window.$message?.success('创建成功')
     showCreateModal.value = false
-    createForm.value = {
-      title: '',
-      project_type: 'ops',
-      project_id: null,
-      person_id: null,
-      system: null,
-      priority: 'medium',
-      source: 'internal'
-    }
+      createForm.value = {
+        title: '',
+        project_type: 'ops',
+        project_id: null,
+        person_id: null,
+        system: null,
+        priority: 'medium',
+        source: 'internal',
+        number: ''
+      }
     await loadData()
   } catch (e) {
     window.$message?.error('创建失败')

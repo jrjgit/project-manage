@@ -6,7 +6,6 @@ import lombok.Data;
 
 @Data
 public class CreateFeatureAssignmentRequest {
-    @NotNull
     private Long featureId;
     @NotBlank
     private String terminal;

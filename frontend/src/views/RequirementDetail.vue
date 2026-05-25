@@ -16,7 +16,7 @@
       <!-- Hero Card -->
       <section class="hero-card">
         <div class="hero-left">
-          <div class="hero-eyebrow">REQ-{{ String(req.id || '').padStart(4, '0') }}</div>
+          <div class="hero-eyebrow">{{ req.number || `REQ-${String(req.id || '').padStart(4, '0')}` }}</div>
           <h2 class="hero-title">{{ req.title }}</h2>
           <div class="hero-tags">
             <n-tag :type="statusMeta?.tone || 'default'" size="small" round>
@@ -118,20 +118,6 @@
             />
           </section>
 
-          <!-- Relevant / 需求方案 -->
-          <section class="section-card">
-            <div class="section-header">
-              <h3>需求方案</h3>
-            </div>
-            <n-input
-              v-model:value="localRelevant"
-              type="textarea"
-              :autosize="{ minRows: 3, maxRows: 8 }"
-              placeholder="添加需求方案..."
-              @blur="saveRelevant"
-            />
-          </section>
-
           <!-- Notes -->
           <section class="section-card">
             <div class="section-header">
@@ -161,7 +147,7 @@
               <div v-for="f in features" :key="f.id" class="feature-item">
                 <div class="feature-header">
                   <span class="feature-title">{{ f.title }}</span>
-                  <n-tag :type="featureStatusTag(f.status)" size="tiny" round>{{ f.status }}</n-tag>
+                  <n-tag :type="featureStatusTag(f.status)" size="tiny" round>{{ featureStatusLabel[f.status] || f.status }}</n-tag>
                   <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteFeature(f)">删除</n-button>
                 </div>
                 <div v-if="f.assignments?.length" class="assignment-list">
@@ -175,7 +161,7 @@
                   </div>
                 </div>
                 <div class="feature-actions">
-                  <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" @click="openAssign(f)">
+                  <n-button v-if="authStore.isDevLead" text size="tiny" @click="openAssign(f)">
                     <template #icon>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </template>
@@ -490,7 +476,6 @@ const iterations = ref([])
 const editingField = ref(null)
 const localDescription = ref('')
 const localNotes = ref('')
-const localRelevant = ref('')
 
 const expandedTerminal = ref(null)
 const features = ref([])
@@ -599,16 +584,6 @@ async function saveNotes() {
     req.value.notes = localNotes.value
   } catch (e) {
     window.$message?.error('保存备注失败')
-  }
-}
-
-async function saveRelevant() {
-  if (localRelevant.value === req.value.relevant) return
-  try {
-    await updateRequirement(req.value.id, { relevant: localRelevant.value })
-    req.value.relevant = localRelevant.value
-  } catch (e) {
-    window.$message?.error('保存需求方案失败')
   }
 }
 
@@ -779,15 +754,20 @@ async function loadReq() {
     req.value = data
     localDescription.value = data.description || ''
     localNotes.value = data.notes || ''
-    localRelevant.value = data.relevant || ''
     await loadFeatures()
   } catch (e) {
     window.$message?.error('加载需求详情失败')
   }
 }
 
+const featureStatusLabel = {
+  planned: '已计划', locked: '已锁定', developing: '开发中',
+  developed: '已开发', pending_test: '待测试', closed: '已关闭',
+  pending_dev: '待开发'
+}
+
 function featureStatusTag(status) {
-  const map = { planned: 'default', locked: 'info', developing: 'warning', developed: 'success' }
+  const map = { planned: 'default', locked: 'info', developing: 'warning', developed: 'success', pending_dev: 'info' }
   return map[status] || 'default'
 }
 

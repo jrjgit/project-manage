@@ -23,4 +23,5 @@ public class CreateRequirementRequest {
     private String bizTestTotal;
     private String bizTestPrice;
     private String iterationId;
+    private String number;
 }
