@@ -45,6 +45,10 @@ public class Task {
     private LocalDateTime deadline;
     private Long requirementId;
     private Long featureId;
+    @TableField(exist = false)
+    private String requirementName;
+    @TableField(exist = false)
+    private String featureName;
     private String terminal;
     private Integer progress;
     private String performance;

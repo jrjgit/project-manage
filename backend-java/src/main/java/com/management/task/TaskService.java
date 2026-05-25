@@ -8,6 +8,10 @@ import com.management.common.notification.NotificationService;
 import com.management.common.workflow.WorkflowService;
 import com.management.project.entity.Project;
 import com.management.project.mapper.ProjectMapper;
+import com.management.requirement.entity.Feature;
+import com.management.requirement.entity.Requirement;
+import com.management.requirement.mapper.FeatureMapper;
+import com.management.requirement.mapper.RequirementMapper;
 import com.management.task.dto.*;
 import com.management.task.entity.*;
 import com.management.task.mapper.*;
@@ -36,6 +40,8 @@ public class TaskService {
     private final ProjectMapper projectMapper;
     private final WorkflowService workflowService;
     private final NotificationService notificationService;
+    private final RequirementMapper requirementMapper;
+    private final FeatureMapper featureMapper;
 
     /** 获取当前用户 */
     public JwtUserDetails currentUser() {
@@ -129,6 +135,14 @@ public class TaskService {
         if (t.getDevLeadId() != null) t.setDevLead(userMapper.selectById(t.getDevLeadId()));
         if (t.getTesterLeadId() != null) t.setTesterLead(userMapper.selectById(t.getTesterLeadId()));
         if (t.getTesterId() != null) t.setTester(userMapper.selectById(t.getTesterId()));
+        if (t.getRequirementId() != null) {
+            Requirement req = requirementMapper.selectById(t.getRequirementId());
+            if (req != null) t.setRequirementName(req.getTitle());
+        }
+        if (t.getFeatureId() != null) {
+            Feature f = featureMapper.selectById(t.getFeatureId());
+            if (f != null) t.setFeatureName(f.getTitle());
+        }
     }
 
     /** Task 详情 DTO */
@@ -164,6 +178,8 @@ public class TaskService {
         task.setDeadline(deadline);
         if (req.getAssigneeId() != null) task.setAssigneeId(req.getAssigneeId());
         if (req.getTesterId() != null) task.setTesterId(req.getTesterId());
+        if (req.getRequirementId() != null) task.setRequirementId(req.getRequirementId());
+        if (req.getFeatureId() != null) task.setFeatureId(req.getFeatureId());
         taskMapper.insert(task);
 
         // 处理多指派人
@@ -220,6 +236,8 @@ public class TaskService {
         if (req.getAssigneeId() != null) task.setAssigneeId(req.getAssigneeId());
         if (req.getTesterLeadId() != null) task.setTesterLeadId(req.getTesterLeadId());
         if (req.getTesterId() != null) task.setTesterId(req.getTesterId());
+        if (req.getRequirementId() != null) task.setRequirementId(req.getRequirementId());
+        if (req.getFeatureId() != null) task.setFeatureId(req.getFeatureId());
         if (req.getDeadline() != null && !req.getDeadline().isBlank()) {
             String d = req.getDeadline().trim();
             if (d.contains("T")) {

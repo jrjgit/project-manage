@@ -3,6 +3,7 @@ package com.management.requirement;
 import com.management.common.result.Result;
 import com.management.requirement.dto.CreateRequirementRequest;
 import com.management.requirement.dto.UpdateRequirementRequest;
+import com.management.requirement.dto.RequirementDetailDTO;
 import com.management.requirement.entity.Requirement;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -48,8 +49,8 @@ public class RequirementController {
     }
 
     @GetMapping("/{id}")
-    public Result<Requirement> get(@PathVariable Long id) {
-        return Result.ok(requirementService.getById(id));
+    public Result<RequirementDetailDTO> get(@PathVariable Long id) {
+        return Result.ok(requirementService.getDetail(id));
     }
 
     @PutMapping("/{id}")

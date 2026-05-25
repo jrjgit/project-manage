@@ -31,6 +31,12 @@
       <n-form-item label="指派测试" path="tester_id">
         <n-select v-model:value="form.tester_id" :options="testerOptions" placeholder="可选，指定测试人员" clearable />
       </n-form-item>
+      <n-form-item label="所属需求">
+        <n-select v-model:value="form.requirement_id" :options="requirementOptions" placeholder="可选，关联需求" clearable filterable @update:value="onRequirementChange" />
+      </n-form-item>
+      <n-form-item label="所属功能点">
+        <n-select v-model:value="form.feature_id" :options="featureOptions" placeholder="可选，关联功能点" clearable filterable :disabled="!form.requirement_id" />
+      </n-form-item>
       <n-form-item label="优先级" path="priority">
         <n-select v-model:value="form.priority" :options="priorityOptions" />
       </n-form-item>
@@ -51,6 +57,7 @@ import { createTask } from '@/api/tasks'
 import { getProjects } from '@/api/projects'
 import { getUsers } from '@/api/users'
 import { getGroup } from '@/api/groups'
+import { getRequirements, getFeatures } from '@/api/requirements'
 import { NModal, NForm, NFormItem, NInput, NSelect, NDatePicker, NButton } from 'naive-ui'
 
 const show = defineModel('show', { type: Boolean, default: false })
@@ -62,6 +69,8 @@ const projects = ref([])
 const users = ref([])
 
 const assigneeOptions = ref([])
+const requirements = ref([])
+const features = ref([])
 
 const form = ref({
   title: '',
@@ -71,7 +80,9 @@ const form = ref({
   assignees: [],
   tester_id: null,
   priority: 'medium',
-  deadline: null
+  deadline: null,
+  requirement_id: null,
+  feature_id: null
 })
 
 const rules = {
@@ -82,6 +93,8 @@ const rules = {
 
 const projectOptions = computed(() => projects.value.map(p => ({ label: p.name, value: p.id })))
 const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
+const requirementOptions = computed(() => requirements.value.map(r => ({ label: `REQ-${String(r.id).padStart(4, '0')} ${r.title}`, value: r.id })))
+const featureOptions = computed(() => features.value.map(f => ({ label: f.title, value: f.id })))
 const testerOptions = computed(() => users.value.filter(u => u.role === 'tester').map(u => ({ label: u.name, value: u.id })))
 const priorityOptions = [
   { label: '低', value: 'low' },
@@ -112,13 +125,27 @@ function removeAssigneeRow(idx) {
   form.value.assignees.splice(idx, 1)
 }
 
+async function onRequirementChange(reqId) {
+  form.value.feature_id = null
+  features.value = []
+  if (!reqId) return
+  try {
+    features.value = await getFeatures(reqId)
+  } catch (e) { console.error(e) }
+}
+
 watch(show, async (val) => {
   if (val) {
-    form.value = { title: '', description: '', project_id: null, dev_lead_id: null, assignees: [], tester_id: null, priority: 'medium', deadline: null }
+    form.value = { title: '', description: '', project_id: null, dev_lead_id: null, assignees: [], tester_id: null, priority: 'medium', deadline: null, requirement_id: null, feature_id: null }
+    features.value = []
     assigneeOptions.value = []
     try {
-      projects.value = await getProjects()
-      users.value = await getUsers()
+      const [projRes, userRes, reqRes] = await Promise.all([
+        getProjects(), getUsers(), getRequirements()
+      ])
+      projects.value = projRes
+      users.value = userRes
+      requirements.value = reqRes || []
     } catch (e) { console.error(e) }
   }
 })
@@ -154,6 +181,8 @@ async function submit() {
     payload.assignees = (payload.assignees || []).filter(r => r.user_id)
     if (payload.assignees.length === 0) delete payload.assignees
     if (!payload.tester_id) delete payload.tester_id
+    if (!payload.requirement_id) { delete payload.requirement_id; delete payload.feature_id }
+    if (!payload.feature_id) delete payload.feature_id
     await createTask(payload)
     window.$message.success('创建成功')
     show.value = false

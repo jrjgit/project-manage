@@ -32,6 +32,7 @@ public class Bug {
     private String reopenReason;
     private Long requirementId;
     private Long developerId;
+    private String testType;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

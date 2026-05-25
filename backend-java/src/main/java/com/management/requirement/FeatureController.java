@@ -2,6 +2,7 @@ package com.management.requirement;
 
 import com.management.common.result.Result;
 import com.management.requirement.dto.CreateFeatureRequest;
+import com.management.requirement.dto.FeatureDetailDTO;
 import com.management.requirement.dto.UpdateFeatureRequest;
 import com.management.requirement.entity.Feature;
 import jakarta.validation.Valid;
@@ -29,6 +30,11 @@ public class FeatureController {
     public Result<Feature> create(@PathVariable Long requirementId,
                                    @Valid @RequestBody CreateFeatureRequest req) {
         return Result.ok(featureService.create(requirementId, req));
+    }
+
+    @GetMapping("/api/features/{id}")
+    public Result<FeatureDetailDTO> get(@PathVariable Long id) {
+        return Result.ok(featureService.getDetail(id));
     }
 
     @PutMapping("/api/features/{id}")

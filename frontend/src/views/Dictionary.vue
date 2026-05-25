@@ -208,7 +208,14 @@ async function handleDelete() {
 
 async function loadData() {
   try {
-    allData.value = await getDictionaries(filterType.value)
+    const res = await getDictionaries(filterType.value)
+    allData.value = (res || []).map(item => ({
+      id: item.id,
+      dictType: item.dict_type,
+      dictKey: item.dict_key,
+      dictValue: item.dict_value,
+      sortOrder: item.sort_order
+    }))
   } catch (e) {
     window.$message?.error('加载字典数据失败')
   }

@@ -83,6 +83,8 @@
             <div class="section-title">任务摘要</div>
             <div class="info-list">
               <div class="info-item"><span>项目</span><strong>{{ task.project?.name || '-' }}</strong></div>
+              <div class="info-item"><span>所属需求</span><strong>{{ task.requirement_name || '-' }}</strong></div>
+              <div class="info-item"><span>所属功能点</span><strong>{{ task.feature_name || '-' }}</strong></div>
               <div class="info-item"><span>创建人</span><strong>{{ task.creator?.name || '-' }}</strong></div>
               <div class="info-item"><span>开发组长</span><strong>{{ task.dev_lead?.name || '-' }}</strong></div>
               <div class="info-item">

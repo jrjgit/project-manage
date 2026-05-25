@@ -1,14 +1,19 @@
 package com.management.requirement;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.management.bug.entity.Bug;
+import com.management.bug.mapper.BugMapper;
 import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
 import com.management.iteration.mapper.IterationMapper;
 import com.management.project.mapper.ProjectMapper;
 import com.management.requirement.dto.CreateRequirementRequest;
+import com.management.requirement.dto.RequirementDetailDTO;
 import com.management.requirement.dto.UpdateRequirementRequest;
 import com.management.requirement.entity.Requirement;
 import com.management.requirement.mapper.RequirementMapper;
+import com.management.task.entity.Task;
+import com.management.task.mapper.TaskMapper;
 import com.management.user.mapper.UserMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +41,8 @@ public class RequirementService {
     private final UserMapper userMapper;
     private final ProjectMapper projectMapper;
     private final IterationMapper iterationMapper;
+    private final TaskMapper taskMapper;
+    private final BugMapper bugMapper;
 
     @Value("${app.upload-dir:./uploads}")
     private String uploadDir;
@@ -87,7 +94,7 @@ public class RequirementService {
         if (source != null && !source.isBlank()) q.eq(Requirement::getSource, source);
         q.orderByDesc(Requirement::getUpdatedAt);
         List<Requirement> list = requirementMapper.selectList(q);
-        for (Requirement r : list) fillAssociations(r);
+        for (Requirement r : list) { fillAssociations(r); fillProgress(r); }
         return list;
     }
 
@@ -97,7 +104,7 @@ public class RequirementService {
                         .eq(Requirement::getProjectType, "ops")
                         .ne(Requirement::getStatus, "released")
                         .orderByDesc(Requirement::getUpdatedAt));
-        for (Requirement r : list) fillAssociations(r);
+        for (Requirement r : list) { fillAssociations(r); fillProgress(r); }
         return list;
     }
 
@@ -107,15 +114,62 @@ public class RequirementService {
                         .eq(Requirement::getProjectType, "project")
                         .ne(Requirement::getStatus, "released")
                         .orderByDesc(Requirement::getUpdatedAt));
-        for (Requirement r : list) fillAssociations(r);
+        for (Requirement r : list) { fillAssociations(r); fillProgress(r); }
         return list;
     }
 
-    public Requirement getById(Long id) {
+    public RequirementDetailDTO getDetail(Long id) {
         Requirement r = requirementMapper.selectById(id);
         if (r == null) throw new BusinessException(404, "需求不存在");
         fillAssociations(r);
-        return r;
+
+        RequirementDetailDTO dto = toDetailDTO(r);
+
+        // compute dev progress by terminal
+        List<Task> tasks = taskMapper.selectList(
+                new LambdaQueryWrapper<Task>().eq(Task::getRequirementId, id));
+        java.util.Map<String, java.util.List<Task>> byTerminal = tasks.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        t -> t.getTerminal() != null ? t.getTerminal() : "其他"));
+        RequirementDetailDTO.DevProgress dp = new RequirementDetailDTO.DevProgress();
+        java.util.List<RequirementDetailDTO.TerminalProgress> terminals = new java.util.ArrayList<>();
+        for (var entry : byTerminal.entrySet()) {
+            RequirementDetailDTO.TerminalProgress tp = new RequirementDetailDTO.TerminalProgress();
+            tp.setTerminal(entry.getKey());
+            java.util.List<Task> tl = entry.getValue();
+            tp.setTotal(tl.size());
+            long done = tl.stream().filter(t -> "closed".equals(t.getStatus()) || "passed".equals(t.getStatus())).count();
+            tp.setDone(done);
+            int avgProgress = (int) Math.round(tl.stream().mapToInt(t -> t.getProgress() != null ? t.getProgress() : 0).average().orElse(0));
+            tp.setProgress(avgProgress);
+            long overdue = tl.stream().filter(t -> t.getDeadline() != null
+                    && t.getDeadline().isBefore(java.time.LocalDateTime.now())
+                    && !"closed".equals(t.getStatus()) && !"passed".equals(t.getStatus())).count();
+            tp.setOverdueDays(overdue);
+            java.util.List<RequirementDetailDTO.TaskBrief> briefs = tl.stream().map(t -> {
+                RequirementDetailDTO.TaskBrief b = new RequirementDetailDTO.TaskBrief();
+                b.setId(t.getId());
+                b.setTitle(t.getTitle());
+                b.setStatus(t.getStatus());
+                return b;
+            }).collect(java.util.stream.Collectors.toList());
+            tp.setTasks(briefs);
+            terminals.add(tp);
+        }
+        dp.setTerminals(terminals);
+        dto.setDevProgress(dp);
+
+        // bugs
+        dto.setIntegrationTestBugs(bugMapper.selectList(
+                new LambdaQueryWrapper<Bug>()
+                        .eq(Bug::getRequirementId, id)
+                        .eq(Bug::getTestType, "integration")));
+        dto.setBusinessTestBugs(bugMapper.selectList(
+                new LambdaQueryWrapper<Bug>()
+                        .eq(Bug::getRequirementId, id)
+                        .eq(Bug::getTestType, "business")));
+
+        return dto;
     }
 
     public Requirement update(Long id, UpdateRequirementRequest req) {
@@ -172,6 +226,62 @@ public class RequirementService {
             r.setStatus("business_test");
         }
         requirementMapper.updateById(r);
+    }
+
+    private void fillProgress(Requirement r) {
+        List<Task> tasks = taskMapper.selectList(
+                new LambdaQueryWrapper<Task>().eq(Task::getRequirementId, r.getId()));
+        int avgProgress = (int) Math.round(tasks.stream()
+                .mapToInt(t -> t.getProgress() != null ? t.getProgress() : 0).average().orElse(0));
+        r.setDevProgress(avgProgress);
+
+        long integrationTotal = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
+                .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "integration"));
+        long integrationClosed = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
+                .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "integration").eq(Bug::getStatus, "closed"));
+        r.setIntegrationTestProgress(integrationTotal > 0 ? (int) (integrationClosed * 100 / integrationTotal) : 0);
+
+        long businessTotal = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
+                .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "business"));
+        long businessClosed = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
+                .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "business").eq(Bug::getStatus, "closed"));
+        r.setBusinessTestProgress(businessTotal > 0 ? (int) (businessClosed * 100 / businessTotal) : 0);
+    }
+
+    private RequirementDetailDTO toDetailDTO(Requirement r) {
+        RequirementDetailDTO dto = new RequirementDetailDTO();
+        dto.setId(r.getId());
+        dto.setRequirementId(r.getRequirementId());
+        dto.setNumber(r.getNumber());
+        dto.setTitle(r.getTitle());
+        dto.setDescription(r.getDescription());
+        dto.setNotes(r.getNotes());
+        dto.setSource(r.getSource());
+        dto.setStatus(r.getStatus());
+        dto.setPriority(r.getPriority());
+        dto.setSystem(r.getSystem());
+        dto.setProjectId(r.getProjectId());
+        dto.setProject(r.getProject());
+        dto.setProjectType(r.getProjectType());
+        dto.setPersonId(r.getPersonId());
+        dto.setPerson(r.getPerson());
+        dto.setRelevant(r.getRelevant());
+        dto.setTotalAmount(r.getTotalAmount());
+        dto.setDevTotal(r.getDevTotal());
+        dto.setDevPrice(r.getDevPrice());
+        dto.setTestTotal(r.getTestTotal());
+        dto.setTestPrice(r.getTestPrice());
+        dto.setBizTestTotal(r.getBizTestTotal());
+        dto.setBizTestPrice(r.getBizTestPrice());
+        dto.setReleaseTime(r.getReleaseTime() != null ? r.getReleaseTime().toString() : null);
+        dto.setIterationId(r.getIterationId());
+        dto.setIterationName(r.getIterationName());
+        dto.setDocumentPath(r.getDocumentPath());
+        dto.setDocumentName(r.getDocumentName());
+        dto.setDocumentSize(r.getDocumentSize());
+        dto.setCreatedAt(r.getCreatedAt() != null ? r.getCreatedAt().toString() : null);
+        dto.setUpdatedAt(r.getUpdatedAt() != null ? r.getUpdatedAt().toString() : null);
+        return dto;
     }
 
     private void fillAssociations(Requirement r) {

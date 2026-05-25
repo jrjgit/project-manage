@@ -13,4 +13,6 @@ public class UpdateTaskRequest {
     private Long testerLeadId;
     private Long testerId;
     private String deadline;
+    private Long requirementId;
+    private Long featureId;
 }

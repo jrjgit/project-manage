@@ -130,6 +130,33 @@
             />
           </section>
 
+          <!-- Features -->
+          <section class="section-card">
+            <div class="section-header">
+              <h3>功能点 ({{ features.length }})</h3>
+              <n-button v-if="authStore.isPM" size="tiny" text @click="showCreateFeature = true">
+                <template #icon>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </template>
+                新增
+              </n-button>
+            </div>
+            <div v-if="features.length > 0" class="feature-list">
+              <div v-for="f in features" :key="f.id" class="feature-item">
+                <div class="feature-header">
+                  <span class="feature-title">{{ f.title }}</span>
+                  <n-tag :type="featureStatusTag(f.status)" size="tiny" round>{{ f.status }}</n-tag>
+                  <n-button v-if="authStore.isPM" text size="tiny" type="error" @click="handleDeleteFeature(f)">删除</n-button>
+                </div>
+                <div class="feature-meta">
+                  <span v-if="f.developer">开发: {{ f.developer?.name }}</span>
+                  <span v-if="f.tester">测试: {{ f.tester?.name }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-else class="empty-state">暂无功能点</div>
+          </section>
+
           <!-- Document -->
           <section class="section-card">
             <div class="section-header">
@@ -333,6 +360,30 @@
       </section>
     </div>
 
+    <!-- Create Feature Modal -->
+    <n-modal v-model:show="showCreateFeature" preset="card" style="width: 480px" title="新增功能点" :mask-closable="false">
+      <n-form :model="createFeatureForm" label-placement="top">
+        <n-form-item label="功能点名称" path="title" :rule="{ required: true, message: '请输入功能点名称' }">
+          <n-input v-model:value="createFeatureForm.title" placeholder="输入功能点名称" />
+        </n-form-item>
+        <n-form-item label="描述">
+          <n-input v-model:value="createFeatureForm.description" type="textarea" placeholder="功能点描述" />
+        </n-form-item>
+        <n-form-item label="开发负责人">
+          <n-select v-model:value="createFeatureForm.developer_id" :options="userOptions" placeholder="选择开发负责人" clearable filterable />
+        </n-form-item>
+        <n-form-item label="测试负责人">
+          <n-select v-model:value="createFeatureForm.tester_id" :options="userOptions" placeholder="选择测试负责人" clearable filterable />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showCreateFeature = false">取消</n-button>
+          <n-button type="primary" :loading="creatingFeature" :disabled="!createFeatureForm.title.trim()" @click="handleCreateFeature">确定</n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
     <!-- Iteration Selector Modal -->
     <n-modal v-model:show="showIterationSelector" preset="card" style="width: 400px" title="选择发布迭代">
       <n-select
@@ -363,13 +414,16 @@ import {
   removeFromRelease,
   uploadRequirementDocument,
   downloadRequirementDocument,
-  deleteRequirementDocument
+  deleteRequirementDocument,
+  getFeatures,
+  createFeature,
+  deleteFeature
 } from '@/api/requirements'
 import { getIterations } from '@/api/iterations'
 import { requirementStatusMeta } from '@/constants/requirementMeta'
 import { priorityMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
-import { NButton, NModal, NInput, NSelect, NSpace, NTag, NProgress, NUpload } from 'naive-ui'
+import { NButton, NModal, NInput, NSelect, NSpace, NTag, NProgress, NUpload, NForm, NFormItem } from 'naive-ui'
 
 const route = useRoute()
 const router = useRouter()
@@ -384,6 +438,10 @@ const localNotes = ref('')
 const localRelevant = ref('')
 
 const expandedTerminal = ref(null)
+const features = ref([])
+const showCreateFeature = ref(false)
+const creatingFeature = ref(false)
+const createFeatureForm = ref({ title: '', description: '', developer_id: null, tester_id: null })
 const showIntegrationBugs = ref(false)
 const showBusinessBugs = ref(false)
 const showIterationSelector = ref(false)
@@ -580,6 +638,14 @@ async function loadIterations() {
   } catch (e) {}
 }
 
+async function loadFeatures() {
+  const id = route.params.id
+  if (!id) return
+  try {
+    features.value = await getFeatures(id)
+  } catch (e) { console.error(e) }
+}
+
 async function loadReq() {
   const id = route.params.id
   if (!id) return
@@ -589,8 +655,42 @@ async function loadReq() {
     localDescription.value = data.description || ''
     localNotes.value = data.notes || ''
     localRelevant.value = data.relevant || ''
+    await loadFeatures()
   } catch (e) {
     window.$message?.error('加载需求详情失败')
+  }
+}
+
+function featureStatusTag(status) {
+  const map = { planned: 'default', locked: 'info', developing: 'warning', developed: 'success' }
+  return map[status] || 'default'
+}
+
+async function handleCreateFeature() {
+  if (!createFeatureForm.value.title.trim()) {
+    window.$message?.warning('请输入功能点名称')
+    return
+  }
+  creatingFeature.value = true
+  try {
+    await createFeature(route.params.id, createFeatureForm.value)
+    window.$message?.success('功能点已创建')
+    showCreateFeature.value = false
+    createFeatureForm.value = { title: '', description: '', developer_id: null, tester_id: null }
+    await loadFeatures()
+  } catch (e) {
+    window.$message?.error('创建失败')
+  }
+  creatingFeature.value = false
+}
+
+async function handleDeleteFeature(f) {
+  try {
+    await deleteFeature(f.id)
+    window.$message?.success('功能点已删除')
+    await loadFeatures()
+  } catch (e) {
+    window.$message?.error('删除失败')
   }
 }
 
@@ -716,6 +816,9 @@ onMounted(() => {
 
 .section-header {
   margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .section-header h3 {
@@ -899,6 +1002,41 @@ onMounted(() => {
   font-size: 12px;
   color: #94a3b8;
   white-space: nowrap;
+}
+
+/* Feature List */
+.feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feature-item {
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+}
+
+.feature-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feature-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  flex: 1;
+}
+
+.feature-meta {
+  margin-top: 6px;
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #64748b;
 }
 
 @media (max-width: 1100px) {

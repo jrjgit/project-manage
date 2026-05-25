@@ -50,4 +50,10 @@ public class Requirement {
 
     @TableField(exist = false)
     private String iterationName;
+    @TableField(exist = false)
+    private Integer devProgress;
+    @TableField(exist = false)
+    private Integer integrationTestProgress;
+    @TableField(exist = false)
+    private Integer businessTestProgress;
 }

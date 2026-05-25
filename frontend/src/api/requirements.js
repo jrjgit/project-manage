@@ -21,3 +21,10 @@ export const uploadRequirementDocument = (id, file) => {
 }
 export const downloadRequirementDocument = (id) => request.get(`/requirements/${id}/document`, { responseType: 'blob' })
 export const deleteRequirementDocument = (id) => request.delete(`/requirements/${id}/document`)
+
+// Feature APIs
+export const getFeatures = (requirementId) => request.get(`/requirements/${requirementId}/features`)
+export const createFeature = (requirementId, data) => request.post(`/requirements/${requirementId}/features`, data)
+export const updateFeature = (id, data) => request.put(`/features/${id}`, data)
+export const changeFeatureStatus = (id, status) => request.patch(`/features/${id}/status`, { status })
+export const deleteFeature = (id) => request.delete(`/features/${id}`)
