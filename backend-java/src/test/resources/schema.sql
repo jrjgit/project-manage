@@ -20,9 +20,7 @@ CREATE TABLE IF NOT EXISTS projects (
     hr_scope TEXT,
     pm_id BIGINT NOT NULL,
     created_by BIGINT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (pm_id) REFERENCES users(id),
-    FOREIGN KEY (created_by) REFERENCES users(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS tasks (
@@ -40,9 +38,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     reject_reason TEXT,
     deadline TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (project_id) REFERENCES projects(id),
-    FOREIGN KEY (creator_id) REFERENCES users(id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS task_assignees (
@@ -52,9 +48,7 @@ CREATE TABLE IF NOT EXISTS task_assignees (
     platform VARCHAR(100),
     status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (task_id) REFERENCES tasks(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS task_status_histories (
@@ -64,9 +58,7 @@ CREATE TABLE IF NOT EXISTS task_status_histories (
     to_status VARCHAR(50) NOT NULL,
     changed_by BIGINT NOT NULL,
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    comment TEXT,
-    FOREIGN KEY (task_id) REFERENCES tasks(id),
-    FOREIGN KEY (changed_by) REFERENCES users(id)
+    comment TEXT
 );
 
 CREATE TABLE IF NOT EXISTS bugs (
@@ -81,9 +73,7 @@ CREATE TABLE IF NOT EXISTS bugs (
     fix_comment TEXT,
     reopen_reason TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (task_id) REFERENCES tasks(id),
-    FOREIGN KEY (creator_id) REFERENCES users(id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS bug_status_histories (
@@ -93,9 +83,7 @@ CREATE TABLE IF NOT EXISTS bug_status_histories (
     to_status VARCHAR(50) NOT NULL,
     changed_by BIGINT NOT NULL,
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    comment TEXT,
-    FOREIGN KEY (bug_id) REFERENCES bugs(id),
-    FOREIGN KEY (changed_by) REFERENCES users(id)
+    comment TEXT
 );
 
 CREATE TABLE IF NOT EXISTS groups (
@@ -104,9 +92,7 @@ CREATE TABLE IF NOT EXISTS groups (
     pm_id BIGINT NOT NULL,
     dev_lead_id BIGINT NOT NULL,
     lead_role VARCHAR(20) DEFAULT 'dev',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (pm_id) REFERENCES users(id),
-    FOREIGN KEY (dev_lead_id) REFERENCES users(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS workflow_rules (
@@ -172,8 +158,7 @@ CREATE TABLE IF NOT EXISTS iterations (
     notes TEXT,
     created_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (created_by) REFERENCES users(id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS systems (
@@ -184,8 +169,7 @@ CREATE TABLE IF NOT EXISTS systems (
     tech_contact VARCHAR(255),
     created_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (created_by) REFERENCES users(id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS dictionaries (
