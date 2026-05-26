@@ -41,6 +41,9 @@
         <n-form-item label="人力资源范围">
           <n-select v-model:value="form.hr_scope" :options="userOptions" multiple placeholder="选择人员" filterable />
         </n-form-item>
+        <n-form-item v-if="editingId" label="项目经理">
+          <n-select v-model:value="form.pm_id" :options="userOptions" placeholder="切换项目经理" filterable clearable />
+        </n-form-item>
       </n-form>
       <template #footer>
         <n-space justify="end">
@@ -68,7 +71,7 @@ const users = ref([])
 const showModal = ref(false)
 const editingId = ref(null)
 const submitting = ref(false)
-const form = ref({ name: '', code: '', project_type: null, system_scope: [], hr_scope: [] })
+const form = ref({ name: '', code: '', project_type: null, system_scope: [], hr_scope: [], pm_id: null })
 
 const projectTypeOptions = [
   { label: '邀标项目', value: 'invite_bidding' },
@@ -81,7 +84,8 @@ const columns = [
   { title: '项目名称', key: 'name', minWidth: 140 },
   { title: '项目编号', key: 'code', width: 120, render(row) { return row.code || '-' } },
   { title: '项目类型', key: 'project_type', width: 100, render(row) { return row.project_type === 'invite_bidding' ? '邀标项目' : row.project_type === 'ops' ? '应需运维' : '-' } },
-  { title: '创建人', key: 'creator', width: 100, render(row) { return row.creator?.name || row.pm?.name || '-' } },
+  { title: '项目经理', key: 'pm', width: 100, render(row) { return row.pm?.name || '-' } },
+  { title: '创建人', key: 'creator', width: 100, render(row) { return row.creator?.name || '-' } },
   { title: '创建时间', key: 'created_at', width: 160, render(row) { return row.created_at ? new Date(row.created_at).toLocaleString() : '-' } },
   {
     title: '操作', key: 'actions', width: 120,
@@ -97,7 +101,7 @@ const columns = [
 
 function openCreate() {
   editingId.value = null
-  form.value = { name: '', code: '', project_type: null, system_scope: [], hr_scope: [] }
+  form.value = { name: '', code: '', project_type: null, system_scope: [], hr_scope: [], pm_id: null }
   showModal.value = true
 }
 
@@ -108,7 +112,8 @@ function openEdit(row) {
     code: row.code || '',
     project_type: row.project_type || null,
     system_scope: row.system_scope ? row.system_scope.split(',').map(Number) : [],
-    hr_scope: row.hr_scope ? row.hr_scope.split(',').map(Number) : []
+    hr_scope: row.hr_scope ? row.hr_scope.split(',').map(Number) : [],
+    pm_id: row.pm_id || null
   }
   showModal.value = true
 }
@@ -122,7 +127,8 @@ async function submit() {
       code: form.value.code || null,
       project_type: form.value.project_type,
       system_scope: form.value.system_scope.length ? form.value.system_scope : null,
-      hr_scope: form.value.hr_scope.length ? form.value.hr_scope : null
+      hr_scope: form.value.hr_scope.length ? form.value.hr_scope : null,
+      pm_id: form.value.pm_id || null
     }
     if (editingId.value) {
       await updateProject(editingId.value, payload)

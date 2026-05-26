@@ -75,6 +75,11 @@ public class ProjectService {
             project.setSystemScope(req.getSystemScope().stream().map(String::valueOf).collect(Collectors.joining(",")));
         if (req.getHrScope() != null)
             project.setHrScope(req.getHrScope().stream().map(String::valueOf).collect(Collectors.joining(",")));
+        if (req.getPmId() != null) {
+            if (userMapper.selectById(req.getPmId()) == null)
+                throw new BusinessException(400, "项目经理不存在");
+            project.setPmId(req.getPmId());
+        }
         projectMapper.updateById(project);
     }
 

@@ -11,4 +11,5 @@ public class UpdateProjectRequest {
     private String projectType;
     private List<Long> systemScope;
     private List<Long> hrScope;
+    private Long pmId;
 }
