@@ -1,23 +1,19 @@
 package com.management.user;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
-import com.management.group.entity.Group;
-import com.management.group.mapper.GroupMapper;
-import com.management.iteration.entity.Iteration;
-import com.management.iteration.mapper.IterationMapper;
-import com.management.project.entity.Project;
-import com.management.project.mapper.ProjectMapper;
-import com.management.system.entity.SystemInfo;
-import com.management.system.mapper.SystemInfoMapper;
 import com.management.user.entity.User;
 import com.management.user.mapper.UserMapper;
+import com.management.project.entity.Project;
+import com.management.project.mapper.ProjectMapper;
+import com.management.task.entity.Task;
+import com.management.task.mapper.TaskMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -25,9 +21,7 @@ import java.util.List;
 public class UserService {
     private final UserMapper userMapper;
     private final ProjectMapper projectMapper;
-    private final IterationMapper iterationMapper;
-    private final SystemInfoMapper systemInfoMapper;
-    private final GroupMapper groupMapper;
+    private final TaskMapper taskMapper;
 
     public JwtUserDetails currentUser() {
         return (JwtUserDetails) SecurityContextHolder.getContext()
@@ -72,18 +66,34 @@ public class UserService {
         if (user == null) {
             throw new BusinessException(404, "user not found");
         }
-        projectMapper.update(null, new LambdaUpdateWrapper<Project>()
-                .eq(Project::getPmId, id).set(Project::getPmId, null));
-        projectMapper.update(null, new LambdaUpdateWrapper<Project>()
-                .eq(Project::getCreatedBy, id).set(Project::getCreatedBy, null));
-        iterationMapper.update(null, new LambdaUpdateWrapper<Iteration>()
-                .eq(Iteration::getCreatedBy, id).set(Iteration::getCreatedBy, null));
-        systemInfoMapper.update(null, new LambdaUpdateWrapper<SystemInfo>()
-                .eq(SystemInfo::getCreatedBy, id).set(SystemInfo::getCreatedBy, null));
-        groupMapper.update(null, new LambdaUpdateWrapper<Group>()
-                .eq(Group::getPmId, id).set(Group::getPmId, null));
-        groupMapper.update(null, new LambdaUpdateWrapper<Group>()
-                .eq(Group::getDevLeadId, id).set(Group::getDevLeadId, null));
+
+        List<String> refs = new ArrayList<>();
+
+        long projectCount = projectMapper.selectCount(
+                new LambdaQueryWrapper<Project>().eq(Project::getPmId, id));
+        if (projectCount > 0) refs.add(projectCount + " 个项目(作为项目经理)");
+
+        long taskAsCreator = taskMapper.selectCount(
+                new LambdaQueryWrapper<Task>().eq(Task::getCreatorId, id));
+        if (taskAsCreator > 0) refs.add(taskAsCreator + " 个任务(作为创建人)");
+
+        long taskAsAssignee = taskMapper.selectCount(
+                new LambdaQueryWrapper<Task>().eq(Task::getAssigneeId, id));
+        if (taskAsAssignee > 0) refs.add(taskAsAssignee + " 个任务(作为指派人)");
+
+        long taskAsDevLead = taskMapper.selectCount(
+                new LambdaQueryWrapper<Task>().eq(Task::getDevLeadId, id));
+        if (taskAsDevLead > 0) refs.add(taskAsDevLead + " 个任务(作为开发组长)");
+
+        long taskAsTester = taskMapper.selectCount(
+                new LambdaQueryWrapper<Task>().eq(Task::getTesterId, id));
+        if (taskAsTester > 0) refs.add(taskAsTester + " 个任务(作为测试人员)");
+
+        if (!refs.isEmpty()) {
+            throw new BusinessException(400,
+                    "该用户存在以下关联数据，请先解除关联后再删除：\n" + String.join("、\n", refs));
+        }
+
         userMapper.deleteById(id);
     }
 }
