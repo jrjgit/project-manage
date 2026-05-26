@@ -22,6 +22,10 @@
         >
           <component :is="item.icon" class="nav-icon" />
           <span>{{ item.label }}</span>
+          <span
+            v-if="item.badge === 'unread' && messageStore.unreadCount > 0"
+            class="nav-badge"
+          >{{ messageStore.unreadCount > 99 ? '99+' : messageStore.unreadCount }}</span>
         </router-link>
       </nav>
 
@@ -54,6 +58,33 @@
           </div>
         </div>
         <div class="top-actions">
+          <div class="bell-wrapper" ref="bellRef">
+            <button class="bell-btn" :class="{ 'has-new': messageStore.unreadCount > 0 }" @click.stop="toggleDropdown">
+              <svg class="bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              <span v-if="messageStore.unreadCount > 0" class="bell-badge">
+                {{ messageStore.unreadCount > 99 ? '99+' : messageStore.unreadCount }}
+              </span>
+            </button>
+            <div class="bell-dropdown" v-if="showDropdown">
+              <div class="dropdown-header">
+                <span>消息</span>
+                <button class="dropdown-mark-all" @click.stop="handleMarkAllRead" v-if="unreadList.length > 0">全部已读</button>
+              </div>
+              <div class="dropdown-body">
+                <div v-for="msg in unreadList" :key="msg.id" class="dropdown-item" @click.stop="handleDropdownItemClick(msg)">
+                  <div class="dropdown-item-title">{{ msg.title }}</div>
+                  <div class="dropdown-item-time">{{ formatTime(msg.createdAt) }}</div>
+                </div>
+                <div v-if="unreadList.length === 0" class="dropdown-empty">暂无未读消息</div>
+              </div>
+              <div class="dropdown-footer" v-if="messageStore.unreadCount > 0">
+                <router-link to="/messages" @click="showDropdown = false">查看全部消息</router-link>
+              </div>
+            </div>
+          </div>
           <slot name="actions" />
         </div>
       </header>
@@ -65,13 +96,87 @@
 </template>
 
 <script setup>
-import { computed, h } from 'vue'
+import { computed, h, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
+import { useMessageStore } from '@/store/useMessageStore'
+import { fetchMessages, markAllRead } from '@/api/message'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const messageStore = useMessageStore()
+
+const showDropdown = ref(false)
+const unreadList = ref([])
+const bellRef = ref(null)
+
+async function fetchUnreadList() {
+  try {
+    const res = await fetchMessages(1, 5, null, false)
+    unreadList.value = res.records || []
+  } catch {}
+}
+
+function toggleDropdown() {
+  showDropdown.value = !showDropdown.value
+  if (showDropdown.value) {
+    fetchUnreadList()
+  }
+}
+
+async function handleMarkAllRead() {
+  await markAllRead()
+  messageStore.unreadCount = 0
+  unreadList.value = []
+  showDropdown.value = false
+}
+
+function handleDropdownItemClick(msg) {
+  showDropdown.value = false
+}
+
+function formatTime(t) {
+  if (!t) return ''
+  const d = new Date(t)
+  const now = new Date()
+  const diff = now - d
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
+  if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
+  if (diff < 172800000) return '昨天'
+  const y = d.getFullYear()
+  const mo = String(d.getMonth() + 1).padStart(2, '0')
+  const da = String(d.getDate()).padStart(2, '0')
+  return `${y}-${mo}-${da}`
+}
+
+function handleClickOutside(e) {
+  if (bellRef.value && !bellRef.value.contains(e.target)) {
+    showDropdown.value = false
+  }
+}
+
+watch(() => messageStore.unreadCount, (newVal, oldVal) => {
+  if (oldVal !== undefined && newVal > oldVal && window.$notification) {
+    window.$notification.info({
+      title: '新消息提醒',
+      content: `您有 ${newVal - oldVal} 条新消息`,
+      duration: 4000
+    })
+  }
+  document.title = newVal > 0 ? `(${newVal}) ProjectOS` : 'ProjectOS'
+})
+
+onMounted(() => {
+  messageStore.startPolling()
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  messageStore.stopPolling()
+  document.removeEventListener('click', handleClickOutside)
+})
 
 const roleLabelMap = {
   pm: '项目经理', dev_lead: '开发组长', dev: '开发',
@@ -85,6 +190,7 @@ const allMenus = [
   { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon },
   { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon },
   { key: 'bugs', label: 'Bug管理', path: '/bugs', icon: BugIcon },
+  { key: 'messages', label: '消息中心', path: '/messages', icon: BellIcon, badge: 'unread' },
   { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon },
   { key: 'iterations', label: '发布迭代', path: '/iterations', icon: MilestoneIcon },
   { key: 'revenue', label: '营收统计', path: '/revenue', icon: ChartBarIcon },
@@ -124,6 +230,10 @@ const pageMeta = computed(() => {
     iterations: {
       title: '发布迭代',
       subtitle: '管理发布迭代与版本计划'
+    },
+    messages: {
+      title: '消息中心',
+      subtitle: '查看系统通知和消息提醒'
     },
     revenue: {
       title: '营收统计看板',
@@ -245,6 +355,13 @@ function TrendingUpIcon(props) {
     h('polyline', { points: '16 7 22 7 22 13' })
   ])
 }
+function BellIcon(props) {
+  return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', ...props }, [
+    h('path', { d: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9' }),
+    h('path', { d: 'M13.73 21a2 2 0 0 1-3.46 0' })
+  ])
+}
+
 function BookOpenIcon(props) {
   return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', ...props }, [
     h('path', { d: 'M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z' }),
@@ -463,5 +580,174 @@ function BookOpenIcon(props) {
 .page-body {
   padding: 28px 32px;
   flex: 1;
+}
+
+/* Nav Badge */
+.nav-badge {
+  margin-left: auto;
+  background: #ef4444;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  line-height: 20px;
+  text-align: center;
+  border-radius: 10px;
+  padding: 0 6px;
+}
+
+/* Bell Wrapper */
+.bell-wrapper {
+  position: relative;
+}
+
+.bell-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.bell-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.bell-btn.has-new {
+  border-color: #fca5a5;
+  animation: bellPulse 2s ease-in-out infinite;
+}
+
+.bell-icon {
+  width: 20px;
+  height: 20px;
+  color: #475569;
+}
+
+.bell-btn.has-new .bell-icon {
+  color: #ef4444;
+}
+
+.bell-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  background: #ef4444;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 9px;
+  padding: 0 5px;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
+}
+
+@keyframes bellPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+
+/* Bell Dropdown */
+.bell-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 360px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+  border: 1px solid #e2e8f0;
+  z-index: 200;
+  overflow: hidden;
+}
+
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.dropdown-mark-all {
+  font-size: 12px;
+  color: #6366f1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.dropdown-mark-all:hover {
+  color: #4f46e5;
+}
+
+.dropdown-body {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.dropdown-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f8fafc;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dropdown-item:hover {
+  background: #f8fafc;
+}
+
+.dropdown-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.dropdown-item-time {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.dropdown-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.dropdown-footer {
+  padding: 10px 16px;
+  border-top: 1px solid #f1f5f9;
+  text-align: center;
+}
+
+.dropdown-footer a {
+  font-size: 13px;
+  color: #6366f1;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.dropdown-footer a:hover {
+  color: #4f46e5;
 }
 </style>

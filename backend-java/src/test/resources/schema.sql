@@ -110,7 +110,6 @@ CREATE TABLE IF NOT EXISTS requirements (
     number VARCHAR(128) NOT NULL,
     title VARCHAR(128) NOT NULL,
     description TEXT,
-    source VARCHAR(50),
     status VARCHAR(50) NOT NULL DEFAULT 'planned',
     priority VARCHAR(20) DEFAULT 'medium',
     system VARCHAR(50),
@@ -118,14 +117,12 @@ CREATE TABLE IF NOT EXISTS requirements (
     project_type VARCHAR(50),
     person_id BIGINT,
     person_name VARCHAR(255),
-    relevant TEXT,
     total_amount VARCHAR(128),
+    total_price VARCHAR(128),
     dev_total VARCHAR(128),
     dev_price VARCHAR(128),
     test_total VARCHAR(128),
     test_price VARCHAR(128),
-    biz_test_total VARCHAR(128),
-    biz_test_price VARCHAR(128),
     release_time TIMESTAMP,
     planned_completion_time TIMESTAMP,
     notes TEXT,
@@ -133,7 +130,6 @@ CREATE TABLE IF NOT EXISTS requirements (
     document_name VARCHAR(255),
     document_size BIGINT,
     dev_lead_id BIGINT,
-    total_price VARCHAR(128),
     iteration_id VARCHAR(128),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -179,4 +175,16 @@ CREATE TABLE IF NOT EXISTS dictionaries (
     dict_key VARCHAR(100) NOT NULL,
     dict_value VARCHAR(255) NOT NULL,
     sort_order INT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS site_messages (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    type VARCHAR(20) NOT NULL DEFAULT 'system',
+    related_id BIGINT,
+    is_read TINYINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    read_at TIMESTAMP NULL
 );

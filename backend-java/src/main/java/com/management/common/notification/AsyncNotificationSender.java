@@ -18,9 +18,6 @@ public class AsyncNotificationSender {
         if (targets == null) return;
         for (User target : targets) {
             if (operatorName != null && operatorName.equals(target.getName())) continue;
-            if (target.getEmail() != null && !target.getEmail().isBlank()) {
-                multiNotifier.notify(target.getEmail(), message);
-            }
             multiNotifier.notify(target.getName(), message);
         }
     }

@@ -69,23 +69,19 @@ public class RequirementService {
         r.setTitle(req.getTitle());
         r.setDescription(req.getDescription());
         r.setNotes(req.getNotes());
-        r.setSource(req.getSource());
         r.setSystem(req.getSystem());
         r.setProjectId(req.getProjectId());
         r.setProjectType(projectType);
         r.setPersonId(req.getPersonId());
         r.setPersonName(req.getPersonName());
-        r.setRelevant(req.getRelevant());
         r.setPriority(req.getPriority() != null ? req.getPriority() : "medium");
         r.setStatus("planned");
         r.setTotalAmount(req.getTotalAmount());
+        r.setTotalPrice(req.getTotalPrice());
         r.setDevTotal(req.getDevTotal());
         r.setDevPrice(req.getDevPrice());
         r.setTestTotal(req.getTestTotal());
         r.setTestPrice(req.getTestPrice());
-        r.setBizTestTotal(req.getBizTestTotal());
-        r.setBizTestPrice(req.getBizTestPrice());
-        r.setTotalPrice(req.getTotalPrice());
         if (req.getPlannedCompletionTime() != null)
             r.setPlannedCompletionTime(java.time.OffsetDateTime.parse(req.getPlannedCompletionTime()).toLocalDateTime());
         r.setIterationId(req.getIterationId());
@@ -104,12 +100,11 @@ public class RequirementService {
         return r;
     }
 
-    public List<Requirement> list(String status, String system, String projectType, String source) {
+    public List<Requirement> list(String status, String system, String projectType) {
         LambdaQueryWrapper<Requirement> q = new LambdaQueryWrapper<>();
         if (status != null && !status.isBlank()) q.eq(Requirement::getStatus, status);
         if (system != null && !system.isBlank()) q.eq(Requirement::getSystem, system);
         if (projectType != null && !projectType.isBlank()) q.eq(Requirement::getProjectType, projectType);
-        if (source != null && !source.isBlank()) q.eq(Requirement::getSource, source);
         applyProjectScopeFilter(q);
         q.orderByDesc(Requirement::getUpdatedAt);
         List<Requirement> list = requirementMapper.selectList(q);
@@ -199,7 +194,6 @@ public class RequirementService {
         if (req.getTitle() != null) r.setTitle(req.getTitle());
         if (req.getDescription() != null) r.setDescription(req.getDescription());
         if (req.getNotes() != null) r.setNotes(req.getNotes());
-        if (req.getSource() != null) r.setSource(req.getSource());
         if (req.getSystem() != null) r.setSystem(req.getSystem());
         if (req.getProjectId() != null) {
             if (projectMapper.selectById(req.getProjectId()) == null)
@@ -212,7 +206,6 @@ public class RequirementService {
             r.setPersonId(req.getPersonId());
         }
         if (req.getPersonName() != null) r.setPersonName(req.getPersonName());
-        if (req.getRelevant() != null) r.setRelevant(req.getRelevant());
         if (req.getPriority() != null) r.setPriority(req.getPriority());
         if (req.getTotalAmount() != null) r.setTotalAmount(req.getTotalAmount());
         if (req.getTotalPrice() != null) r.setTotalPrice(req.getTotalPrice());
@@ -220,8 +213,6 @@ public class RequirementService {
         if (req.getDevPrice() != null) r.setDevPrice(req.getDevPrice());
         if (req.getTestTotal() != null) r.setTestTotal(req.getTestTotal());
         if (req.getTestPrice() != null) r.setTestPrice(req.getTestPrice());
-        if (req.getBizTestTotal() != null) r.setBizTestTotal(req.getBizTestTotal());
-        if (req.getBizTestPrice() != null) r.setBizTestPrice(req.getBizTestPrice());
         if (req.getIterationId() != null) r.setIterationId(req.getIterationId());
         if (req.getNumber() != null) r.setNumber(req.getNumber());
         if (req.getProjectType() != null) r.setProjectType(req.getProjectType());
@@ -315,7 +306,6 @@ public class RequirementService {
         dto.setTitle(r.getTitle());
         dto.setDescription(r.getDescription());
         dto.setNotes(r.getNotes());
-        dto.setSource(r.getSource());
         dto.setStatus(r.getStatus());
         dto.setPriority(r.getPriority());
         dto.setSystem(r.getSystem());
@@ -324,15 +314,15 @@ public class RequirementService {
         dto.setProjectType(r.getProjectType());
         dto.setPersonId(r.getPersonId());
         dto.setPerson(r.getPerson());
-        dto.setRelevant(r.getRelevant());
+        dto.setPersonName(r.getPersonName());
         dto.setTotalAmount(r.getTotalAmount());
+        dto.setTotalPrice(r.getTotalPrice());
         dto.setDevTotal(r.getDevTotal());
         dto.setDevPrice(r.getDevPrice());
         dto.setTestTotal(r.getTestTotal());
         dto.setTestPrice(r.getTestPrice());
-        dto.setBizTestTotal(r.getBizTestTotal());
-        dto.setBizTestPrice(r.getBizTestPrice());
         dto.setReleaseTime(r.getReleaseTime() != null ? r.getReleaseTime().toString() : null);
+        dto.setPlannedCompletionTime(r.getPlannedCompletionTime() != null ? r.getPlannedCompletionTime().toString() : null);
         dto.setIterationId(r.getIterationId());
         dto.setDevLeadId(r.getDevLeadId());
         dto.setDevLead(r.getDevLead());

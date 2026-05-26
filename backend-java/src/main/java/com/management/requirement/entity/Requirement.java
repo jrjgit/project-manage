@@ -20,7 +20,6 @@ public class Requirement {
     private String title;
     private String description;
     private String notes;
-    private String source;
     private String status;
     private String priority;
     @TableField("`system`")
@@ -33,15 +32,12 @@ public class Requirement {
     @TableField(exist = false)
     private User person;
     private String personName;
-    private String relevant;
     private String totalAmount;
     private String totalPrice;
     private String devTotal;
     private String devPrice;
     private String testTotal;
     private String testPrice;
-    private String bizTestTotal;
-    private String bizTestPrice;
     private LocalDateTime releaseTime;
     private LocalDateTime plannedCompletionTime;
     private Long devLeadId;

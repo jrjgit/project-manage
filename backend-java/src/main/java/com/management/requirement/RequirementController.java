@@ -33,9 +33,8 @@ public class RequirementController {
     @GetMapping
     public Result<List<Requirement>> list(@RequestParam(required = false) String status,
                                            @RequestParam(required = false) String system,
-                                           @RequestParam(required = false) String projectType,
-                                           @RequestParam(required = false) String source) {
-        return Result.ok(requirementService.list(status, system, projectType, source));
+                                           @RequestParam(required = false) String projectType) {
+        return Result.ok(requirementService.list(status, system, projectType));
     }
 
     @GetMapping("/ops")

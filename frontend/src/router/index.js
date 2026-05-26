@@ -67,6 +67,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/messages',
+    name: 'Messages',
+    component: () => import('@/views/Messages.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/revenue',
     name: 'RevenueDashboard',
     component: () => import('@/views/RevenueDashboard.vue'),

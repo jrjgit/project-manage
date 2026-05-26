@@ -13,6 +13,6 @@ spring:
 app:
   jwt-secret: test-secret-key-for-jwt-testing-purposes-only
   notification:
-    email-enable: false
+    site-message-enable: false
     nanobot-enable: false
     async: false

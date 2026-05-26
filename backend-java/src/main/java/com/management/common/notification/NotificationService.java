@@ -7,7 +7,6 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,12 +18,10 @@ public class NotificationService {
 
     private final MultiNotifier multiNotifier;
     private final LogNotifier logNotifier;
-    private final EmailNotifier emailNotifier;
+    private final SiteMessageNotifier siteMessageNotifier;
     private final NanobotNotifier nanobotNotifier;
     private final AsyncNotificationSender asyncSender;
 
-    @Value("${app.notification.email-enable:false}")
-    private boolean emailEnable;
     @Value("${app.notification.nanobot-enable:true}")
     private boolean nanobotEnable;
     @Value("${app.notification.async:true}")
@@ -32,13 +29,13 @@ public class NotificationService {
 
     public NotificationService(MultiNotifier multiNotifier,
                                 LogNotifier logNotifier,
+                                SiteMessageNotifier siteMessageNotifier,
                                 AsyncNotificationSender asyncSender,
-                                @org.springframework.beans.factory.annotation.Autowired(required = false) EmailNotifier emailNotifier,
                                 @org.springframework.beans.factory.annotation.Autowired(required = false) NanobotNotifier nanobotNotifier) {
         this.multiNotifier = multiNotifier;
         this.logNotifier = logNotifier;
+        this.siteMessageNotifier = siteMessageNotifier;
         this.asyncSender = asyncSender;
-        this.emailNotifier = emailNotifier;
         this.nanobotNotifier = nanobotNotifier;
     }
 
@@ -67,7 +64,7 @@ public class NotificationService {
     @PostConstruct
     void init() {
         multiNotifier.addDelegate(logNotifier);
-        if (emailEnable && emailNotifier != null) multiNotifier.addDelegate(emailNotifier);
+        multiNotifier.addDelegate(siteMessageNotifier);
         if (nanobotEnable && nanobotNotifier != null) multiNotifier.addDelegate(nanobotNotifier);
     }
 
@@ -95,9 +92,6 @@ public class NotificationService {
         if (targets == null) return;
         for (User target : targets) {
             if (operatorName != null && operatorName.equals(target.getName())) continue;
-            if (target.getEmail() != null && !target.getEmail().isBlank()) {
-                multiNotifier.notify(target.getEmail(), message);
-            }
             multiNotifier.notify(target.getName(), message);
         }
     }

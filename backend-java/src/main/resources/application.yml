@@ -14,14 +14,6 @@ spring:
     username: ${MYSQL_USER:root}
     password: ${MYSQL_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
-  mail:
-    host: ${SMTP_HOST:}
-    port: ${SMTP_PORT:587}
-    username: ${SMTP_USER:}
-    password: ${SMTP_PASSWORD:}
-    properties:
-      mail.smtp.auth: true
-      mail.smtp.starttls.enable: true
 
 mybatis-plus:
   global-config:
@@ -36,6 +28,6 @@ app:
   nanobot-path: ${NANOBOT_PATH:nanobot}
   upload-dir: ${UPLOAD_DIR:./uploads}
   notification:
-    email-enable: ${NOTIFY_EMAIL_ENABLE:false}
+    site-message-enable: true
     nanobot-enable: ${NOTIFY_NANOBOT_ENABLE:true}
     async: ${NOTIFY_ASYNC:true}

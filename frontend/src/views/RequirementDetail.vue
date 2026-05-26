@@ -118,6 +118,59 @@
             />
           </section>
 
+          <!-- Basic Info -->
+          <section class="section-card">
+            <div class="section-header">
+              <h3>基本信息</h3>
+            </div>
+            <div class="info-grid">
+              <div class="info-cell">
+                <span class="info-label">项目类型</span>
+                <span class="info-value">{{ req.project_type === 'project' ? '项目需求' : req.project_type === 'ops' ? '运维需求' : '-' }}</span>
+              </div>
+              <div class="info-cell">
+                <span class="info-label">所属系统</span>
+                <span class="info-value">{{ req.system || '-' }}</span>
+              </div>
+              <div class="info-cell">
+                <span class="info-label">业务负责人</span>
+                <span class="info-value">{{ req.person_name || req.person?.name || '-' }}</span>
+              </div>
+              <div class="info-cell">
+                <span class="info-label">发布迭代</span>
+                <span class="info-value">{{ req.iteration_name || (req.iteration_id ? `迭代 #${req.iteration_id}` : '-') }}</span>
+              </div>
+              <div class="info-cell">
+                <span class="info-label">计划完成时间</span>
+                <span class="info-value">{{ req.planned_completion_time ? formatDate2(req.planned_completion_time) : '-' }}</span>
+              </div>
+              <div class="info-cell">
+                <span class="info-label">开发人天</span>
+                <span class="info-value">{{ req.dev_total || '-' }}</span>
+              </div>
+              <div class="info-cell">
+                <span class="info-label">开发单价</span>
+                <span class="info-value">{{ req.dev_price || '-' }}</span>
+              </div>
+              <div class="info-cell">
+                <span class="info-label">测试人天</span>
+                <span class="info-value">{{ req.test_total || '-' }}</span>
+              </div>
+              <div class="info-cell">
+                <span class="info-label">测试单价</span>
+                <span class="info-value">{{ req.test_price || '-' }}</span>
+              </div>
+              <div class="info-cell">
+                <span class="info-label">总人天</span>
+                <span class="info-value">{{ req.total_amount || '-' }}</span>
+              </div>
+              <div class="info-cell">
+                <span class="info-label">总价</span>
+                <span class="info-value">{{ req.total_price || '-' }}</span>
+              </div>
+            </div>
+          </section>
+
           <!-- Notes -->
           <section class="section-card">
             <div class="section-header">
@@ -613,6 +666,13 @@ function formatSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
+function formatDate2(d) {
+  if (!d) return ''
+  const date = new Date(d)
+  if (isNaN(date.getTime())) return d
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
 async function handleCustomUpload({ file, onFinish, onError }) {
   documentLoading.value = true
   try {
@@ -709,6 +769,7 @@ async function saveAssignDevLead() {
   try {
     await assignDevLead(req.value.id, req.value.dev_lead_id)
     window.$message?.success('开发组长已指派')
+    await loadReq()
   } catch (e) {
     window.$message?.error('指派失败')
   }
@@ -1240,6 +1301,34 @@ onMounted(() => {
 
 .feature-actions {
   margin-top: 6px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.info-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.info-label {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.info-value {
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 600;
 }
 
 @media (max-width: 1100px) {

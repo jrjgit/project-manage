@@ -1,11 +1,9 @@
 package com.management.requirement.dto;
 
 import com.management.bug.entity.Bug;
-import com.management.requirement.entity.Requirement;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 
 @Data
 public class RequirementDetailDTO {
@@ -15,7 +13,6 @@ public class RequirementDetailDTO {
     private String title;
     private String description;
     private String notes;
-    private String source;
     private String status;
     private String priority;
     private String system;
@@ -24,15 +21,15 @@ public class RequirementDetailDTO {
     private String projectType;
     private Long personId;
     private Object person;
-    private String relevant;
+    private String personName;
     private String totalAmount;
+    private String totalPrice;
     private String devTotal;
     private String devPrice;
     private String testTotal;
     private String testPrice;
-    private String bizTestTotal;
-    private String bizTestPrice;
     private String releaseTime;
+    private String plannedCompletionTime;
     private Long devLeadId;
     private Object devLead;
     private String iterationId;
