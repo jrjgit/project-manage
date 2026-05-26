@@ -150,6 +150,22 @@
                   <n-tag :type="featureStatusTag(f.status)" size="tiny" round>{{ featureStatusLabel[f.status] || f.status }}</n-tag>
                   <n-button text size="tiny" type="error" @click="handleDeleteFeature(f)">删除</n-button>
                 </div>
+                <div class="feature-meta-row">
+                  <span class="feature-meta-label">开发：</span>
+                  <template v-if="editingFeatureDev === f.id">
+                    <n-select v-model:value="f.developer_id" :options="userOptions" size="small" style="width:140px" filterable
+                      @blur="saveFeatureDev(f); editingFeatureDev = null"
+                      @keyup.enter="saveFeatureDev(f); editingFeatureDev = null" autofocus />
+                  </template>
+                  <span v-else class="feature-meta-value" @click="startFeatureEdit('dev', f)">{{ f.developer?.name || '点击设置' }}</span>
+                  <span class="feature-meta-label" style="margin-left:12px">测试：</span>
+                  <template v-if="editingFeatureTester === f.id">
+                    <n-select v-model:value="f.tester_id" :options="userOptions" size="small" style="width:140px" filterable
+                      @blur="saveFeatureTester(f); editingFeatureTester = null"
+                      @keyup.enter="saveFeatureTester(f); editingFeatureTester = null" autofocus />
+                  </template>
+                  <span v-else class="feature-meta-value" @click="startFeatureEdit('tester', f)">{{ f.tester?.name || '点击设置' }}</span>
+                </div>
                 <div v-if="f.assignments?.length" class="assignment-list">
                   <div v-for="a in f.assignments" :key="a.id" class="assignment-item">
                     <span class="assignment-terminal">{{ a.terminal }}</span>
@@ -454,6 +470,7 @@ import {
   deleteRequirementDocument,
   getFeatures,
   createFeature,
+  updateFeature,
   deleteFeature,
   assignDevLead,
   getFeatureAssignments,
@@ -479,6 +496,8 @@ const localNotes = ref('')
 
 const expandedTerminal = ref(null)
 const features = ref([])
+const editingFeatureDev = ref(null)
+const editingFeatureTester = ref(null)
 const showCreateFeature = ref(false)
 const creatingFeature = ref(false)
 const createFeatureForm = ref({ title: '', description: '', developer_id: null, tester_id: null })
@@ -734,6 +753,29 @@ async function handleCreateAssignment() {
     window.$message?.error('分配失败')
   }
   assignLoading.value = false
+}
+
+function startFeatureEdit(type, f) {
+  if (type === 'dev') editingFeatureDev.value = f.id
+  else editingFeatureTester.value = f.id
+}
+
+async function saveFeatureDev(f) {
+  if (!f.developer_id) return
+  try {
+    await updateFeature(f.id, { developer_id: f.developer_id })
+    window.$message?.success('开发负责人已更新')
+    await loadFeatures()
+  } catch (e) { window.$message?.error('更新失败') }
+}
+
+async function saveFeatureTester(f) {
+  if (!f.tester_id) return
+  try {
+    await updateFeature(f.id, { tester_id: f.tester_id })
+    window.$message?.success('测试负责人已更新')
+    await loadFeatures()
+  } catch (e) { window.$message?.error('更新失败') }
 }
 
 async function handleDeleteAssignment(a) {
@@ -1142,6 +1184,30 @@ onMounted(() => {
   gap: 12px;
   font-size: 12px;
   color: #64748b;
+}
+
+.feature-meta-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.feature-meta-label {
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.feature-meta-value {
+  color: #6366f1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.feature-meta-value:hover {
+  background: #eef2ff;
 }
 
 .assignment-list {

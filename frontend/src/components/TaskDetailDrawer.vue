@@ -53,6 +53,24 @@
             </div>
           </div>
 
+          <div v-if="canEditDevLead" class="action-block">
+            <div class="action-block-title">切换开发组长</div>
+            <div class="action-block-copy">重新指定该任务的开发组长。</div>
+            <div class="action-row">
+              <n-select v-model:value="selectedDevLead" :options="devLeadOptions" placeholder="选择开发组长" style="width: 220px;" />
+              <n-button :loading="actionLoading" @click="saveDevLead">确认</n-button>
+            </div>
+          </div>
+
+          <div v-if="canEditTesterLead" class="action-block">
+            <div class="action-block-title">切换测试组长</div>
+            <div class="action-block-copy">重新指定该任务的测试组长。</div>
+            <div class="action-row">
+              <n-select v-model:value="selectedTesterLead" :options="testerLeadOptions" placeholder="选择测试组长" style="width: 220px;" />
+              <n-button :loading="actionLoading" @click="saveTesterLead">确认</n-button>
+            </div>
+          </div>
+
           <div v-if="canEditTester" class="action-block">
             <div class="action-block-title">指派测试人员</div>
             <div class="action-block-copy">项目经理可为任务指定测试负责人。</div>
@@ -171,6 +189,7 @@ const selectedTester = ref(null)
 const selectedDev = ref(null)
 const selectedDevToAdd = ref(null)
 const selectedDevPlatform = ref('')
+const selectedDevLead = ref(null)
 const selectedTesterLead = ref(null)
 const actionLoading = ref(false)
 const platformOptions = [
@@ -193,6 +212,9 @@ const canManageDevAssignees = computed(() =>
   authStore.userInfo?.role === 'dev_lead' &&
   ['assigned_lead', 'developing'].includes(task.value?.status)
 )
+const devLeadOptions = computed(() => users.value.filter((user) => user.role === 'dev_lead').map((user) => ({ label: user.name, value: user.id })))
+const canEditDevLead = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'assigned_lead', 'developing'].includes(task.value?.status))
+const canEditTesterLead = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'assigned_lead', 'developing', 'developed', 'pending_test'].includes(task.value?.status))
 const canEditTester = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'assigned_lead', 'developing', 'developed', 'pending_test'].includes(task.value?.status))
 
 const availableDevOptions = computed(() => {
@@ -390,6 +412,32 @@ async function removeDevAssignee(userId) {
   } finally {
     actionLoading.value = false
   }
+}
+
+async function saveDevLead() {
+  if (actionLoading.value) return
+  if (!selectedDevLead.value) { window.$message.warning('请选择开发组长'); return }
+  actionLoading.value = true
+  try {
+    await updateTask(props.taskId, { dev_lead_id: selectedDevLead.value })
+    window.$message.success('开发组长已更新')
+    selectedDevLead.value = null
+    await loadDetail(); emit('refresh')
+  } catch (e) { console.error(e) }
+  actionLoading.value = false
+}
+
+async function saveTesterLead() {
+  if (actionLoading.value) return
+  if (!selectedTesterLead.value) { window.$message.warning('请选择测试组长'); return }
+  actionLoading.value = true
+  try {
+    await updateTask(props.taskId, { tester_lead_id: selectedTesterLead.value })
+    window.$message.success('测试组长已更新')
+    selectedTesterLead.value = null
+    await loadDetail(); emit('refresh')
+  } catch (e) { console.error(e) }
+  actionLoading.value = false
 }
 
 async function saveTester() {
