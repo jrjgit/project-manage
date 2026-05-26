@@ -29,8 +29,8 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('userInfo')
   }
 
-  const doLogin = async (name, password) => {
-    const res = await login({ name, password })
+  const doLogin = async (account, password) => {
+    const res = await login({ account, password })
     setAuth(res.token, res.user)
     return res
   }

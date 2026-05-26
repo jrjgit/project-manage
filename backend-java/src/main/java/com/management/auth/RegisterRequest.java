@@ -8,6 +8,8 @@ import lombok.Data;
 public class RegisterRequest {
     @NotBlank
     private String name;
+    @NotBlank
+    private String account;
     @NotBlank @Size(min = 6)
     private String password;
     @NotBlank

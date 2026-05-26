@@ -20,31 +20,32 @@ public class AuthService {
 
     public Long register(RegisterRequest req) {
         User existing = userMapper.selectOne(new LambdaQueryWrapper<User>()
-                .eq(User::getName, req.getName()));
+                .eq(User::getAccount, req.getAccount()));
         if (existing != null) {
-            throw new BusinessException(409, "username already exists");
+            throw new BusinessException(409, "账号已存在");
         }
         User user = new User();
         user.setName(req.getName());
+        user.setAccount(req.getAccount());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setRole(req.getRole());
         user.setGroupId(req.getGroupId());
         user.setWechatId(req.getWechatId());
         user.setEmail(req.getEmail());
         userMapper.insert(user);
-        log.info("User registered: name={}, role={}, id={}", req.getName(), req.getRole(), user.getId());
+        log.info("User registered: name={}, account={}, role={}, id={}", req.getName(), req.getAccount(), req.getRole(), user.getId());
         return user.getId();
     }
 
     public LoginResponse login(LoginRequest req) {
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
-                .eq(User::getName, req.getName()));
+                .eq(User::getAccount, req.getAccount()));
         if (user == null || !passwordEncoder.matches(req.getPassword(), user.getPassword())) {
-            throw new BusinessException(401, "invalid username or password");
+            throw new BusinessException(401, "账号或密码错误");
         }
         String token = jwtUtils.generateToken(user.getId(), user.getName(),
                 user.getRole(), user.getGroupId());
-        log.info("User logged in: name={}, id={}", user.getName(), user.getId());
+        log.info("User logged in: name={}, account={}, id={}", user.getName(), user.getAccount(), user.getId());
         return new LoginResponse(token, user);
     }
 }

@@ -27,17 +27,15 @@ class ManagementApplicationTests {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private String adminToken;
-
     @Test
     void contextLoads() {
-        // Spring context loads successfully
     }
 
     @Test
     void registerAndLogin_shouldReturnTokenAndUser() throws Exception {
         RegisterRequest reg = new RegisterRequest();
-        reg.setName("testpm");
+        reg.setName("测试PM");
+        reg.setAccount("testpm");
         reg.setPassword("test123");
         reg.setRole("pm");
 
@@ -48,7 +46,7 @@ class ManagementApplicationTests {
                 .andExpect(jsonPath("$.data.user_id").isNumber());
 
         LoginRequest login = new LoginRequest();
-        login.setName("testpm");
+        login.setAccount("testpm");
         login.setPassword("test123");
 
         mockMvc.perform(post("/api/auth/login")
@@ -56,13 +54,14 @@ class ManagementApplicationTests {
                         .content(objectMapper.writeValueAsString(login)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.token").isString())
-                .andExpect(jsonPath("$.data.user.name").value("testpm"));
+                .andExpect(jsonPath("$.data.user.name").value("测试PM"));
     }
 
     @Test
     void registerDuplicate_shouldReturn409() throws Exception {
         RegisterRequest reg = new RegisterRequest();
         reg.setName("dupuser");
+        reg.setAccount("dupuser");
         reg.setPassword("test123");
         reg.setRole("pm");
 
@@ -74,13 +73,14 @@ class ManagementApplicationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(reg)))
                 .andExpect(status().is4xxClientError())
-                .andExpect(jsonPath("$.error").value("username already exists"));
+                .andExpect(jsonPath("$.error").value("账号已存在"));
     }
 
     @Test
     void loginWithWrongPassword_shouldReturn401() throws Exception {
         RegisterRequest reg = new RegisterRequest();
         reg.setName("wrongpw");
+        reg.setAccount("wrongpw");
         reg.setPassword("test123");
         reg.setRole("pm");
 
@@ -89,14 +89,14 @@ class ManagementApplicationTests {
                 .content(objectMapper.writeValueAsString(reg)));
 
         LoginRequest login = new LoginRequest();
-        login.setName("wrongpw");
+        login.setAccount("wrongpw");
         login.setPassword("badpass");
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(login)))
                 .andExpect(status().is4xxClientError())
-                .andExpect(jsonPath("$.error").value("invalid username or password"));
+                .andExpect(jsonPath("$.error").value("账号或密码错误"));
     }
 
     @Test

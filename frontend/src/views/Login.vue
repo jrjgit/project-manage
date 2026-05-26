@@ -19,7 +19,7 @@
         <form @submit.prevent="handleSubmit">
           <div class="form-group">
             <label>账号</label>
-            <input v-model="form.name" type="text" placeholder="请输入账号" autocomplete="username" />
+            <input v-model="form.account" type="text" placeholder="请输入账号" autocomplete="username" />
           </div>
 
           <div class="form-group">
@@ -46,14 +46,14 @@ const authStore = useAuthStore()
 const loading = ref(false)
 
 const form = ref({
-  name: '',
+  account: '',
   password: ''
 })
 
 async function handleSubmit() {
   loading.value = true
   try {
-    await authStore.doLogin(form.value.name, form.value.password)
+    await authStore.doLogin(form.value.account, form.value.password)
     window.$message.success('登录成功')
     router.push('/dashboard')
   } catch (e) {

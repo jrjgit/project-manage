@@ -42,6 +42,7 @@ public class DataInitializer implements ApplicationRunner {
             log.warn("No PM user found, creating default admin (admin/admin123)");
             User admin = new User();
             admin.setName("admin");
+            admin.setAccount("admin");
             admin.setPassword(passwordEncoder.encode("admin123"));
             admin.setRole("pm");
             userMapper.insert(admin);

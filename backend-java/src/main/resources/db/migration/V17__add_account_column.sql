@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN account VARCHAR(255) COMMENT '登录账号' AFTER password;

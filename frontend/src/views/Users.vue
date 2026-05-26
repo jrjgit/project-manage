@@ -35,8 +35,11 @@
 
       <n-modal v-model:show="showModal" preset="card" title="新增用户" style="width: 460px;" :mask-closable="false">
         <n-form ref="formRef" :model="createForm" :rules="rules" label-placement="top">
-          <n-form-item label="账号" path="name">
-            <n-input v-model:value="createForm.name" placeholder="请输入账号" />
+          <n-form-item label="用户名" path="name">
+            <n-input v-model:value="createForm.name" placeholder="输入用户名（显示用）" />
+          </n-form-item>
+          <n-form-item label="账号" path="account">
+            <n-input v-model:value="createForm.account" placeholder="输入登录账号" />
           </n-form-item>
           <n-form-item label="密码" path="password">
             <n-input v-model:value="createForm.password" type="password" placeholder="至少 6 位字符" />
@@ -75,13 +78,15 @@ const formRef = ref(null)
 
 const createForm = ref({
   name: '',
+  account: '',
   password: '',
   role: null,
   email: ''
 })
 
 const rules = {
-  name: { required: true, message: '请输入账号', trigger: 'blur' },
+  name: { required: true, message: '请输入用户名', trigger: 'blur' },
+  account: { required: true, message: '请输入登录账号', trigger: 'blur' },
   password: { required: true, min: 6, message: '密码至少 6 位', trigger: 'blur' },
   role: { required: true, message: '请选择角色', trigger: 'change' }
 }
@@ -99,7 +104,8 @@ const roleOptions = [
 
 const columns = [
   { title: 'ID', key: 'id', width: 60 },
-  { title: '账号', key: 'name', ellipsis: { tooltip: true } },
+  { title: '用户名', key: 'name', ellipsis: { tooltip: true } },
+  { title: '账号', key: 'account', ellipsis: { tooltip: true } },
   { title: '角色', key: 'role', width: 120,
     render(row) {
       return h(NTag, { type: roleTagTypeMap[row.role], size: 'small', round: true }, { default: () => roleMap[row.role] || row.role })
@@ -134,7 +140,7 @@ const columns = [
 ]
 
 function openCreate() {
-  createForm.value = { name: '', password: '', role: null, email: '' }
+  createForm.value = { name: '', account: '', password: '', role: null, email: '' }
   showModal.value = true
 }
 
@@ -146,6 +152,7 @@ async function handleCreate() {
   try {
     await createUser({
       name: createForm.value.name,
+      account: createForm.value.account,
       password: createForm.value.password,
       role: createForm.value.role,
       email: createForm.value.email || undefined
