@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS projects (
     project_type VARCHAR(50),
     system_scope TEXT,
     hr_scope TEXT,
-    pm_id BIGINT NOT NULL,
+    pm_id BIGINT,
     created_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -89,8 +89,8 @@ CREATE TABLE IF NOT EXISTS bug_status_histories (
 CREATE TABLE IF NOT EXISTS groups (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    pm_id BIGINT NOT NULL,
-    dev_lead_id BIGINT NOT NULL,
+    pm_id BIGINT,
+    dev_lead_id BIGINT,
     lead_role VARCHAR(20) DEFAULT 'dev',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

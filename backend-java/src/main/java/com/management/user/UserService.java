@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
+import com.management.group.entity.Group;
+import com.management.group.mapper.GroupMapper;
 import com.management.iteration.entity.Iteration;
 import com.management.iteration.mapper.IterationMapper;
 import com.management.project.entity.Project;
@@ -25,6 +27,7 @@ public class UserService {
     private final ProjectMapper projectMapper;
     private final IterationMapper iterationMapper;
     private final SystemInfoMapper systemInfoMapper;
+    private final GroupMapper groupMapper;
 
     public JwtUserDetails currentUser() {
         return (JwtUserDetails) SecurityContextHolder.getContext()
@@ -77,6 +80,10 @@ public class UserService {
                 .eq(Iteration::getCreatedBy, id).set(Iteration::getCreatedBy, null));
         systemInfoMapper.update(null, new LambdaUpdateWrapper<SystemInfo>()
                 .eq(SystemInfo::getCreatedBy, id).set(SystemInfo::getCreatedBy, null));
+        groupMapper.update(null, new LambdaUpdateWrapper<Group>()
+                .eq(Group::getPmId, id).set(Group::getPmId, null));
+        groupMapper.update(null, new LambdaUpdateWrapper<Group>()
+                .eq(Group::getDevLeadId, id).set(Group::getDevLeadId, null));
         userMapper.deleteById(id);
     }
 }
