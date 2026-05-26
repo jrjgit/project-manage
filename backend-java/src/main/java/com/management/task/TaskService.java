@@ -27,7 +27,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -85,6 +87,7 @@ public class TaskService {
         if (projectId != null && !projectId.isBlank()) q.eq(Task::getProjectId, projectId);
         if (status != null && !status.isBlank()) q.eq(Task::getStatus, status);
         if (priority != null && !priority.isBlank()) q.eq(Task::getPriority, priority);
+        applyProjectScopeFilter(u, q);
 
         q.orderByDesc(Task::getUpdatedAt);
         List<Task> tasks = taskMapper.selectList(q);
@@ -122,6 +125,27 @@ public class TaskService {
             h.setUser(userMapper.selectById(h.getChangedBy()));
         }
         return list;
+    }
+
+    private void applyProjectScopeFilter(JwtUserDetails u, LambdaQueryWrapper<Task> q) {
+        String role = u.getRole();
+        if ("pm".equals(role) || "dev_lead".equals(role) || "tester_lead".equals(role)) return;
+        List<Long> projectIds = getVisibleProjectIds(u.getUserId());
+        if (projectIds.isEmpty()) {
+            q.and(w -> w.isNull(Task::getProjectId));
+        } else {
+            q.and(w -> w.in(Task::getProjectId, projectIds).or().isNull(Task::getProjectId));
+        }
+    }
+
+    private List<Long> getVisibleProjectIds(Long userId) {
+        List<Project> all = projectMapper.selectList(null);
+        return all.stream()
+                .filter(p -> p.getHrScope() != null && !p.getHrScope().isBlank())
+                .filter(p -> Arrays.stream(p.getHrScope().split(","))
+                        .map(String::trim).anyMatch(id -> id.equals(String.valueOf(userId))))
+                .map(Project::getId)
+                .collect(Collectors.toList());
     }
 
     /** 填充关联对象 */

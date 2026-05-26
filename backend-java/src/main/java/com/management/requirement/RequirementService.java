@@ -30,8 +30,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -98,6 +100,7 @@ public class RequirementService {
         if (system != null && !system.isBlank()) q.eq(Requirement::getSystem, system);
         if (projectType != null && !projectType.isBlank()) q.eq(Requirement::getProjectType, projectType);
         if (source != null && !source.isBlank()) q.eq(Requirement::getSource, source);
+        applyProjectScopeFilter(q);
         q.orderByDesc(Requirement::getUpdatedAt);
         List<Requirement> list = requirementMapper.selectList(q);
         for (Requirement r : list) { fillAssociations(r); fillProgress(r); }
@@ -105,21 +108,23 @@ public class RequirementService {
     }
 
     public List<Requirement> opsList() {
-        List<Requirement> list = requirementMapper.selectList(
-                new LambdaQueryWrapper<Requirement>()
-                        .eq(Requirement::getProjectType, "ops")
-                        .ne(Requirement::getStatus, "released")
-                        .orderByDesc(Requirement::getUpdatedAt));
+        LambdaQueryWrapper<Requirement> q = new LambdaQueryWrapper<Requirement>()
+                .eq(Requirement::getProjectType, "ops")
+                .ne(Requirement::getStatus, "released");
+        applyProjectScopeFilter(q);
+        q.orderByDesc(Requirement::getUpdatedAt);
+        List<Requirement> list = requirementMapper.selectList(q);
         for (Requirement r : list) { fillAssociations(r); fillProgress(r); }
         return list;
     }
 
     public List<Requirement> projectList() {
-        List<Requirement> list = requirementMapper.selectList(
-                new LambdaQueryWrapper<Requirement>()
-                        .eq(Requirement::getProjectType, "project")
-                        .ne(Requirement::getStatus, "released")
-                        .orderByDesc(Requirement::getUpdatedAt));
+        LambdaQueryWrapper<Requirement> q = new LambdaQueryWrapper<Requirement>()
+                .eq(Requirement::getProjectType, "project")
+                .ne(Requirement::getStatus, "released");
+        applyProjectScopeFilter(q);
+        q.orderByDesc(Requirement::getUpdatedAt);
+        List<Requirement> list = requirementMapper.selectList(q);
         for (Requirement r : list) { fillAssociations(r); fillProgress(r); }
         return list;
     }
@@ -238,6 +243,29 @@ public class RequirementService {
             r.setStatus("business_test");
         }
         requirementMapper.updateById(r);
+    }
+
+    private void applyProjectScopeFilter(LambdaQueryWrapper<Requirement> q) {
+        JwtUserDetails u = currentUser();
+        String role = u.getRole();
+        if ("pm".equals(role) || "dev_lead".equals(role) || "tester_lead".equals(role)) return;
+        List<Long> projectIds = getVisibleProjectIds(u.getUserId());
+        if (projectIds.isEmpty()) {
+            q.apply("1=0");
+        } else {
+            q.in(Requirement::getProjectId, projectIds);
+            q.or().isNull(Requirement::getProjectId);
+        }
+    }
+
+    private List<Long> getVisibleProjectIds(Long userId) {
+        List<com.management.project.entity.Project> all = projectMapper.selectList(null);
+        return all.stream()
+                .filter(p -> p.getHrScope() != null && !p.getHrScope().isBlank())
+                .filter(p -> Arrays.stream(p.getHrScope().split(","))
+                        .map(String::trim).anyMatch(id -> id.equals(String.valueOf(userId))))
+                .map(com.management.project.entity.Project::getId)
+                .collect(Collectors.toList());
     }
 
     private void fillProgress(Requirement r) {

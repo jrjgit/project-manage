@@ -199,11 +199,15 @@ const projectOptions = computed(() => projects.value.map(p => ({ label: p.name, 
 const userOptions = computed(() => users.value.map(u => ({ label: u.name, value: u.id })))
 const iterationOptions = computed(() => iterations.value.map(i => ({ label: i.name, value: String(i.id) })))
 const systemOptions = computed(() => {
-  if (!form.value.project_id) return []
-  const p = projects.value.find(x => x.id === form.value.project_id)
-  if (!p || !p.system_scope) return []
-  const ids = p.system_scope.split(',').map(Number)
-  return systems.value.filter(s => ids.includes(s.id)).map(s => ({ label: s.name, value: s.name }))
+  if (form.value.project_id) {
+    const p = projects.value.find(x => x.id === form.value.project_id)
+    if (p && p.system_scope) {
+      const ids = p.system_scope.split(',').map(Number)
+      return systems.value.filter(s => ids.includes(s.id)).map(s => ({ label: s.name, value: s.name }))
+    }
+    return []
+  }
+  return systems.value.map(s => ({ label: s.name, value: s.name }))
 })
 const statusOptions = Object.entries(requirementStatusMeta).map(([v, m]) => ({ label: m.label, value: v }))
 const projectTypeOptions = [
