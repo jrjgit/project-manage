@@ -1,13 +1,15 @@
 <template>
-  <n-message-provider>
-    <n-dialog-provider>
-      <router-view />
-    </n-dialog-provider>
-  </n-message-provider>
+  <n-config-provider :locale="zhCN" :date-locale="dateZhCN">
+    <n-message-provider>
+      <n-dialog-provider>
+        <router-view />
+      </n-dialog-provider>
+    </n-message-provider>
+  </n-config-provider>
 </template>
 
 <script setup>
-import { NMessageProvider, NDialogProvider } from 'naive-ui'
+import { NConfigProvider, NMessageProvider, NDialogProvider, zhCN, dateZhCN } from 'naive-ui'
 </script>
 
 <style>

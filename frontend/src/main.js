@@ -1,10 +1,13 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import { createDiscreteApi } from 'naive-ui'
+import { createDiscreteApi, zhCN, dateZhCN } from 'naive-ui'
 import App from './App.vue'
 import router from './router'
 
-const { message, dialog, notification } = createDiscreteApi(['message', 'dialog', 'notification'])
+const { message, dialog, notification } = createDiscreteApi(
+  ['message', 'dialog', 'notification'],
+  { configProviderProps: { locale: zhCN, dateLocale: dateZhCN } }
+)
 
 // 全局挂载，方便在api层使用
 window.$message = message
