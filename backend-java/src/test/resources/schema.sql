@@ -117,6 +117,7 @@ CREATE TABLE IF NOT EXISTS requirements (
     project_id BIGINT,
     project_type VARCHAR(50),
     person_id BIGINT,
+    person_name VARCHAR(255),
     relevant TEXT,
     total_amount VARCHAR(128),
     dev_total VARCHAR(128),

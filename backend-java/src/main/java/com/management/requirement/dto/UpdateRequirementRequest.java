@@ -11,6 +11,7 @@ public class UpdateRequirementRequest {
     private String system;
     private Long projectId;
     private Long personId;
+    private String personName;
     private String relevant;
     private String priority;
     private String status;

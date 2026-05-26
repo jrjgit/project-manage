@@ -11,8 +11,9 @@ public class CreateRequirementRequest {
     private String source;
     private String system;
     private Long projectId;
-    @NotBlank private String projectType;
+    private String projectType;
     private Long personId;
+    private String personName;
     private String relevant;
     private String priority;
     private String totalAmount;

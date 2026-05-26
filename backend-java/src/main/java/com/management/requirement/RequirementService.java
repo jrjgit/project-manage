@@ -58,8 +58,12 @@ public class RequirementService {
     public Requirement create(CreateRequirementRequest req) {
         if (req.getProjectId() != null && projectMapper.selectById(req.getProjectId()) == null)
             throw new BusinessException(400, "所属项目不存在");
-        if (req.getPersonId() != null && userMapper.selectById(req.getPersonId()) == null)
-            throw new BusinessException(400, "业务负责人不存在");
+
+        String projectType = req.getProjectType();
+        if (projectType == null && req.getProjectId() != null) {
+            com.management.project.entity.Project p = projectMapper.selectById(req.getProjectId());
+            projectType = "invite_bidding".equals(p.getProjectType()) ? "project" : "ops";
+        }
 
         Requirement r = new Requirement();
         r.setTitle(req.getTitle());
@@ -68,8 +72,9 @@ public class RequirementService {
         r.setSource(req.getSource());
         r.setSystem(req.getSystem());
         r.setProjectId(req.getProjectId());
-        r.setProjectType(req.getProjectType());
+        r.setProjectType(projectType);
         r.setPersonId(req.getPersonId());
+        r.setPersonName(req.getPersonName());
         r.setRelevant(req.getRelevant());
         r.setPriority(req.getPriority() != null ? req.getPriority() : "medium");
         r.setStatus("planned");
@@ -206,6 +211,7 @@ public class RequirementService {
                 throw new BusinessException(400, "业务负责人不存在");
             r.setPersonId(req.getPersonId());
         }
+        if (req.getPersonName() != null) r.setPersonName(req.getPersonName());
         if (req.getRelevant() != null) r.setRelevant(req.getRelevant());
         if (req.getPriority() != null) r.setPriority(req.getPriority());
         if (req.getTotalAmount() != null) r.setTotalAmount(req.getTotalAmount());

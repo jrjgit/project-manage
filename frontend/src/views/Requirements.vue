@@ -78,7 +78,7 @@
         <n-grid :cols="2" :x-gap="16">
           <n-gi>
             <n-form-item label="项目类型">
-              <n-select v-model:value="form.project_type" :options="projectTypeOptions" placeholder="选择类型" />
+              <n-input :value="projectTypeLabel" disabled />
             </n-form-item>
           </n-gi>
           <n-gi>
@@ -95,12 +95,26 @@
           </n-gi>
           <n-gi>
             <n-form-item label="业务负责人">
-              <n-select v-model:value="form.person_id" :options="userOptions" placeholder="选择负责人" filterable />
+              <n-input v-model:value="form.person_name" placeholder="输入业务负责人" />
             </n-form-item>
           </n-gi>
         </n-grid>
-        <n-form-item label="需求描述详情">
-          <n-input v-model:value="form.description" type="textarea" :autosize="{ minRows: 2, maxRows: 4 }" placeholder="详细描述" />
+        <n-form-item label="需求方案附件">
+          <n-upload
+            :show-file-list="false"
+            :custom-request="handleAttachUpload"
+            accept="*/*"
+          >
+            <n-button :loading="attachUploading">
+              <template #icon>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </template>
+              {{ attachFileName || '选择文件' }}
+            </n-button>
+          </n-upload>
+          <div v-if="attachFileName" style="margin-top:6px;font-size:12px;color:#18a058">已选择: {{ attachFileName }}</div>
         </n-form-item>
         <n-grid :cols="2" :x-gap="16">
           <n-gi>
@@ -164,12 +178,13 @@ import {
   getRequirements,
   createRequirement,
   updateRequirement,
-  deleteRequirement
+  deleteRequirement,
+  uploadRequirementDocument
 } from '@/api/requirements'
 import { requirementStatusMeta } from '@/constants/requirementMeta'
 import { priorityMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
-import { NButton, NModal, NForm, NFormItem, NInput, NSelect, NSpace, NDataTable, NTag, NDatePicker, NGrid, NGi } from 'naive-ui'
+import { NButton, NModal, NForm, NFormItem, NInput, NSelect, NSpace, NDataTable, NTag, NDatePicker, NGrid, NGi, NUpload } from 'naive-ui'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -182,6 +197,9 @@ const iterations = ref([])
 const showModal = ref(false)
 const editingId = ref(null)
 const submitting = ref(false)
+const attachFile = ref(null)
+const attachFileName = ref('')
+const attachUploading = ref(false)
 const form = ref(emptyForm())
 
 const filters = ref({ number: '', title: '', status: null, project_type: null, project_id: null, iteration_id: null })
@@ -189,7 +207,7 @@ const filters = ref({ number: '', title: '', status: null, project_type: null, p
 function emptyForm() {
   return {
     number: '', title: '', description: '', status: 'planned', priority: 'medium',
-    project_id: null, project_type: 'ops', system: null, person_id: null,
+    project_id: null, project_type: 'ops', system: null, person_id: null, person_name: '',
     iteration_id: null, dev_total: '', dev_price: '', test_total: '', test_price: '',
     total_amount: '', total_price: '', planned_completion_time: null
   }
@@ -210,10 +228,12 @@ const systemOptions = computed(() => {
   return systems.value.map(s => ({ label: s.name, value: s.name }))
 })
 const statusOptions = Object.entries(requirementStatusMeta).map(([v, m]) => ({ label: m.label, value: v }))
-const projectTypeOptions = [
-  { label: '运维需求', value: 'ops' },
-  { label: '项目需求', value: 'project' }
-]
+const projectTypeLabel = computed(() => {
+  if (!form.value.project_id) return '选择项目后自动匹配'
+  const p = projects.value.find(x => x.id === form.value.project_id)
+  if (!p) return '选择项目后自动匹配'
+  return p.project_type === 'invite_bidding' ? '项目需求' : '运维需求'
+})
 const priorityOptions = Object.entries(priorityMeta).map(([v, m]) => ({ label: m.label, value: v }))
 
 const inProgressCount = computed(() => allData.value.filter(r => r.status === 'in_progress').length)
@@ -287,6 +307,8 @@ function resetFilters() {
 
 function onProjectChange() {
   form.value.system = null
+  const p = projects.value.find(x => x.id === form.value.project_id)
+  form.value.project_type = p ? (p.project_type === 'invite_bidding' ? 'project' : 'ops') : 'ops'
 }
 
 function openCreate() {
@@ -307,6 +329,7 @@ function openEdit(row) {
     project_type: row.project_type,
     system: row.system,
     person_id: row.person_id,
+    person_name: row.person_name || '',
     iteration_id: row.iteration_id,
     dev_total: row.dev_total || '',
     dev_price: row.dev_price || '',
@@ -316,6 +339,8 @@ function openEdit(row) {
     total_price: row.total_price || '',
     planned_completion_time: row.planned_completion_time ? new Date(row.planned_completion_time).getTime() : null
   }
+  attachFileName.value = ''
+  attachFile.value = null
   showModal.value = true
 }
 
@@ -334,13 +359,23 @@ async function submit() {
       await updateRequirement(editingId.value, payload)
       window.$message?.success('更新成功')
     } else {
-      await createRequirement(payload)
+      const created = await createRequirement(payload)
+      if (attachFile.value) {
+        await uploadRequirementDocument(created.id, attachFile.value)
+      }
       window.$message?.success('创建成功')
     }
     showModal.value = false
+    attachFile.value = null
+    attachFileName.value = ''
     await loadData()
   } catch (e) { window.$message?.error('操作失败') }
   submitting.value = false
+}
+
+function handleAttachUpload({ file }) {
+  attachFile.value = file.file
+  attachFileName.value = file.name
 }
 
 async function handleDelete(row) {

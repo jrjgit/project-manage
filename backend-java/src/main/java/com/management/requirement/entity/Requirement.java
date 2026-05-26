@@ -32,6 +32,7 @@ public class Requirement {
     private Long personId;
     @TableField(exist = false)
     private User person;
+    private String personName;
     private String relevant;
     private String totalAmount;
     private String totalPrice;
