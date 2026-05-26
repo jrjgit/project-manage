@@ -28,7 +28,7 @@
       <section class="section-card">
         <div class="filter-bar">
           <n-input v-model:value="filters.number" placeholder="需求编号" clearable style="width:140px" size="small" />
-          <n-input v-model:value="filters.title" placeholder="需求内容" clearable style="width:180px" size="small" />
+          <n-input v-model:value="filters.title" placeholder="需求描述" clearable style="width:180px" size="small" />
           <n-select v-model:value="filters.status" :options="statusOptions" placeholder="状态" clearable style="width:130px" size="small" />
           <n-select v-model:value="filters.project_type" :options="projectTypeOptions" placeholder="项目类型" clearable style="width:130px" size="small" />
           <n-select v-model:value="filters.project_id" :options="projectOptions" placeholder="项目名称" clearable filterable style="width:160px" size="small" />
@@ -262,7 +262,7 @@ const columns = [
       }, row.number || `REQ-${String(row.id).padStart(4, '0')}`)
     }
   },
-  { title: '需求内容', key: 'title', ellipsis: { tooltip: true }, minWidth: 200 },
+  { title: '需求描述', key: 'title', ellipsis: { tooltip: true }, minWidth: 200 },
   {
     title: '状态', key: 'status', width: 100,
     render(row) {

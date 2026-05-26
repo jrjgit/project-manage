@@ -103,13 +103,13 @@
           <!-- Description -->
           <section class="section-card">
             <div class="section-header">
-              <h3>需求描述</h3>
+              <h3>详细说明</h3>
             </div>
             <n-input
               v-model:value="localDescription"
               type="textarea"
               :autosize="{ minRows: 3, maxRows: 8 }"
-              placeholder="添加需求描述..."
+              placeholder="添加详细说明..."
               @blur="saveDescription"
             />
           </section>
