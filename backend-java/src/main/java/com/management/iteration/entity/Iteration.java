@@ -17,7 +17,7 @@ public class Iteration {
     private Long id;
     private String iterationId;
     private String name;
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
     private LocalDateTime releaseTime;
     private String notes;
     private Long createdBy;

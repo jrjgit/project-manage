@@ -4,6 +4,11 @@ server:
 spring:
   jackson:
     property-naming-strategy: SNAKE_CASE
+    time-zone: Asia/Shanghai
+    deserialization:
+      accept-empty-string-as-null-object: true
+    serialization:
+      write-dates-as-timestamps: false
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DB:management}?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: ${MYSQL_USER:root}
