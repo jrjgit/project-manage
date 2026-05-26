@@ -78,6 +78,11 @@ public class BugService {
     /** 创建 Bug */
     @Transactional
     public Bug createBug(CreateBugRequest req) {
+        if (taskMapper.selectById(req.getTaskId()) == null)
+            throw new BusinessException(400, "关联任务不存在");
+        if (req.getAssigneeId() != null && userMapper.selectById(req.getAssigneeId()) == null)
+            throw new BusinessException(400, "指派人不存在");
+
         Long userId = currentUser().getUserId();
         Bug bug = new Bug();
         bug.setTitle(req.getTitle());
@@ -119,8 +124,16 @@ public class BugService {
         if (req.getTitle() != null && !req.getTitle().isBlank()) bug.setTitle(req.getTitle());
         if (req.getDescription() != null) bug.setDescription(req.getDescription());
         if (req.getSeverity() != null && !req.getSeverity().isBlank()) bug.setSeverity(req.getSeverity());
-        if (req.getTaskId() != null) bug.setTaskId(req.getTaskId());
-        if (req.getAssigneeId() != null) bug.setAssigneeId(req.getAssigneeId());
+        if (req.getTaskId() != null) {
+            if (taskMapper.selectById(req.getTaskId()) == null)
+                throw new BusinessException(400, "关联任务不存在");
+            bug.setTaskId(req.getTaskId());
+        }
+        if (req.getAssigneeId() != null) {
+            if (userMapper.selectById(req.getAssigneeId()) == null)
+                throw new BusinessException(400, "指派人不存在");
+            bug.setAssigneeId(req.getAssigneeId());
+        }
         if (req.getFixComment() != null) bug.setFixComment(req.getFixComment());
         if (req.getReopenReason() != null) bug.setReopenReason(req.getReopenReason());
         bugMapper.updateById(bug);

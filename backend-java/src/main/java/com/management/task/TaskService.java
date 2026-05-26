@@ -191,6 +191,19 @@ public class TaskService {
             }
         }
 
+        if (req.getProjectId() != null && projectMapper.selectById(req.getProjectId()) == null)
+            throw new BusinessException(400, "项目不存在");
+        if (req.getDevLeadId() != null && userMapper.selectById(req.getDevLeadId()) == null)
+            throw new BusinessException(400, "开发组长不存在");
+        if (req.getAssigneeId() != null && userMapper.selectById(req.getAssigneeId()) == null)
+            throw new BusinessException(400, "指派人不存在");
+        if (req.getTesterId() != null && userMapper.selectById(req.getTesterId()) == null)
+            throw new BusinessException(400, "测试人员不存在");
+        if (req.getRequirementId() != null && requirementMapper.selectById(req.getRequirementId()) == null)
+            throw new BusinessException(400, "关联需求不存在");
+        if (req.getFeatureId() != null && featureMapper.selectById(req.getFeatureId()) == null)
+            throw new BusinessException(400, "关联功能点不存在");
+
         Task task = new Task();
         task.setTitle(req.getTitle());
         task.setDescription(req.getDescription());
@@ -210,6 +223,8 @@ public class TaskService {
         // 处理多指派人
         if (req.getAssignees() != null && !req.getAssignees().isEmpty()) {
             for (var item : req.getAssignees()) {
+                if (userMapper.selectById(item.getUserId()) == null)
+                    throw new BusinessException(400, "指派人不存在: " + item.getUserId());
                 TaskAssignee ta = new TaskAssignee();
                 ta.setTaskId(task.getId());
                 ta.setUserId(item.getUserId());
@@ -223,6 +238,8 @@ public class TaskService {
             }
         } else if (req.getAssigneeIds() != null && !req.getAssigneeIds().isEmpty()) {
             for (Long uid : req.getAssigneeIds()) {
+                if (userMapper.selectById(uid) == null)
+                    throw new BusinessException(400, "指派人不存在: " + uid);
                 TaskAssignee ta = new TaskAssignee();
                 ta.setTaskId(task.getId());
                 ta.setUserId(uid);
@@ -256,13 +273,41 @@ public class TaskService {
         if (req.getTitle() != null && !req.getTitle().isBlank()) task.setTitle(req.getTitle());
         if (req.getDescription() != null) task.setDescription(req.getDescription());
         if (req.getPriority() != null && !req.getPriority().isBlank()) task.setPriority(req.getPriority());
-        if (req.getProjectId() != null) task.setProjectId(req.getProjectId());
-        if (req.getDevLeadId() != null) task.setDevLeadId(req.getDevLeadId());
-        if (req.getAssigneeId() != null) task.setAssigneeId(req.getAssigneeId());
-        if (req.getTesterLeadId() != null) task.setTesterLeadId(req.getTesterLeadId());
-        if (req.getTesterId() != null) task.setTesterId(req.getTesterId());
-        if (req.getRequirementId() != null) task.setRequirementId(req.getRequirementId());
-        if (req.getFeatureId() != null) task.setFeatureId(req.getFeatureId());
+        if (req.getProjectId() != null) {
+            if (projectMapper.selectById(req.getProjectId()) == null)
+                throw new BusinessException(400, "项目不存在");
+            task.setProjectId(req.getProjectId());
+        }
+        if (req.getDevLeadId() != null) {
+            if (userMapper.selectById(req.getDevLeadId()) == null)
+                throw new BusinessException(400, "开发组长不存在");
+            task.setDevLeadId(req.getDevLeadId());
+        }
+        if (req.getAssigneeId() != null) {
+            if (userMapper.selectById(req.getAssigneeId()) == null)
+                throw new BusinessException(400, "指派人不存在");
+            task.setAssigneeId(req.getAssigneeId());
+        }
+        if (req.getTesterLeadId() != null) {
+            if (userMapper.selectById(req.getTesterLeadId()) == null)
+                throw new BusinessException(400, "测试组长不存在");
+            task.setTesterLeadId(req.getTesterLeadId());
+        }
+        if (req.getTesterId() != null) {
+            if (userMapper.selectById(req.getTesterId()) == null)
+                throw new BusinessException(400, "测试人员不存在");
+            task.setTesterId(req.getTesterId());
+        }
+        if (req.getRequirementId() != null) {
+            if (requirementMapper.selectById(req.getRequirementId()) == null)
+                throw new BusinessException(400, "关联需求不存在");
+            task.setRequirementId(req.getRequirementId());
+        }
+        if (req.getFeatureId() != null) {
+            if (featureMapper.selectById(req.getFeatureId()) == null)
+                throw new BusinessException(400, "关联功能点不存在");
+            task.setFeatureId(req.getFeatureId());
+        }
         if (req.getDeadline() != null && !req.getDeadline().isBlank()) {
             String d = req.getDeadline().trim();
             if (d.contains("T")) {

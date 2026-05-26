@@ -59,6 +59,9 @@ public class FeatureAssignmentService {
         feature.setStatus("pending_dev");
         featureMapper.updateById(feature);
 
+        if (req.getDeveloperId() != null && userMapper.selectById(req.getDeveloperId()) == null)
+            throw new BusinessException(400, "开发人员不存在");
+
         FeatureAssignment a = new FeatureAssignment();
         a.setFeatureId(req.getFeatureId());
         a.setTerminal(req.getTerminal());

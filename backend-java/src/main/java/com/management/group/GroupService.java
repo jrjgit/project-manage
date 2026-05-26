@@ -54,6 +54,9 @@ public class GroupService {
     public Group createGroup(CreateGroupRequest req) {
         Long userId = currentUser().getUserId();
         String leadRole = req.getLeadRole() != null ? req.getLeadRole() : "dev";
+        if (userMapper.selectById(req.getDevLeadId()) == null)
+            throw new BusinessException(400, "开发组长不存在");
+
         Group group = new Group();
         group.setName(req.getName());
         group.setPmId(userId);

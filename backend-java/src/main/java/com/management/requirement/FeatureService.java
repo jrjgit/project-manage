@@ -10,6 +10,7 @@ import com.management.requirement.entity.Feature;
 import com.management.requirement.mapper.FeatureMapper;
 import com.management.task.entity.Task;
 import com.management.task.mapper.TaskMapper;
+import com.management.requirement.mapper.RequirementMapper;
 import com.management.user.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ public class FeatureService {
     private final FeatureMapper featureMapper;
     private final UserMapper userMapper;
     private final TaskMapper taskMapper;
+    private final RequirementMapper requirementMapper;
 
     public List<Feature> listByRequirement(Long requirementId) {
         List<Feature> list = featureMapper.selectList(
@@ -35,6 +37,12 @@ public class FeatureService {
     }
 
     public Feature create(Long requirementId, CreateFeatureRequest req) {
+        if (requirementMapper.selectById(requirementId) == null)
+            throw new BusinessException(400, "关联需求不存在");
+        if (req.getDeveloperId() != null && userMapper.selectById(req.getDeveloperId()) == null)
+            throw new BusinessException(400, "开发负责人不存在");
+        if (req.getTesterId() != null && userMapper.selectById(req.getTesterId()) == null)
+            throw new BusinessException(400, "测试负责人不存在");
         Feature f = new Feature();
         f.setRequirementId(requirementId);
         f.setTitle(req.getTitle());
@@ -53,8 +61,16 @@ public class FeatureService {
         if (f == null) throw new BusinessException(404, "功能点不存在");
         if (req.getTitle() != null) f.setTitle(req.getTitle());
         if (req.getDescription() != null) f.setDescription(req.getDescription());
-        if (req.getDeveloperId() != null) f.setDeveloperId(req.getDeveloperId());
-        if (req.getTesterId() != null) f.setTesterId(req.getTesterId());
+        if (req.getDeveloperId() != null) {
+            if (userMapper.selectById(req.getDeveloperId()) == null)
+                throw new BusinessException(400, "开发负责人不存在");
+            f.setDeveloperId(req.getDeveloperId());
+        }
+        if (req.getTesterId() != null) {
+            if (userMapper.selectById(req.getTesterId()) == null)
+                throw new BusinessException(400, "测试负责人不存在");
+            f.setTesterId(req.getTesterId());
+        }
         featureMapper.updateById(f);
         fillAssociations(f);
         return f;
