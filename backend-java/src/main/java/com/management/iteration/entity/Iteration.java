@@ -20,6 +20,7 @@ public class Iteration {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
     private LocalDateTime releaseTime;
     private String notes;
+    private String releaseNotes;
     private Long createdBy;
     @TableField(exist = false)
     private User creator;

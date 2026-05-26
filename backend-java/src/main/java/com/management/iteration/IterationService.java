@@ -48,6 +48,7 @@ public class IterationService {
         if (req.getName() != null) it.setName(req.getName());
         if (req.getReleaseTime() != null) it.setReleaseTime(req.getReleaseTime());
         if (req.getNotes() != null) it.setNotes(req.getNotes());
+        if (req.getReleaseNotes() != null) it.setReleaseNotes(req.getReleaseNotes());
         iterationMapper.updateById(it);
         if (it.getCreatedBy() != null) it.setCreator(userMapper.selectById(it.getCreatedBy()));
         return it;

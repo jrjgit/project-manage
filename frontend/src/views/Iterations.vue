@@ -43,6 +43,9 @@
         <n-form-item label="备注">
           <n-input v-model:value="form.notes" type="textarea" :autosize="{ minRows: 2, maxRows: 4 }" placeholder="输入备注" />
         </n-form-item>
+        <n-form-item label="发布说明及注意事项">
+          <n-input v-model:value="form.release_notes" type="textarea" :autosize="{ minRows: 3, maxRows: 6 }" placeholder="输入发布说明及注意事项" />
+        </n-form-item>
       </n-form>
       <template #footer>
         <n-space justify="end">
@@ -80,7 +83,7 @@ const saving = ref(false)
 const showDeleteConfirm = ref(false)
 const deleting = ref(false)
 const deletingId = ref(null)
-const form = ref({ name: '', releaseTime: null, notes: '' })
+const form = ref({ name: '', releaseTime: null, notes: '', release_notes: '' })
 const expandedRequirements = ref({})
 
 function formatDate(ts) {
@@ -95,14 +98,14 @@ function formatDate(ts) {
 function openCreate() {
   isEditing.value = false
   editingId.value = null
-  form.value = { name: '', releaseTime: null, notes: '' }
+  form.value = { name: '', releaseTime: null, notes: '', release_notes: '' }
   showModal.value = true
 }
 
 function openEdit(row) {
   isEditing.value = true
   editingId.value = row.id
-  form.value = { name: row.name, releaseTime: row.release_time ? new Date(row.release_time).getTime() : null, notes: row.notes || '' }
+  form.value = { name: row.name, releaseTime: row.release_time ? new Date(row.release_time).getTime() : null, notes: row.notes || '', release_notes: row.release_notes || '' }
   showModal.value = true
 }
 
@@ -117,7 +120,8 @@ async function handleSave() {
     const payload = {
       name: form.value.name,
       release_time: form.value.releaseTime ? new Date(form.value.releaseTime).toISOString() : null,
-      notes: form.value.notes || null
+      notes: form.value.notes || null,
+      release_notes: form.value.release_notes || null
     }
     if (isEditing.value) {
       await updateIteration(editingId.value, payload)

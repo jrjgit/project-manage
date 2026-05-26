@@ -18,8 +18,8 @@
 
         <form @submit.prevent="handleSubmit">
           <div class="form-group">
-            <label>用户名</label>
-            <input v-model="form.name" type="text" placeholder="请输入用户名" autocomplete="username" />
+            <label>账号</label>
+            <input v-model="form.name" type="text" placeholder="请输入账号" autocomplete="username" />
           </div>
 
           <div class="form-group">

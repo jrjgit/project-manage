@@ -1,5 +1,6 @@
 export const requirementStatusMeta = {
   planned:          { label: '未开始',       tone: 'default', color: '#909399' },
+  pending_task:     { label: '任务待分配',   tone: 'info',    color: '#6366f1' },
   assigned:         { label: '已分配组长',   tone: 'info',    color: '#6366f1' },
   in_progress:      { label: '开发中',       tone: 'info',    color: '#2080f0' },
   integration_test: { label: '综合测试',     tone: 'warning', color: '#f59e0b' },

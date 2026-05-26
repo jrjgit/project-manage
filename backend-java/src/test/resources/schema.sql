@@ -153,6 +153,7 @@ CREATE TABLE IF NOT EXISTS iterations (
     name VARCHAR(255) NOT NULL,
     release_time TIMESTAMP,
     notes TEXT,
+    release_notes TEXT,
     created_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

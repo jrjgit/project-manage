@@ -39,7 +39,7 @@
               autofocus
             />
             <span v-else class="hero-field-value" @click="startEdit('person_id')">
-              {{ req.person?.name || '点击选择' }}
+              {{ req.person?.name || req.person_name || '点击选择' }}
             </span>
           </div>
           <div class="hero-field">
@@ -66,19 +66,15 @@
           </div>
           <div class="hero-field">
             <span class="hero-field-label">开发组长</span>
-            <n-select
-              v-if="editingField === 'dev_lead_id'"
-              v-model:value="req.dev_lead_id"
-              :options="devLeadOptions"
-              size="small"
-              style="width:160px"
-              @blur="saveAssignDevLead(); editingField = null"
-              @keyup.enter="saveAssignDevLead(); editingField = null"
-              autofocus
-            />
-            <span v-else class="hero-field-value" @click="startEdit('dev_lead_id')">
+            <div v-if="editingField === 'dev_lead_id'" class="hero-field-inline">
+              <n-select v-model:value="req.dev_lead_id" :options="devLeadOptions" size="small" style="width:140px" filterable
+                @keyup.enter="saveAssignDevLead(); editingField = null" autofocus />
+              <n-button size="tiny" type="primary" @click="saveAssignDevLead(); editingField = null">确定</n-button>
+              <n-button size="tiny" @click="editingField = null">取消</n-button>
+            </div>
+            <n-button v-else size="tiny" type="primary" ghost @click="startEdit('dev_lead_id')">
               {{ req.dev_lead?.name || '点击指派' }}
-            </span>
+            </n-button>
           </div>
           <div class="hero-field">
             <span class="hero-field-label">发布迭代</span>
@@ -414,7 +410,7 @@
       <section class="action-bar section-card">
         <div class="action-bar-left">
           <n-button
-            v-if="authStore.isPM"
+            v-if="authStore.isPM && !req.iteration_id"
             type="primary"
             ghost
             @click="showIterationSelector = true"
@@ -998,6 +994,12 @@ onMounted(() => {
 
 .hero-field-value:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.hero-field-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* Detail Grid */

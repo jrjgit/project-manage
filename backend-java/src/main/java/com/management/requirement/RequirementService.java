@@ -75,7 +75,7 @@ public class RequirementService {
         r.setPersonId(req.getPersonId());
         r.setPersonName(req.getPersonName());
         r.setPriority(req.getPriority() != null ? req.getPriority() : "medium");
-        r.setStatus("planned");
+        r.setStatus("pending_task");
         r.setTotalAmount(req.getTotalAmount());
         r.setTotalPrice(req.getTotalPrice());
         r.setDevTotal(req.getDevTotal());
@@ -240,7 +240,6 @@ public class RequirementService {
         Requirement r = requirementMapper.selectById(id);
         if (r == null) throw new BusinessException(404, "需求不存在");
         r.setIterationId(iterationId);
-        r.setStatus("pending_release");
         requirementMapper.updateById(r);
     }
 
@@ -249,9 +248,6 @@ public class RequirementService {
         Requirement r = requirementMapper.selectById(id);
         if (r == null) throw new BusinessException(404, "需求不存在");
         r.setIterationId(null);
-        if ("pending_release".equals(r.getStatus()) || "released".equals(r.getStatus())) {
-            r.setStatus("business_test");
-        }
         requirementMapper.updateById(r);
     }
 

@@ -33,7 +33,7 @@
           <n-input v-model:value="form.it_contact" placeholder="输入甲方IT负责人" />
         </n-form-item>
         <n-form-item label="甲方业务负责人">
-          <n-input v-model:value="form.biz_contact" placeholder="输入甲方业务负责人" />
+          <n-input v-model:value="form.biz_contact" type="textarea" :autosize="{ minRows: 2, maxRows: 4 }" placeholder="输入甲方业务负责人" />
         </n-form-item>
         <n-form-item label="内部技术权限负责人">
           <n-input v-model:value="form.tech_contact" placeholder="输入内部技术权限负责人" />
@@ -64,10 +64,10 @@ const submitting = ref(false)
 const form = ref({ name: '', it_contact: '', biz_contact: '', tech_contact: '' })
 
 const columns = [
-  { title: '系统名称', key: 'name', minWidth: 140 },
-  { title: '甲方IT负责人', key: 'it_contact', width: 140, render(row) { return row.it_contact || '-' } },
-  { title: '甲方业务负责人', key: 'biz_contact', width: 140, render(row) { return row.biz_contact || '-' } },
-  { title: '内部技术权限负责人', key: 'tech_contact', width: 140, render(row) { return row.tech_contact || '-' } },
+  { title: '系统名称', key: 'name', width: 100 },
+  { title: '甲方IT负责人', key: 'it_contact', width: 160, render(row) { return row.it_contact || '-' } },
+  { title: '甲方业务负责人', key: 'biz_contact', width: 200, render(row) { return row.biz_contact || '-' } },
+  { title: '内部技术权限负责人', key: 'tech_contact', width: 160, render(row) { return row.tech_contact || '-' } },
   { title: '创建人', key: 'creator', width: 100, render(row) { return row.creator?.name || '-' } },
   { title: '创建时间', key: 'created_at', width: 160, render(row) { return row.created_at ? new Date(row.created_at).toLocaleString() : '-' } },
   {
