@@ -99,7 +99,7 @@
             </n-form-item>
           </n-gi>
         </n-grid>
-        <n-form-item label="需求方案附件">
+        <n-form-item label="需求文档">
           <n-upload
             :show-file-list="false"
             :custom-request="handleAttachUpload"
