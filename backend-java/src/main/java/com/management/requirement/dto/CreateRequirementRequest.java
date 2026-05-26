@@ -5,8 +5,7 @@ import lombok.Data;
 
 @Data
 public class CreateRequirementRequest {
-    @NotBlank private String title;
-    private String description;
+    @NotBlank private String description;
     private String notes;
     private String system;
     private Long projectId;

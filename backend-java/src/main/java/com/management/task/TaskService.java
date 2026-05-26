@@ -161,7 +161,7 @@ public class TaskService {
         if (t.getTesterId() != null) t.setTester(userMapper.selectById(t.getTesterId()));
         if (t.getRequirementId() != null) {
             Requirement req = requirementMapper.selectById(t.getRequirementId());
-            if (req != null) t.setRequirementName(req.getTitle());
+            if (req != null) t.setRequirementName(req.getDescription());
         }
         if (t.getFeatureId() != null) {
             Feature f = featureMapper.selectById(t.getFeatureId());

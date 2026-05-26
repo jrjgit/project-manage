@@ -28,7 +28,7 @@
       <section class="section-card">
         <div class="filter-bar">
           <n-input v-model:value="filters.number" placeholder="需求编号" clearable style="width:140px" size="small" />
-          <n-input v-model:value="filters.title" placeholder="需求描述" clearable style="width:180px" size="small" />
+          <n-input v-model:value="filters.description" placeholder="需求描述" clearable style="width:180px" size="small" />
           <n-select v-model:value="filters.status" :options="statusOptions" placeholder="状态" clearable style="width:130px" size="small" />
           <n-select v-model:value="filters.project_type" :options="projectTypeOptions" placeholder="项目类型" clearable style="width:130px" size="small" />
           <n-select v-model:value="filters.project_id" :options="projectOptions" placeholder="项目名称" clearable filterable style="width:160px" size="small" />
@@ -60,8 +60,8 @@
             </n-form-item>
           </n-gi>
         </n-grid>
-        <n-form-item label="需求描述" path="title" :rule="{ required: true, message: '请输入需求描述' }">
-          <n-input v-model:value="form.title" placeholder="输入需求描述" />
+        <n-form-item label="需求描述" path="description" :rule="{ required: true, message: '请输入需求描述' }">
+          <n-input v-model:value="form.description" placeholder="输入需求描述" />
         </n-form-item>
         <n-grid :cols="2" :x-gap="16">
           <n-gi>
@@ -202,11 +202,11 @@ const attachFileName = ref('')
 const attachUploading = ref(false)
 const form = ref(emptyForm())
 
-const filters = ref({ number: '', title: '', status: null, project_type: null, project_id: null, iteration_id: null })
+const filters = ref({ number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null })
 
 function emptyForm() {
   return {
-    number: '', title: '', description: '', status: 'planned', priority: 'medium',
+    number: '', description: '', status: 'planned', priority: 'medium',
     project_id: null, project_type: 'ops', system: null, person_id: null, person_name: '',
     iteration_id: null, dev_total: '', dev_price: '', test_total: '', test_price: '',
     total_amount: '', total_price: '', planned_completion_time: null
@@ -243,7 +243,7 @@ const filteredData = computed(() => {
   const f = filters.value
   return allData.value.filter(r => {
     if (f.number && !(r.number || '').includes(f.number)) return false
-    if (f.title && !(r.title || '').toLowerCase().includes(f.title.toLowerCase())) return false
+    if (f.description && !(r.description || '').toLowerCase().includes(f.description.toLowerCase())) return false
     if (f.status && r.status !== f.status) return false
     if (f.project_type && r.project_type !== f.project_type) return false
     if (f.project_id && r.project_id !== f.project_id) return false
@@ -262,7 +262,7 @@ const columns = [
       }, row.number || `REQ-${String(row.id).padStart(4, '0')}`)
     }
   },
-  { title: '需求描述', key: 'title', ellipsis: { tooltip: true }, minWidth: 200 },
+  { title: '需求描述', key: 'description', ellipsis: { tooltip: true }, minWidth: 200 },
   {
     title: '状态', key: 'status', width: 100,
     render(row) {
@@ -302,7 +302,7 @@ const columns = [
 ]
 
 function resetFilters() {
-  filters.value = { number: '', title: '', status: null, project_type: null, project_id: null, iteration_id: null }
+  filters.value = { number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null }
 }
 
 function onProjectChange() {
@@ -321,7 +321,6 @@ function openEdit(row) {
   editingId.value = row.id
   form.value = {
     number: row.number || '',
-    title: row.title,
     description: row.description || '',
     status: row.status,
     priority: row.priority,
@@ -345,11 +344,11 @@ function openEdit(row) {
 }
 
 async function submit() {
-  if (!form.value.title.trim()) { window.$message?.warning('请输入需求描述'); return }
+  if (!form.value.description.trim()) { window.$message?.warning('请输入需求描述'); return }
   submitting.value = true
   try {
     const payload = {
-      ...form.value,
+      ...form.value, description: form.value.description || '',
       planned_completion_time: form.value.planned_completion_time ? new Date(form.value.planned_completion_time).toISOString() : null,
       project_id: form.value.project_id || null,
       person_id: form.value.person_id || null,
@@ -380,7 +379,7 @@ function handleAttachUpload({ file }) {
 
 async function handleDelete(row) {
   window.$dialog?.warning({
-    title: '确认删除', content: `确定删除需求「${row.title}」吗？`,
+    title: '确认删除', content: `确定删除需求「${row.description}」吗？`,
     positiveText: '确定', negativeText: '取消',
     onPositiveClick: async () => {
       try { await deleteRequirement(row.id); window.$message?.success('已删除'); await loadData() }

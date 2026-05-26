@@ -17,7 +17,6 @@ public class Requirement {
     private Long id;
     private String requirementId;
     private String number;
-    private String title;
     private String description;
     private String notes;
     private String status;

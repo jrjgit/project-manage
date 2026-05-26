@@ -16,8 +16,8 @@
       <!-- Hero Card -->
       <section class="hero-card">
         <div class="hero-left">
-          <div class="hero-eyebrow">{{ req.number || `REQ-${String(req.id || '').padStart(4, '0')}` }}</div>
-          <h2 class="hero-title">{{ req.title }}</h2>
+          <div class="hero-eyebrow" style="font-size:16px;font-weight:700">{{ req.number || `REQ-${String(req.id || '').padStart(4, '0')}` }}</div>
+          <h2 class="hero-title">{{ req.description }}</h2>
           <div class="hero-tags">
             <n-tag :type="statusMeta?.tone || 'default'" size="small" round>
               {{ statusMeta?.label || req.status }}
@@ -70,7 +70,7 @@
               <n-select v-model:value="req.dev_lead_id" :options="devLeadOptions" size="small" style="width:140px" filterable
                 @keyup.enter="saveAssignDevLead(); editingField = null" autofocus />
               <n-button size="tiny" type="primary" @click="saveAssignDevLead(); editingField = null">确定</n-button>
-              <n-button size="tiny" @click="editingField = null">取消</n-button>
+              <n-button size="tiny" type="error" ghost @click="editingField = null">取消</n-button>
             </div>
             <n-button v-else size="tiny" type="primary" ghost @click="startEdit('dev_lead_id')">
               {{ req.dev_lead?.name || '点击指派' }}

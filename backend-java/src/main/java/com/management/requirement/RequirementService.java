@@ -66,7 +66,6 @@ public class RequirementService {
         }
 
         Requirement r = new Requirement();
-        r.setTitle(req.getTitle());
         r.setDescription(req.getDescription());
         r.setNotes(req.getNotes());
         r.setSystem(req.getSystem());
@@ -96,7 +95,7 @@ public class RequirementService {
         }
         requirementMapper.updateById(r);
         fillAssociations(r);
-        log.info("Requirement created: id={}, title={}", r.getRequirementId(), r.getTitle());
+        log.info("Requirement created: id={}, description={}", r.getRequirementId(), r.getDescription());
         return r;
     }
 
@@ -191,7 +190,6 @@ public class RequirementService {
     public Requirement update(Long id, UpdateRequirementRequest req) {
         Requirement r = requirementMapper.selectById(id);
         if (r == null) throw new BusinessException(404, "需求不存在");
-        if (req.getTitle() != null) r.setTitle(req.getTitle());
         if (req.getDescription() != null) r.setDescription(req.getDescription());
         if (req.getNotes() != null) r.setNotes(req.getNotes());
         if (req.getSystem() != null) r.setSystem(req.getSystem());
@@ -299,7 +297,6 @@ public class RequirementService {
         dto.setId(r.getId());
         dto.setRequirementId(r.getRequirementId());
         dto.setNumber(r.getNumber());
-        dto.setTitle(r.getTitle());
         dto.setDescription(r.getDescription());
         dto.setNotes(r.getNotes());
         dto.setStatus(r.getStatus());

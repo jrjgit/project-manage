@@ -4,7 +4,6 @@ import lombok.Data;
 
 @Data
 public class UpdateRequirementRequest {
-    private String title;
     private String description;
     private String notes;
     private String system;
