@@ -112,8 +112,9 @@ async function submit() {
 }
 
 async function handleDelete(row) {
-  window.$dialog?.confirm({
+  window.$dialog?.warning({
     title: '确认删除', content: `确定删除系统「${row.name}」吗？`,
+    positiveText: '确定', negativeText: '取消',
     onPositiveClick: async () => {
       try { await deleteSystem(row.id); window.$message?.success('已删除'); await loadData() }
       catch (e) { window.$message?.error('删除失败') }
