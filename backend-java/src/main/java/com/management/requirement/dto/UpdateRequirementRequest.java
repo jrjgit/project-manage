@@ -13,7 +13,9 @@ public class UpdateRequirementRequest {
     private Long personId;
     private String relevant;
     private String priority;
+    private String status;
     private String totalAmount;
+    private String totalPrice;
     private String devTotal;
     private String devPrice;
     private String testTotal;
@@ -21,5 +23,8 @@ public class UpdateRequirementRequest {
     private String bizTestTotal;
     private String bizTestPrice;
     private String requirementId;
+    private String number;
     private String iterationId;
+    private String projectType;
+    private String plannedCompletionTime;
 }

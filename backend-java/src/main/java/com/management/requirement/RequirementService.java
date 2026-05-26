@@ -188,6 +188,7 @@ public class RequirementService {
         if (req.getRelevant() != null) r.setRelevant(req.getRelevant());
         if (req.getPriority() != null) r.setPriority(req.getPriority());
         if (req.getTotalAmount() != null) r.setTotalAmount(req.getTotalAmount());
+        if (req.getTotalPrice() != null) r.setTotalPrice(req.getTotalPrice());
         if (req.getDevTotal() != null) r.setDevTotal(req.getDevTotal());
         if (req.getDevPrice() != null) r.setDevPrice(req.getDevPrice());
         if (req.getTestTotal() != null) r.setTestTotal(req.getTestTotal());
@@ -195,6 +196,11 @@ public class RequirementService {
         if (req.getBizTestTotal() != null) r.setBizTestTotal(req.getBizTestTotal());
         if (req.getBizTestPrice() != null) r.setBizTestPrice(req.getBizTestPrice());
         if (req.getIterationId() != null) r.setIterationId(req.getIterationId());
+        if (req.getNumber() != null) r.setNumber(req.getNumber());
+        if (req.getProjectType() != null) r.setProjectType(req.getProjectType());
+        if (req.getStatus() != null) r.setStatus(req.getStatus());
+        if (req.getPlannedCompletionTime() != null)
+            r.setPlannedCompletionTime(java.time.LocalDateTime.parse(req.getPlannedCompletionTime()));
         requirementMapper.updateById(r);
         fillAssociations(r);
         return r;

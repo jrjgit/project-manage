@@ -1,69 +1,51 @@
 <template>
   <AppLayout>
     <template #actions>
-      <n-button v-if="authStore.isPM" type="primary" class="action-btn" @click="showCreate = true">
+      <n-button v-if="authStore.isPM" type="primary" class="action-btn" @click="openCreate">
         <template #icon>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
         </template>
-        创建项目
+        新增项目
       </n-button>
     </template>
 
-    <div class="page-shell">
-      <section class="hero-card">
-        <div>
-          <div class="section-kicker">项目总览</div>
-          <h2 class="hero-title">当前项目空间</h2>
-          <p class="hero-subtitle">集中查看项目负责人、创建时间与可维护入口，保持视觉风格与执行页一致。</p>
-        </div>
-        <div class="hero-stat">
-          <span class="hero-stat-value">{{ projects.length }}</span>
-          <span class="hero-stat-label">项目总数</span>
-        </div>
+    <div class="projects-page">
+      <section class="section-card">
+        <n-data-table
+          :columns="columns"
+          :data="projects"
+          :pagination="{ pageSize: 15 }"
+          :bordered="false"
+          :single-line="false"
+          striped
+        />
       </section>
-
-      <div class="projects-grid">
-        <div v-for="project in projects" :key="project.id" class="project-card">
-          <div class="project-header">
-            <div class="project-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-              </svg>
-            </div>
-            <div class="project-actions" v-if="authStore.isPM">
-              <button class="icon-btn" @click="editProject(project)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              </button>
-              <button class="icon-btn danger" @click="deleteProject(project.id)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
-            </div>
-          </div>
-          <h3 class="project-name">{{ project.name }}</h3>
-          <div class="project-meta">
-            <span class="pm-badge">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              {{ project.pm?.name }}
-            </span>
-            <span class="date-badge">{{ formatDate(project.created_at) }}</span>
-          </div>
-        </div>
-      </div>
     </div>
 
-    <!-- 创建/编辑弹窗 -->
-    <n-modal v-model:show="showCreate" preset="card" style="width: 440px" :title="editingId ? '编辑项目' : '创建项目'">
-      <n-form :model="form" :rules="{ name: [{ required: true, message: '请输入项目名称' }] }">
-        <n-form-item label="项目名称" path="name">
+    <n-modal v-model:show="showModal" preset="card" style="width: 560px" :title="editingId ? '编辑项目' : '新增项目'" :mask-closable="false">
+      <n-form :model="form" label-placement="top">
+        <n-form-item label="项目名称" path="name" :rule="{ required: true, message: '请输入项目名称' }">
           <n-input v-model:value="form.name" placeholder="输入项目名称" />
+        </n-form-item>
+        <n-form-item label="项目编号">
+          <n-input v-model:value="form.code" placeholder="输入项目编号" />
+        </n-form-item>
+        <n-form-item label="项目类型">
+          <n-select v-model:value="form.project_type" :options="projectTypeOptions" placeholder="选择项目类型" />
+        </n-form-item>
+        <n-form-item label="系统范围">
+          <n-select v-model:value="form.system_scope" :options="systemOptions" multiple placeholder="选择系统范围" />
+        </n-form-item>
+        <n-form-item label="人力资源范围">
+          <n-select v-model:value="form.hr_scope" :options="userOptions" multiple placeholder="选择人员" filterable />
         </n-form-item>
       </n-form>
       <template #footer>
         <n-space justify="end">
-          <n-button @click="showCreate = false">取消</n-button>
-          <n-button type="primary" :loading="loading" @click="submit">确定</n-button>
+          <n-button @click="showModal = false">取消</n-button>
+          <n-button type="primary" :loading="submitting" @click="submit">确定</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -71,258 +53,112 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, h, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
-import { getProjects, createProject, updateProject, deleteProject as apiDelete } from '@/api/projects'
+import { getProjects, createProject, updateProject, deleteProject } from '@/api/projects'
+import { getSystems } from '@/api/systems'
+import { getUsers } from '@/api/users'
 import AppLayout from '@/components/AppLayout.vue'
-import { NButton, NModal, NForm, NFormItem, NInput, NSpace } from 'naive-ui'
+import { NButton, NModal, NForm, NFormItem, NInput, NSelect, NSpace, NDataTable } from 'naive-ui'
 
 const authStore = useAuthStore()
 const projects = ref([])
-const showCreate = ref(false)
-const loading = ref(false)
+const systems = ref([])
+const users = ref([])
+const showModal = ref(false)
 const editingId = ref(null)
-const form = ref({ name: '' })
+const submitting = ref(false)
+const form = ref({ name: '', code: '', project_type: null, system_scope: [], hr_scope: [] })
 
-async function load() {
-  try { projects.value = await getProjects() } catch (e) {}
+const projectTypeOptions = [
+  { label: '邀标项目', value: 'invite_bidding' },
+  { label: '应需运维', value: 'ops' }
+]
+const systemOptions = computed(() => systems.value.map(s => ({ label: s.name, value: s.id })))
+const userOptions = computed(() => users.value.map(u => ({ label: u.name, value: u.id })))
+
+const columns = [
+  { title: '项目名称', key: 'name', minWidth: 140 },
+  { title: '项目编号', key: 'code', width: 120, render(row) { return row.code || '-' } },
+  { title: '项目类型', key: 'project_type', width: 100, render(row) { return row.project_type === 'invite_bidding' ? '邀标项目' : row.project_type === 'ops' ? '应需运维' : '-' } },
+  { title: '创建人', key: 'creator', width: 100, render(row) { return row.creator?.name || row.pm?.name || '-' } },
+  { title: '创建时间', key: 'created_at', width: 160, render(row) { return row.created_at ? new Date(row.created_at).toLocaleString() : '-' } },
+  {
+    title: '操作', key: 'actions', width: 120,
+    render(row) {
+      if (!authStore.isPM) return null
+      return h('span', { style: 'display:flex;gap:8px' }, [
+        h('a', { style: 'cursor:pointer;color:#6366f1', onClick: () => openEdit(row) }, '编辑'),
+        h('a', { style: 'cursor:pointer;color:#d03050', onClick: () => handleDelete(row) }, '删除')
+      ])
+    }
+  }
+]
+
+function openCreate() {
+  editingId.value = null
+  form.value = { name: '', code: '', project_type: null, system_scope: [], hr_scope: [] }
+  showModal.value = true
 }
 
-function editProject(p) {
-  editingId.value = p.id
-  form.value = { name: p.name }
-  showCreate.value = true
+function openEdit(row) {
+  editingId.value = row.id
+  form.value = {
+    name: row.name,
+    code: row.code || '',
+    project_type: row.project_type || null,
+    system_scope: row.system_scope ? row.system_scope.split(',').map(Number) : [],
+    hr_scope: row.hr_scope ? row.hr_scope.split(',').map(Number) : []
+  }
+  showModal.value = true
 }
 
 async function submit() {
-  if (!form.value.name.trim()) return
-  loading.value = true
+  if (!form.value.name.trim()) { window.$message?.warning('请输入项目名称'); return }
+  submitting.value = true
   try {
-    if (editingId.value) {
-      await updateProject(editingId.value, { name: form.value.name })
-    } else {
-      await createProject({ name: form.value.name })
+    const payload = {
+      name: form.value.name,
+      code: form.value.code || null,
+      project_type: form.value.project_type,
+      system_scope: form.value.system_scope.length ? form.value.system_scope : null,
+      hr_scope: form.value.hr_scope.length ? form.value.hr_scope : null
     }
-    window.$message.success(editingId.value ? '更新成功' : '创建成功')
-    showCreate.value = false
-    editingId.value = null
-    form.value = { name: '' }
-    await load()
-  } catch (e) {}
-  loading.value = false
+    if (editingId.value) {
+      await updateProject(editingId.value, payload)
+      window.$message?.success('更新成功')
+    } else {
+      await createProject(payload)
+      window.$message?.success('创建成功')
+    }
+    showModal.value = false
+    await loadData()
+  } catch (e) { window.$message?.error('操作失败') }
+  submitting.value = false
 }
 
-async function deleteProject(id) {
+async function handleDelete(row) {
+  window.$dialog?.confirm({
+    title: '确认删除', content: `确定删除项目「${row.name}」吗？`,
+    onPositiveClick: async () => {
+      try { await deleteProject(row.id); window.$message?.success('已删除'); await loadData() }
+      catch (e) { window.$message?.error('删除失败') }
+    }
+  })
+}
+
+async function loadData() {
   try {
-    await apiDelete(id)
-    window.$message.success('删除成功')
-    await load()
-  } catch (e) {}
+    const [proj, sys, usr] = await Promise.all([getProjects(), getSystems(), getUsers()])
+    projects.value = proj; systems.value = sys; users.value = usr
+  } catch (e) { window.$message?.error('加载失败') }
 }
 
-function formatDate(d) {
-  if (!d) return ''
-  const date = new Date(d)
-  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
-}
-
-onMounted(load)
+onMounted(() => loadData())
 </script>
 
 <style scoped>
-.page-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.hero-card {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 22px 24px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #eef2ff 0%, #ffffff 55%, #f8fafc 100%);
-  border: 1px solid #e2e8f0;
-}
-
-.section-kicker {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #6366f1;
-}
-
-.hero-title {
-  margin: 8px 0 0;
-  font-size: 26px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.hero-subtitle {
-  margin: 10px 0 0;
-  max-width: 720px;
-  color: #64748b;
-  font-size: 14px;
-  line-height: 1.7;
-}
-
-.hero-stat {
-  min-width: 96px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: white;
-  border: 1px solid #dbeafe;
-}
-
-.hero-stat-value {
-  display: block;
-  font-size: 24px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.hero-stat-label {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.projects-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-}
-
-.project-card {
-  background: white;
-  border-radius: 16px;
-  padding: 24px;
-  border: 1px solid #e2e8f0;
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
-}
-
-.project-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.project-card:hover {
-  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
-  transform: translateY(-2px);
-}
-
-.project-card:hover::before {
-  opacity: 1;
-}
-
-.project-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.project-icon {
-  width: 44px;
-  height: 44px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.project-icon svg {
-  width: 22px;
-  height: 22px;
-}
-
-.project-actions {
-  display: flex;
-  gap: 6px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.project-card:hover .project-actions {
-  opacity: 1;
-}
-
-.icon-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: none;
-  background: #f1f5f9;
-  color: #64748b;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.icon-btn:hover {
-  background: #e2e8f0;
-  color: #334155;
-}
-
-.icon-btn.danger:hover {
-  background: #fee2e2;
-  color: #ef4444;
-}
-
-.icon-btn svg {
-  width: 14px;
-  height: 14px;
-}
-
-.project-name {
-  font-size: 17px;
-  font-weight: 600;
-  color: #0f172a;
-  margin-bottom: 12px;
-}
-
-.project-meta {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.pm-badge, .date-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #64748b;
-  background: #f8fafc;
-  padding: 4px 10px;
-  border-radius: 20px;
-}
-
-.pm-badge svg, .date-badge svg {
-  width: 13px;
-  height: 13px;
-}
-
-.action-btn {
-  border-radius: 10px;
-  font-weight: 500;
-}
+.projects-page { display: flex; flex-direction: column; gap: 20px; }
+.section-card { background: white; border-radius: 20px; border: 1px solid #e2e8f0; padding: 22px; }
+.action-btn { border-radius: 10px; font-weight: 500; }
 </style>

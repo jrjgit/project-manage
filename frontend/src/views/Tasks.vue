@@ -1,16 +1,6 @@
 <template>
   <AppLayout>
-    <template #actions>
-      <n-button v-if="authStore.isPM" type="primary" class="action-btn" @click="showCreateDialog = true">
-        <template #icon>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-        </template>
-        创建任务
-      </n-button>
-    </template>
-
+    <template #actions></template>
     <div class="tasks-page">
       <section class="toolbar section-card">
         <div class="toolbar-row">
@@ -68,7 +58,6 @@
         />
       </div>
 
-      <CreateTaskDialog v-model:show="showCreateDialog" @success="loadTasks" />
       <TaskDetailDrawer
         v-model:show="showDetailDrawer"
         :task-id="selectedTaskId"
@@ -86,7 +75,6 @@ import { useAuthStore } from '@/store/useAuthStore'
 import { getTasks, changeTaskStatus } from '@/api/tasks'
 import { getProjects } from '@/api/projects'
 import TaskBoard from '@/components/TaskBoard.vue'
-import CreateTaskDialog from '@/components/CreateTaskDialog.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import AppLayout from '@/components/AppLayout.vue'
 import { taskPrimaryViews } from '@/constants/taskViews'
@@ -101,7 +89,6 @@ const router = useRouter()
 const viewMode = ref('board')
 const tasks = ref([])
 const projects = ref([])
-const showCreateDialog = ref(false)
 const showDetailDrawer = ref(false)
 const selectedTaskId = ref(null)
 

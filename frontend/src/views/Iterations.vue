@@ -40,6 +40,9 @@
         <n-form-item label="发布日期" path="releaseTime">
           <n-date-picker v-model:value="form.releaseTime" type="date" placeholder="选择发布日期" clearable style="width: 100%" />
         </n-form-item>
+        <n-form-item label="备注">
+          <n-input v-model:value="form.notes" type="textarea" :autosize="{ minRows: 2, maxRows: 4 }" placeholder="输入备注" />
+        </n-form-item>
       </n-form>
       <template #footer>
         <n-space justify="end">
@@ -77,7 +80,7 @@ const saving = ref(false)
 const showDeleteConfirm = ref(false)
 const deleting = ref(false)
 const deletingId = ref(null)
-const form = ref({ name: '', releaseTime: null })
+const form = ref({ name: '', releaseTime: null, notes: '' })
 const expandedRequirements = ref({})
 
 function formatDate(ts) {
@@ -92,14 +95,14 @@ function formatDate(ts) {
 function openCreate() {
   isEditing.value = false
   editingId.value = null
-  form.value = { name: '', releaseTime: null }
+  form.value = { name: '', releaseTime: null, notes: '' }
   showModal.value = true
 }
 
 function openEdit(row) {
   isEditing.value = true
   editingId.value = row.id
-  form.value = { name: row.name, releaseTime: row.release_time ? new Date(row.release_time).getTime() : null }
+  form.value = { name: row.name, releaseTime: row.release_time ? new Date(row.release_time).getTime() : null, notes: row.notes || '' }
   showModal.value = true
 }
 
@@ -113,7 +116,8 @@ async function handleSave() {
   try {
     const payload = {
       name: form.value.name,
-      release_time: form.value.releaseTime ? new Date(form.value.releaseTime).toISOString() : null
+      release_time: form.value.releaseTime ? new Date(form.value.releaseTime).toISOString() : null,
+      notes: form.value.notes || null
     }
     if (isEditing.value) {
       await updateIteration(editingId.value, payload)
@@ -199,6 +203,22 @@ const columns = computed(() => [
     width: 140,
     render(row) {
       return formatDate(row.release_time)
+    }
+  },
+  {
+    title: '创建人',
+    key: 'creator',
+    width: 100,
+    render(row) {
+      return row.creator?.name || '-'
+    }
+  },
+  {
+    title: '创建时间',
+    key: 'created_at',
+    width: 160,
+    render(row) {
+      return row.created_at ? new Date(row.created_at).toLocaleString() : '-'
     }
   },
   {

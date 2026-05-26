@@ -1,18 +1,17 @@
 <template>
   <AppLayout>
     <template #actions>
-      <n-button v-if="authStore.isPM" type="primary" class="action-btn" @click="showCreateModal = true">
+      <n-button v-if="authStore.isPM" type="primary" class="action-btn" @click="openCreate">
         <template #icon>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
         </template>
-        创建需求
+        新增需求
       </n-button>
     </template>
 
     <div class="requirements-page">
-      <!-- Hero Stats -->
       <section class="hero-card">
         <div>
           <div class="hero-eyebrow">需求总览</div>
@@ -20,104 +19,133 @@
           <p class="hero-subtitle">集中管理运维需求与项目需求，跟踪开发、测试与发布全流程。</p>
         </div>
         <div class="hero-meta">
-          <div class="meta-pill">
-            <span class="meta-value">{{ opsCount }}</span>
-            <span class="meta-label">运维需求</span>
-          </div>
-          <div class="meta-pill">
-            <span class="meta-value">{{ projectCount }}</span>
-            <span class="meta-label">项目需求</span>
-          </div>
-          <div class="meta-pill">
-            <span class="meta-value">{{ inProgressCount }}</span>
-            <span class="meta-label">进行中</span>
-          </div>
-          <div class="meta-pill">
-            <span class="meta-value">{{ pendingReleaseCount }}</span>
-            <span class="meta-label">待发布</span>
-          </div>
+          <div class="meta-pill"><span class="meta-value">{{ allData.length }}</span><span class="meta-label">需求总数</span></div>
+          <div class="meta-pill"><span class="meta-value">{{ inProgressCount }}</span><span class="meta-label">开发中</span></div>
+          <div class="meta-pill"><span class="meta-value">{{ pendingReleaseCount }}</span><span class="meta-label">待发布</span></div>
         </div>
       </section>
 
-      <!-- Tabs -->
       <section class="section-card">
-        <n-tabs v-model:value="activeTab" type="line" animated>
-          <n-tab-pane name="ops" tab="运维需求清单">
-            <div class="filter-bar">
-              <n-select v-model:value="filterSystem" :options="systemOptions" placeholder="筛选系统" clearable style="width: 160px;" size="small" />
-              <n-select v-model:value="filterStatus" :options="statusOptions" placeholder="筛选状态" clearable style="width: 160px;" size="small" />
-              <n-button size="small" quaternary @click="resetFilters">重置</n-button>
-              <n-button size="small" quaternary @click="loadData">
-                <template #icon><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></template>
-              </n-button>
-            </div>
-            <div class="table-container">
-              <n-data-table
-                :columns="columns"
-                :data="filteredOpsRequirements"
-                :pagination="{ pageSize: 15 }"
-                :bordered="false"
-                :single-line="false"
-                striped
-              />
-            </div>
-          </n-tab-pane>
-          <n-tab-pane name="project" tab="项目需求清单">
-            <div class="filter-bar">
-              <n-select v-model:value="filterSystem" :options="systemOptions" placeholder="筛选系统" clearable style="width: 160px;" size="small" />
-              <n-select v-model:value="filterStatus" :options="statusOptions" placeholder="筛选状态" clearable style="width: 160px;" size="small" />
-              <n-button size="small" quaternary @click="resetFilters">重置</n-button>
-              <n-button size="small" quaternary @click="loadData">
-                <template #icon><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></template>
-              </n-button>
-            </div>
-            <div class="table-container">
-              <n-data-table
-                :columns="columns"
-                :data="filteredProjectRequirements"
-                :pagination="{ pageSize: 15 }"
-                :bordered="false"
-                :single-line="false"
-                striped
-              />
-            </div>
-          </n-tab-pane>
-        </n-tabs>
+        <div class="filter-bar">
+          <n-input v-model:value="filters.number" placeholder="需求编号" clearable style="width:140px" size="small" />
+          <n-input v-model:value="filters.title" placeholder="需求内容" clearable style="width:180px" size="small" />
+          <n-select v-model:value="filters.status" :options="statusOptions" placeholder="状态" clearable style="width:130px" size="small" />
+          <n-select v-model:value="filters.project_type" :options="projectTypeOptions" placeholder="项目类型" clearable style="width:130px" size="small" />
+          <n-select v-model:value="filters.project_id" :options="projectOptions" placeholder="项目名称" clearable filterable style="width:160px" size="small" />
+          <n-select v-model:value="filters.iteration_id" :options="iterationOptions" placeholder="需求迭代" clearable filterable style="width:160px" size="small" />
+          <n-button size="small" quaternary @click="resetFilters">重置</n-button>
+        </div>
+        <n-data-table
+          :columns="columns"
+          :data="filteredData"
+          :pagination="{ pageSize: 15 }"
+          :bordered="false"
+          :single-line="false"
+          striped
+        />
       </section>
     </div>
 
-    <!-- Create Modal -->
-    <n-modal v-model:show="showCreateModal" preset="card" style="width: 560px" title="创建需求" :mask-closable="false">
-      <n-form :model="createForm" label-placement="top">
-        <n-form-item label="需求编号">
-          <n-input v-model:value="createForm.number" placeholder="留空则自动生成" />
+    <n-modal v-model:show="showModal" preset="card" style="width: 640px" :title="editingId ? '编辑需求' : '新增需求'" :mask-closable="false">
+      <n-form :model="form" label-placement="top">
+        <n-grid :cols="2" :x-gap="16">
+          <n-gi>
+            <n-form-item label="需求编号">
+              <n-input v-model:value="form.number" placeholder="留空则自动生成" />
+            </n-form-item>
+          </n-gi>
+          <n-gi>
+            <n-form-item label="需求状态">
+              <n-select v-model:value="form.status" :options="statusOptions" placeholder="选择状态" />
+            </n-form-item>
+          </n-gi>
+        </n-grid>
+        <n-form-item label="需求描述" path="title" :rule="{ required: true, message: '请输入需求描述' }">
+          <n-input v-model:value="form.title" placeholder="输入需求描述" />
         </n-form-item>
-        <n-form-item label="需求标题" path="title" :rule="{ required: true, message: '请输入需求标题' }">
-          <n-input v-model:value="createForm.title" placeholder="输入需求标题" />
+        <n-grid :cols="2" :x-gap="16">
+          <n-gi>
+            <n-form-item label="所属项目">
+              <n-select v-model:value="form.project_id" :options="projectOptions" placeholder="选择项目" clearable filterable @update:value="onProjectChange" />
+            </n-form-item>
+          </n-gi>
+          <n-gi>
+            <n-form-item label="所属系统">
+              <n-select v-model:value="form.system" :options="systemOptions" placeholder="选择系统" clearable />
+            </n-form-item>
+          </n-gi>
+        </n-grid>
+        <n-grid :cols="2" :x-gap="16">
+          <n-gi>
+            <n-form-item label="项目类型">
+              <n-select v-model:value="form.project_type" :options="projectTypeOptions" placeholder="选择类型" />
+            </n-form-item>
+          </n-gi>
+          <n-gi>
+            <n-form-item label="所属迭代">
+              <n-select v-model:value="form.iteration_id" :options="iterationOptions" placeholder="选择迭代" clearable filterable />
+            </n-form-item>
+          </n-gi>
+        </n-grid>
+        <n-grid :cols="2" :x-gap="16">
+          <n-gi>
+            <n-form-item label="优先级">
+              <n-select v-model:value="form.priority" :options="priorityOptions" placeholder="选择优先级" />
+            </n-form-item>
+          </n-gi>
+          <n-gi>
+            <n-form-item label="业务负责人">
+              <n-select v-model:value="form.person_id" :options="userOptions" placeholder="选择负责人" filterable />
+            </n-form-item>
+          </n-gi>
+        </n-grid>
+        <n-form-item label="需求描述详情">
+          <n-input v-model:value="form.description" type="textarea" :autosize="{ minRows: 2, maxRows: 4 }" placeholder="详细描述" />
         </n-form-item>
-        <n-form-item label="需求类型">
-          <n-select v-model:value="createForm.project_type" :options="projectTypeOptions" placeholder="选择类型" />
-        </n-form-item>
-        <n-form-item label="所属项目">
-          <n-select v-model:value="createForm.project_id" :options="projectOptions" placeholder="选择项目（可选）" clearable filterable />
-        </n-form-item>
-        <n-form-item label="业务负责人">
-          <n-select v-model:value="createForm.person_id" :options="userOptions" placeholder="选择负责人" filterable />
-        </n-form-item>
-        <n-form-item label="关联系统">
-          <n-select v-model:value="createForm.system" :options="systemOptions" placeholder="选择系统" clearable />
-        </n-form-item>
-        <n-form-item label="优先级">
-          <n-select v-model:value="createForm.priority" :options="priorityOptions" placeholder="选择优先级" />
-        </n-form-item>
-        <n-form-item label="来源">
-          <n-select v-model:value="createForm.source" :options="sourceOptions" placeholder="选择来源" />
+        <n-grid :cols="2" :x-gap="16">
+          <n-gi>
+            <n-form-item label="开发人天">
+              <n-input v-model:value="form.dev_total" placeholder="开发人天" />
+            </n-form-item>
+          </n-gi>
+          <n-gi>
+            <n-form-item label="开发单价">
+              <n-input v-model:value="form.dev_price" placeholder="开发单价" />
+            </n-form-item>
+          </n-gi>
+        </n-grid>
+        <n-grid :cols="2" :x-gap="16">
+          <n-gi>
+            <n-form-item label="测试人天">
+              <n-input v-model:value="form.test_total" placeholder="测试人天" />
+            </n-form-item>
+          </n-gi>
+          <n-gi>
+            <n-form-item label="测试单价">
+              <n-input v-model:value="form.test_price" placeholder="测试单价" />
+            </n-form-item>
+          </n-gi>
+        </n-grid>
+        <n-grid :cols="2" :x-gap="16">
+          <n-gi>
+            <n-form-item label="总人天">
+              <n-input v-model:value="form.total_amount" placeholder="总人天" />
+            </n-form-item>
+          </n-gi>
+          <n-gi>
+            <n-form-item label="总价">
+              <n-input v-model:value="form.total_price" placeholder="总价" />
+            </n-form-item>
+          </n-gi>
+        </n-grid>
+        <n-form-item label="计划完成时间">
+          <n-date-picker v-model:value="form.planned_completion_time" type="date" placeholder="选择计划完成时间" clearable style="width:100%" />
         </n-form-item>
       </n-form>
       <template #footer>
         <n-space justify="end">
-          <n-button @click="showCreateModal = false">取消</n-button>
-          <n-button type="primary" :loading="creating" @click="handleCreate">确定</n-button>
+          <n-button @click="showModal = false">取消</n-button>
+          <n-button type="primary" :loading="submitting" @click="submit">确定</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -125,99 +153,84 @@
 </template>
 
 <script setup>
-import { computed, h, onMounted, ref } from 'vue'
+import { computed, h, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getProjects } from '@/api/projects'
+import { getSystems } from '@/api/systems'
 import { getUsers } from '@/api/users'
+import { getIterations } from '@/api/iterations'
 import {
   getRequirements,
-  getOpsRequirements,
-  getProjectRequirements,
   createRequirement,
-  changeRequirementStatus,
-  updateRequirement
+  updateRequirement,
+  deleteRequirement
 } from '@/api/requirements'
-import { requirementStatusMeta, requirementSourceMeta } from '@/constants/requirementMeta'
+import { requirementStatusMeta } from '@/constants/requirementMeta'
 import { priorityMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
-import { NButton, NModal, NForm, NFormItem, NInput, NSelect, NSpace, NDataTable, NTag, NTabs, NTabPane, NProgress } from 'naive-ui'
+import { NButton, NModal, NForm, NFormItem, NInput, NSelect, NSpace, NDataTable, NTag, NDatePicker, NGrid, NGi } from 'naive-ui'
 
 const authStore = useAuthStore()
 const router = useRouter()
 
-const activeTab = ref('ops')
-const allRequirements = ref([])
-const opsRequirements = ref([])
-const projectRequirements = ref([])
+const allData = ref([])
 const projects = ref([])
+const systems = ref([])
 const users = ref([])
-const showCreateModal = ref(false)
-const creating = ref(false)
-const createForm = ref({
-  title: '',
-  project_type: 'ops',
-  project_id: null,
-  person_id: null,
-  system: null,
-  priority: 'medium',
-  source: 'internal',
-  number: ''
+const iterations = ref([])
+const showModal = ref(false)
+const editingId = ref(null)
+const submitting = ref(false)
+const form = ref(emptyForm())
+
+const filters = ref({ number: '', title: '', status: null, project_type: null, project_id: null, iteration_id: null })
+
+function emptyForm() {
+  return {
+    number: '', title: '', description: '', status: 'planned', priority: 'medium',
+    project_id: null, project_type: 'ops', system: null, person_id: null,
+    iteration_id: null, dev_total: '', dev_price: '', test_total: '', test_price: '',
+    total_amount: '', total_price: '', planned_completion_time: null
+  }
+}
+
+const projectOptions = computed(() => projects.value.map(p => ({ label: p.name, value: p.id })))
+const userOptions = computed(() => users.value.map(u => ({ label: u.name, value: u.id })))
+const iterationOptions = computed(() => iterations.value.map(i => ({ label: i.name, value: String(i.id) })))
+const systemOptions = computed(() => {
+  if (!form.value.project_id) return []
+  const p = projects.value.find(x => x.id === form.value.project_id)
+  if (!p || !p.system_scope) return []
+  const ids = p.system_scope.split(',').map(Number)
+  return systems.value.filter(s => ids.includes(s.id)).map(s => ({ label: s.name, value: s.name }))
 })
-
-const filterSystem = ref(null)
-const filterStatus = ref(null)
-
-const projectOptions = computed(() => projects.value.map((p) => ({ label: p.name, value: p.id })))
-const userOptions = computed(() => users.value.map((u) => ({ label: u.name, value: u.id })))
-
-const systemOptions = [
-  { label: 'CRM', value: 'crm' },
-  { label: 'ERP', value: 'erp' },
-  { label: 'WMS', value: 'wms' },
-  { label: 'OMS', value: 'oms' },
-  { label: 'BI', value: 'bi' },
-  { label: 'OA', value: 'oa' },
-  { label: '其他', value: 'other' }
-]
-
-const statusOptions = Object.entries(requirementStatusMeta).map(([value, meta]) => ({ label: meta.label, value }))
-
-const priorityOptions = Object.entries(priorityMeta).map(([value, meta]) => ({ label: meta.label, value }))
-
+const statusOptions = Object.entries(requirementStatusMeta).map(([v, m]) => ({ label: m.label, value: v }))
 const projectTypeOptions = [
   { label: '运维需求', value: 'ops' },
   { label: '项目需求', value: 'project' }
 ]
+const priorityOptions = Object.entries(priorityMeta).map(([v, m]) => ({ label: m.label, value: v }))
 
-const sourceOptions = Object.entries(requirementSourceMeta).map(([value, meta]) => ({ label: meta.label, value }))
+const inProgressCount = computed(() => allData.value.filter(r => r.status === 'in_progress').length)
+const pendingReleaseCount = computed(() => allData.value.filter(r => r.status === 'pending_release').length)
 
-const opsCount = computed(() => opsRequirements.value.length)
-const projectCount = computed(() => projectRequirements.value.length)
-const inProgressCount = computed(() => allRequirements.value.filter((r) => r.status === 'in_progress').length)
-const pendingReleaseCount = computed(() => allRequirements.value.filter((r) => r.status === 'pending_release').length)
-
-const filteredOpsRequirements = computed(() => {
-  return opsRequirements.value.filter((req) => {
-    if (filterSystem.value && req.system !== filterSystem.value) return false
-    if (filterStatus.value && req.status !== filterStatus.value) return false
-    return true
-  })
-})
-
-const filteredProjectRequirements = computed(() => {
-  return projectRequirements.value.filter((req) => {
-    if (filterSystem.value && req.system !== filterSystem.value) return false
-    if (filterStatus.value && req.status !== filterStatus.value) return false
+const filteredData = computed(() => {
+  const f = filters.value
+  return allData.value.filter(r => {
+    if (f.number && !(r.number || '').includes(f.number)) return false
+    if (f.title && !(r.title || '').toLowerCase().includes(f.title.toLowerCase())) return false
+    if (f.status && r.status !== f.status) return false
+    if (f.project_type && r.project_type !== f.project_type) return false
+    if (f.project_id && r.project_id !== f.project_id) return false
+    if (f.iteration_id && r.iteration_id !== f.iteration_id) return false
     return true
   })
 })
 
 const columns = [
   {
-    title: '需求编号',
-    key: 'number',
-    width: 140,
+    title: '需求编号', key: 'number', width: 140,
     render(row) {
       return h('a', {
         style: { color: '#6366f1', cursor: 'pointer', fontWeight: '600', textDecoration: 'none' },
@@ -225,292 +238,145 @@ const columns = [
       }, row.number || `REQ-${String(row.id).padStart(4, '0')}`)
     }
   },
+  { title: '需求内容', key: 'title', ellipsis: { tooltip: true }, minWidth: 200 },
   {
-    title: '标题',
-    key: 'title',
-    ellipsis: { tooltip: true },
-    minWidth: 180
-  },
-  {
-    title: '业务负责人',
-    key: 'person',
-    width: 120,
-    render(row) {
-      return row.person?.name || '-'
-    }
-  },
-  {
-    title: '状态',
-    key: 'status',
-    width: 110,
+    title: '状态', key: 'status', width: 100,
     render(row) {
       const meta = requirementStatusMeta[row.status] || { label: row.status, tone: 'default' }
       return h(NTag, { type: meta.tone, size: 'small', round: true }, { default: () => meta.label })
     }
   },
   {
-    title: '优先级',
-    key: 'priority',
-    width: 90,
+    title: '优先级', key: 'priority', width: 80,
     render(row) {
       const meta = priorityMeta[row.priority] || { label: row.priority, tone: 'default' }
-      return h(NTag, {
-        type: meta.tone,
-        size: 'small',
-        round: true,
-        style: { cursor: 'pointer' },
-        onClick: () => handlePriorityClick(row)
-      }, { default: () => meta.label })
+      return h(NTag, { type: meta.tone, size: 'small', round: true }, { default: () => meta.label })
     }
   },
   {
-    title: '开发进度',
-    key: 'dev_progress',
-    width: 140,
-    render(row) {
-      const pct = row.dev_progress != null ? row.dev_progress : 0
-      return h(NProgress, {
-        type: 'line',
-        percentage: pct,
-        indicatorPlacement: 'inside',
-        height: 18,
-        borderRadius: 4,
-        color: pct >= 100 ? '#18a058' : '#2080f0'
-      })
-    }
+    title: '需求迭代', key: 'iteration', width: 120,
+    render(row) { return row.iteration_name || (row.iteration_id ? `迭代 #${row.iteration_id}` : '-') }
   },
   {
-    title: '综合测试',
-    key: 'integration_test_progress',
-    width: 100,
-    render(row) {
-      const pct = row.integration_test_progress != null ? row.integration_test_progress : 0
-      return h(NProgress, {
-        type: 'line',
-        percentage: pct,
-        indicatorPlacement: 'inside',
-        height: 18,
-        borderRadius: 4,
-        color: '#f59e0b'
-      })
-    }
+    title: '项目名称', key: 'project', width: 120,
+    render(row) { return row.project?.name || '-' }
   },
   {
-    title: '业务测试',
-    key: 'business_test_progress',
-    width: 100,
-    render(row) {
-      const pct = row.business_test_progress != null ? row.business_test_progress : 0
-      return h(NProgress, {
-        type: 'line',
-        percentage: pct,
-        indicatorPlacement: 'inside',
-        height: 18,
-        borderRadius: 4,
-        color: '#f0a020'
-      })
-    }
+    title: '项目类型', key: 'project_type', width: 90,
+    render(row) { return row.project_type === 'ops' ? '运维需求' : row.project_type === 'project' ? '项目需求' : '-' }
   },
   {
-    title: '发布迭代',
-    key: 'iteration',
-    width: 120,
+    title: '操作', key: 'actions', width: 140,
     render(row) {
-      return row.iteration_id ? `迭代 #${row.iteration_id}` : '-'
-    }
-  },
-  {
-    title: '所属项目',
-    key: 'project',
-    width: 120,
-    render(row) {
-      return row.project?.name || '-'
+      if (!authStore.isPM) return null
+      return h('span', { style: 'display:flex;gap:8px' }, [
+        h('a', { style: 'cursor:pointer;color:#6366f1', onClick: () => openEdit(row) }, '编辑'),
+        h('a', { style: 'cursor:pointer;color:#d03050', onClick: () => handleDelete(row) }, '删除')
+      ])
     }
   }
 ]
 
-function handlePriorityClick(row) {
-  if (!authStore.isPM) return
-  const current = row.priority || 'medium'
-  const keys = Object.keys(priorityMeta)
-  const idx = keys.indexOf(current)
-  const next = keys[(idx + 1) % keys.length]
-  updateRequirement(row.id, { priority: next }).then(() => {
-    row.priority = next
-    window.$message?.success('优先级已更新')
-  }).catch(() => {
-    window.$message?.error('更新失败')
-  })
-}
-
 function resetFilters() {
-  filterSystem.value = null
-  filterStatus.value = null
+  filters.value = { number: '', title: '', status: null, project_type: null, project_id: null, iteration_id: null }
 }
 
-async function handleCreate() {
-  if (!createForm.value.title.trim()) {
-    window.$message?.warning('请输入需求标题')
-    return
+function onProjectChange() {
+  form.value.system = null
+}
+
+function openCreate() {
+  editingId.value = null
+  form.value = emptyForm()
+  showModal.value = true
+}
+
+function openEdit(row) {
+  editingId.value = row.id
+  form.value = {
+    number: row.number || '',
+    title: row.title,
+    description: row.description || '',
+    status: row.status,
+    priority: row.priority,
+    project_id: row.project_id,
+    project_type: row.project_type,
+    system: row.system,
+    person_id: row.person_id,
+    iteration_id: row.iteration_id,
+    dev_total: row.dev_total || '',
+    dev_price: row.dev_price || '',
+    test_total: row.test_total || '',
+    test_price: row.test_price || '',
+    total_amount: row.total_amount || '',
+    total_price: row.total_price || '',
+    planned_completion_time: row.planned_completion_time ? new Date(row.planned_completion_time).getTime() : null
   }
-  creating.value = true
+  showModal.value = true
+}
+
+async function submit() {
+  if (!form.value.title.trim()) { window.$message?.warning('请输入需求描述'); return }
+  submitting.value = true
   try {
-    await createRequirement(createForm.value)
-    window.$message?.success('创建成功')
-    showCreateModal.value = false
-      createForm.value = {
-        title: '',
-        project_type: 'ops',
-        project_id: null,
-        person_id: null,
-        system: null,
-        priority: 'medium',
-        source: 'internal',
-        number: ''
-      }
+    const payload = {
+      ...form.value,
+      planned_completion_time: form.value.planned_completion_time ? new Date(form.value.planned_completion_time).toISOString() : null,
+      project_id: form.value.project_id || null,
+      person_id: form.value.person_id || null,
+      iteration_id: form.value.iteration_id || null
+    }
+    if (editingId.value) {
+      await updateRequirement(editingId.value, payload)
+      window.$message?.success('更新成功')
+    } else {
+      await createRequirement(payload)
+      window.$message?.success('创建成功')
+    }
+    showModal.value = false
     await loadData()
-  } catch (e) {
-    window.$message?.error('创建失败')
-  }
-  creating.value = false
+  } catch (e) { window.$message?.error('操作失败') }
+  submitting.value = false
+}
+
+async function handleDelete(row) {
+  window.$dialog?.confirm({
+    title: '确认删除', content: `确定删除需求「${row.title}」吗？`,
+    onPositiveClick: async () => {
+      try { await deleteRequirement(row.id); window.$message?.success('已删除'); await loadData() }
+      catch (e) { window.$message?.error('删除失败') }
+    }
+  })
 }
 
 async function loadData() {
   try {
-    const [ops, proj] = await Promise.all([
-      getOpsRequirements(),
-      getProjectRequirements()
+    const [reqs, proj, sys, usr, iters] = await Promise.all([
+      getRequirements(), getProjects(), getSystems(), getUsers(), getIterations()
     ])
-    opsRequirements.value = ops
-    projectRequirements.value = proj
-    allRequirements.value = [...ops, ...proj]
-  } catch (e) {
-    window.$message?.error('加载需求数据失败')
-  }
+    allData.value = reqs; projects.value = proj; systems.value = sys; users.value = usr; iterations.value = iters
+  } catch (e) { window.$message?.error('加载数据失败') }
 }
 
-async function loadProjects() {
-  try { projects.value = await getProjects() } catch (e) {}
-}
-
-async function loadUsers() {
-  try { users.value = await getUsers() } catch (e) {}
-}
-
-onMounted(() => {
-  loadData()
-  loadProjects()
-  loadUsers()
-})
+onMounted(() => loadData())
 </script>
 
 <style scoped>
-.requirements-page {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
+.requirements-page { display: flex; flex-direction: column; gap: 20px; }
 .hero-card {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 28px 30px;
-  border-radius: 24px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;
+  padding: 28px 30px; border-radius: 24px;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #312e81 100%);
-  color: white;
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+  color: white; box-shadow: 0 18px 48px rgba(15,23,42,0.18);
 }
-
-.hero-eyebrow {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.72);
-  margin-bottom: 12px;
-}
-
-.hero-title {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.hero-subtitle {
-  margin: 12px 0 0;
-  max-width: 760px;
-  font-size: 14px;
-  line-height: 1.7;
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.hero-meta {
-  display: flex;
-  gap: 12px;
-}
-
-.meta-pill {
-  min-width: 92px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(6px);
-}
-
-.meta-value {
-  display: block;
-  font-size: 24px;
-  font-weight: 700;
-}
-
-.meta-label {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.74);
-}
-
-.section-card {
-  background: white;
-  border-radius: 20px;
-  border: 1px solid #e2e8f0;
-  padding: 22px;
-}
-
-.filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-
-.table-container {
-  padding: 0;
-}
-
-.action-btn {
-  border-radius: 10px;
-  font-weight: 500;
-}
-
-@media (max-width: 1100px) {
-  .hero-card {
-    flex-direction: column;
-  }
-
-  .hero-meta {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
-  .meta-pill {
-    flex: 1;
-    min-width: 80px;
-  }
-}
+.hero-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.72); margin-bottom: 12px; }
+.hero-title { margin: 0; font-size: 28px; font-weight: 700; line-height: 1.25; }
+.hero-subtitle { margin: 12px 0 0; max-width: 760px; font-size: 14px; line-height: 1.7; color: rgba(255,255,255,0.82); }
+.hero-meta { display: flex; gap: 12px; }
+.meta-pill { min-width: 92px; padding: 14px 16px; border-radius: 18px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(6px); }
+.meta-value { display: block; font-size: 24px; font-weight: 700; }
+.meta-label { display: block; margin-top: 4px; font-size: 12px; color: rgba(255,255,255,0.74); }
+.section-card { background: white; border-radius: 20px; border: 1px solid #e2e8f0; padding: 22px; }
+.filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.action-btn { border-radius: 10px; font-weight: 500; }
 </style>

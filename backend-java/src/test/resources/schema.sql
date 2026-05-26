@@ -14,9 +14,15 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS projects (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
+    code VARCHAR(128),
+    project_type VARCHAR(50),
+    system_scope TEXT,
+    hr_scope TEXT,
     pm_id BIGINT NOT NULL,
+    created_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (pm_id) REFERENCES users(id)
+    FOREIGN KEY (pm_id) REFERENCES users(id),
+    FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS tasks (
@@ -134,6 +140,13 @@ CREATE TABLE IF NOT EXISTS requirements (
     biz_test_total VARCHAR(128),
     biz_test_price VARCHAR(128),
     release_time TIMESTAMP,
+    planned_completion_time TIMESTAMP,
+    notes TEXT,
+    document_path VARCHAR(500),
+    document_name VARCHAR(255),
+    document_size BIGINT,
+    dev_lead_id BIGINT,
+    total_price VARCHAR(128),
     iteration_id VARCHAR(128),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -156,8 +169,23 @@ CREATE TABLE IF NOT EXISTS iterations (
     iteration_id VARCHAR(128) NOT NULL,
     name VARCHAR(255) NOT NULL,
     release_time TIMESTAMP,
+    notes TEXT,
+    created_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS systems (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    it_contact VARCHAR(255),
+    biz_contact VARCHAR(255),
+    tech_contact VARCHAR(255),
+    created_by BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS dictionaries (

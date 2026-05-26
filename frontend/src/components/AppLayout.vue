@@ -91,6 +91,7 @@ const allMenus = [
   { key: 'performance', label: '人员绩效', path: '/performance', icon: TrendingUpIcon },
   { key: 'users', label: '用户管理', path: '/users', icon: UsersIcon, pmOnly: true },
   { key: 'groups', label: '小组管理', path: '/groups', icon: GroupIcon, pmOnly: true },
+  { key: 'systems', label: '系统管理', path: '/systems', icon: BookOpenIcon },
   { key: 'dictionary', label: '基础字典', path: '/dictionary', icon: BookOpenIcon, pmOnly: true }
 ]
 

@@ -16,6 +16,7 @@ public class CreateRequirementRequest {
     private String relevant;
     private String priority;
     private String totalAmount;
+    private String totalPrice;
     private String devTotal;
     private String devPrice;
     private String testTotal;
@@ -24,4 +25,5 @@ public class CreateRequirementRequest {
     private String bizTestPrice;
     private String iterationId;
     private String number;
+    private String plannedCompletionTime;
 }

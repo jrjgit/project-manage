@@ -34,6 +34,7 @@ public class Requirement {
     private User person;
     private String relevant;
     private String totalAmount;
+    private String totalPrice;
     private String devTotal;
     private String devPrice;
     private String testTotal;
@@ -41,6 +42,7 @@ public class Requirement {
     private String bizTestTotal;
     private String bizTestPrice;
     private LocalDateTime releaseTime;
+    private LocalDateTime plannedCompletionTime;
     private Long devLeadId;
     @TableField(exist = false)
     private User devLead;
