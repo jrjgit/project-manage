@@ -1,8 +1,15 @@
 package com.management.user;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
+import com.management.iteration.entity.Iteration;
+import com.management.iteration.mapper.IterationMapper;
+import com.management.project.entity.Project;
+import com.management.project.mapper.ProjectMapper;
+import com.management.system.entity.SystemInfo;
+import com.management.system.mapper.SystemInfoMapper;
 import com.management.user.entity.User;
 import com.management.user.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +22,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserService {
     private final UserMapper userMapper;
+    private final ProjectMapper projectMapper;
+    private final IterationMapper iterationMapper;
+    private final SystemInfoMapper systemInfoMapper;
 
     public JwtUserDetails currentUser() {
         return (JwtUserDetails) SecurityContextHolder.getContext()
@@ -59,6 +69,14 @@ public class UserService {
         if (user == null) {
             throw new BusinessException(404, "user not found");
         }
+        projectMapper.update(null, new LambdaUpdateWrapper<Project>()
+                .eq(Project::getPmId, id).set(Project::getPmId, null));
+        projectMapper.update(null, new LambdaUpdateWrapper<Project>()
+                .eq(Project::getCreatedBy, id).set(Project::getCreatedBy, null));
+        iterationMapper.update(null, new LambdaUpdateWrapper<Iteration>()
+                .eq(Iteration::getCreatedBy, id).set(Iteration::getCreatedBy, null));
+        systemInfoMapper.update(null, new LambdaUpdateWrapper<SystemInfo>()
+                .eq(SystemInfo::getCreatedBy, id).set(SystemInfo::getCreatedBy, null));
         userMapper.deleteById(id);
     }
 }
