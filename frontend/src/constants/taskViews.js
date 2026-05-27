@@ -6,7 +6,7 @@ export const taskPrimaryViews = {
   ],
   dev_lead: [
     { key: 'group', label: '本组任务', params: { mine: 'group' } },
-    { key: 'todo', label: '待接手', params: { mine: 'todo' } },
+    { key: 'todo', label: '待受理', params: { mine: 'todo' } },
     { key: 'all', label: '全部任务', params: {} }
   ],
   dev: [
@@ -15,13 +15,12 @@ export const taskPrimaryViews = {
     { key: 'all', label: '全部任务', params: {} }
   ],
   tester_lead: [
-    { key: 'verify-pool', label: '测试池', params: { mine: 'verify-pool' } },
-    { key: 'active', label: '测试中', params: { status: 'testing' } },
+    { key: 'testing', label: '测试中', params: { status: 'testing' } },
     { key: 'all', label: '全部任务', params: {} }
   ],
   tester: [
     { key: 'todo', label: '我的待办', params: { mine: 'todo' } },
-    { key: 'pending', label: '待测试', params: { status: 'pending_test' } },
+    { key: 'testing', label: '测试中', params: { status: 'testing' } },
     { key: 'all', label: '全部任务', params: {} }
   ]
 }

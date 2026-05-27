@@ -115,45 +115,29 @@ const filteredTasks = computed(() => {
 
 const columns = [
   { title: 'ID', key: 'id', width: 60 },
-  { title: '标题', key: 'title', ellipsis: { tooltip: true } },
+  { title: '标题', key: 'title', ellipsis: { tooltip: true }, minWidth: 160 },
   {
-    title: '状态',
-    key: 'status',
-    width: 110,
+    title: '状态', key: 'status', width: 100,
     render(row) {
       const meta = taskStatusMeta[row.status] || { label: row.status, tone: 'default' }
       return h(NTag, { type: meta.tone, size: 'small', round: true }, { default: () => meta.label })
     }
   },
   {
-    title: '优先级',
-    key: 'priority',
-    width: 90,
+    title: '优先级', key: 'priority', width: 80,
     render(row) {
       const meta = priorityMeta[row.priority] || { label: row.priority, tone: 'default' }
       return h(NTag, { type: meta.tone, size: 'small', round: true }, { default: () => meta.label })
     }
   },
+  { title: '指派人', key: 'assignee', width: 100, render(row) { return row.assignee?.name || '-' } },
+  { title: '技能', key: 'terminal', width: 90, render(row) { return row.terminal || '-' } },
+  { title: '进度', key: 'progress', width: 80, render(row) { return row.progress != null ? row.progress + '%' : '-' } },
+  { title: '绩效工时', key: 'performance', width: 80, render(row) { return row.performance || '-' } },
+  { title: '截止时间', key: 'deadline', width: 100, render(row) { return row.deadline ? formatDateShort(row.deadline) : '-' } },
+  { title: '项目', key: 'project', width: 120, render(row) { return row.project?.name || '-' } },
   {
-    title: '项目',
-    key: 'project',
-    width: 140,
-    render(row) {
-      return row.project?.name || '-'
-    }
-  },
-  {
-    title: '指派人',
-    key: 'assignee',
-    width: 100,
-    render(row) {
-      return row.assignee?.name || row.tester?.name || '未指派'
-    }
-  },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 80,
+    title: '操作', key: 'actions', width: 80,
     render(row) {
       return h(NButton, { size: 'small', type: 'primary', ghost: true, round: true, onClick: () => openDetail(row.id) }, { default: () => '详情' })
     }
@@ -162,23 +146,15 @@ const columns = [
 
 function matchesView(task, params = {}) {
   if (params.status && task.status !== params.status) return false
-  if (params.focus === 'risk') return ['rejected', 'pending_test', 'testing'].includes(task.status)
+  if (params.focus === 'risk') return ['developing', 'testing'].includes(task.status) && task.deadline != null && new Date(task.deadline) < new Date()
   if (params.mine === 'group') return task.dev_lead_id === authStore.userInfo?.id
-  if (params.mine === 'verify-pool') return ['pending_test', 'testing'].includes(task.status)
   if (params.mine === 'todo') {
-    if (authStore.isDevLead) return task.dev_lead_id === authStore.userInfo?.id && task.status === 'assigned_lead'
-    if (authStore.isDev) {
-      const isMyTask = task.assignee_id === authStore.userInfo?.id ||
-        (task.assignees || []).some(a => a.user_id === authStore.userInfo?.id)
-      return isMyTask && ['assigned_lead', 'developing', 'rejected'].includes(task.status)
-    }
-    if (authStore.isTester) return task.tester_id === authStore.userInfo?.id && ['pending_test', 'testing', 'rejected'].includes(task.status)
+    if (authStore.isDevLead) return task.dev_lead_id === authStore.userInfo?.id && task.status === 'pending'
+    if (authStore.isDev) return task.assignee_id === authStore.userInfo?.id && ['pending', 'developing'].includes(task.status)
+    if (authStore.isTester) return task.tester_id === authStore.userInfo?.id && ['testing'].includes(task.status)
   }
   if (params.mine === 'all') {
-    if (authStore.isDev) {
-      return task.assignee_id === authStore.userInfo?.id ||
-        (task.assignees || []).some(a => a.user_id === authStore.userInfo?.id)
-    }
+    if (authStore.isDev) return task.assignee_id === authStore.userInfo?.id
     if (authStore.isTester) return task.tester_id === authStore.userInfo?.id
   }
   return true
@@ -190,6 +166,12 @@ function countForView(view) {
 
 function applyView(view) {
   router.replace({ path: '/tasks', query: compactParams({ ...buildViewQuery(view), mode: viewMode.value }) })
+}
+
+function formatDateShort(d) {
+  if (!d) return ''
+  const date = new Date(d)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 function resetFilters() {
