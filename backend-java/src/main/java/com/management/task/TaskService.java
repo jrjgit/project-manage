@@ -48,7 +48,7 @@ public class TaskService {
     }
 
     /** 按角色过滤查询任务列表 */
-    public List<Task> listTasks(String projectId, String status, String priority) {
+    public List<Task> listTasks(String projectId, String status, String priority, String requirementId) {
         JwtUserDetails u = currentUser();
         LambdaQueryWrapper<Task> q = new LambdaQueryWrapper<>();
 
@@ -83,6 +83,7 @@ public class TaskService {
         if (projectId != null && !projectId.isBlank()) q.eq(Task::getProjectId, projectId);
         if (status != null && !status.isBlank()) q.eq(Task::getStatus, status);
         if (priority != null && !priority.isBlank()) q.eq(Task::getPriority, priority);
+        if (requirementId != null && !requirementId.isBlank()) q.eq(Task::getRequirementId, requirementId);
         applyProjectScopeFilter(u, q);
 
         q.orderByDesc(Task::getUpdatedAt);
