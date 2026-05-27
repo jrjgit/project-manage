@@ -78,6 +78,20 @@
           </div>
           <div class="stat-value">{{ stats.totalDone }}</div>
         </div>
+        <div class="stat-card" style="--accent: #f59e0b;">
+          <div class="stat-card-header">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </div>
+            <span class="stat-label">总绩效工时</span>
+          </div>
+          <div class="stat-value">{{ stats.totalPerformance }}</div>
+        </div>
       </section>
 
       <!-- Performance bar charts -->
@@ -109,11 +123,23 @@
         <div class="section-header gradient-header" style="background: linear-gradient(135deg, #ecfdf5, #ffffff);">
           <div>
             <div class="section-kicker" style="color: #10b981;">产出排行</div>
-            <h3>绩效产能</h3>
+            <h3>已完成任务</h3>
           </div>
         </div>
         <div class="chart-wrap">
           <BarChart :data="doneData" color="#10b981" />
+        </div>
+      </section>
+
+      <section class="section-card chart-section">
+        <div class="section-header gradient-header" style="background: linear-gradient(135deg, #fefce8, #ffffff);">
+          <div>
+            <div class="section-kicker" style="color: #f59e0b;">绩效工时</div>
+            <h3>绩效工时总计</h3>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <BarChart :data="performanceData2" color="#f59e0b" />
         </div>
       </section>
     </div>
@@ -147,7 +173,8 @@ const stats = computed(() => {
     totalUsers: data.length,
     totalInProgress: data.reduce((s, d) => s + (d.inProgress || 0), 0),
     totalOverdue: data.reduce((s, d) => s + (d.overdue || 0), 0),
-    totalDone: data.reduce((s, d) => s + (d.done || 0), 0)
+    totalDone: data.reduce((s, d) => s + (d.done || 0), 0),
+    totalPerformance: data.reduce((s, d) => s + (d.performance || 0), 0)
   }
 })
 
@@ -163,6 +190,10 @@ const doneData = computed(() =>
   [...performanceData.value].sort((a, b) => (b.done || 0) - (a.done || 0)).map(d => ({ label: d.userName, value: d.done || 0 }))
 )
 
+const performanceData2 = computed(() =>
+  [...performanceData.value].sort((a, b) => (b.performance || 0) - (a.performance || 0)).map(d => ({ label: d.userName, value: d.performance || 0 }))
+)
+
 async function loadData() {
   try {
     const res = await getPerformanceStats(selectedYear.value, selectedMonth.value)
@@ -170,7 +201,8 @@ async function loadData() {
       userName: u.user_name,
       inProgress: u.in_progress,
       overdue: u.overdue,
-      done: u.done
+      done: u.done,
+      performance: u.performance
     }))
   } catch (e) {
     window.$message?.error('加载绩效统计失败')
@@ -204,7 +236,7 @@ onMounted(loadData)
 }
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
 }
 .stat-card {
@@ -237,7 +269,10 @@ onMounted(loadData)
   margin: 4px 0 0; font-size: 16px; font-weight: 700; color: #0f172a;
 }
 .chart-wrap { padding: 8px; }
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
+  .stats-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 700px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
 </style>

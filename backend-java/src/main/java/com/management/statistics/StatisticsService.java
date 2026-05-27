@@ -72,22 +72,29 @@ public class StatisticsService {
     public Map<String, Object> performanceStats(int year, int month) {
         List<User> users = userMapper.selectList(null);
         List<Map<String, Object>> stats = new ArrayList<>();
+        java.time.LocalDateTime monthStart = java.time.LocalDateTime.of(year, month, 1, 0, 0);
+        java.time.LocalDateTime monthEnd = monthStart.plusMonths(1);
 
         for (User u : users) {
             List<Task> tasks = taskMapper.selectList(
-                    new LambdaQueryWrapper<Task>().eq(Task::getAssigneeId, u.getId()));
+                    new LambdaQueryWrapper<Task>()
+                            .eq(Task::getAssigneeId, u.getId())
+                            .ge(Task::getCreatedAt, monthStart)
+                            .lt(Task::getCreatedAt, monthEnd));
             long inProgress = tasks.stream()
-                    .filter(t -> "developing".equals(t.getStatus())).count();
+                    .filter(t -> "developing".equals(t.getStatus()) || "testing".equals(t.getStatus())).count();
             long overdue = tasks.stream()
-                    .filter(t -> "developing".equals(t.getStatus())
+                    .filter(t -> !"closed".equals(t.getStatus())
                             && t.getDeadline() != null
                             && t.getDeadline().isBefore(java.time.LocalDateTime.now()))
                     .count();
             long done = tasks.stream()
-                    .filter(t -> "developed".equals(t.getStatus())
-                            || "passed".equals(t.getStatus())
-                            || "closed".equals(t.getStatus()))
+                    .filter(t -> "closed".equals(t.getStatus()))
                     .count();
+            double totalPerformance = tasks.stream()
+                    .filter(t -> t.getPerformance() != null && !t.getPerformance().isBlank())
+                    .mapToDouble(t -> { try { return Double.parseDouble(t.getPerformance()); } catch (Exception e) { return 0; } })
+                    .sum();
 
             Map<String, Object> userStat = new LinkedHashMap<>();
             userStat.put("user_id", u.getId());
@@ -95,6 +102,7 @@ public class StatisticsService {
             userStat.put("in_progress", inProgress);
             userStat.put("overdue", overdue);
             userStat.put("done", done);
+            userStat.put("performance", totalPerformance);
             stats.add(userStat);
         }
         return Map.of("users", stats);
