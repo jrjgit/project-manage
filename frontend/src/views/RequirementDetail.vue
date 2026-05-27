@@ -147,10 +147,19 @@
               </div>
             </div>
             <div class="task-item-meta">
-              <span class="task-meta-label">指派: {{ t.assignee?.name || t.creator?.name || '-' }}</span>
+              <span class="task-meta-label">指派:</span>
+              <template v-if="transferringTaskId === t.id">
+                <n-select v-model:value="t.assignee_id" :options="devOptions" size="small" style="width:140px" filterable
+                  @keyup.enter="confirmTransfer(t)" @blur="cancelTransfer" autofocus />
+                <n-button size="tiny" type="primary" @click="confirmTransfer(t)">确定</n-button>
+                <n-button size="tiny" @click="cancelTransfer">取消</n-button>
+              </template>
+              <span v-else>{{ t.assignee?.name || t.creator?.name || '-' }}</span>
               <n-tag v-if="t.terminal" size="tiny" type="info">{{ skillsMap[t.terminal] || t.terminal }}</n-tag>
               <span class="task-meta-label">绩效: {{ t.performance || '-' }}</span>
               <span class="task-meta-label">截止: {{ t.deadline ? formatDate2(t.deadline) : '-' }}</span>
+              <n-button v-if="authStore.isPM && transferringTaskId !== t.id" text size="tiny" type="warning" @click.stop="startTransfer(t)">转让</n-button>
+              <n-button v-if="authStore.isPM && transferringTaskId !== t.id" text size="tiny" type="error" @click.stop="handleDeleteTask(t)">删除</n-button>
             </div>
             <n-progress v-if="t.progress != null" type="line" :percentage="t.progress" :height="6" :border-radius="3"
               :color="t.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" />
@@ -251,7 +260,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getUsers } from '@/api/users'
-import { getTasks, createTask } from '@/api/tasks'
+import { getTasks, createTask, updateTask, deleteTask } from '@/api/tasks'
 import {
   getRequirement,
   updateRequirement,
@@ -282,6 +291,7 @@ const localNotes = ref('')
 const localPlannedTime = ref(null)
 
 const tasks = ref([])
+const transferringTaskId = ref(null)
 const showCreateTask = ref(false)
 const creatingTask = ref(false)
 const createTaskForm = ref({ developer_ids: [] })
@@ -583,6 +593,36 @@ async function handleCreateTasks() {
   taskPreview.value = []
   creatingTask.value = false
   await loadTasks()
+}
+
+function startTransfer(t) {
+  transferringTaskId.value = t.id
+}
+
+function cancelTransfer() {
+  transferringTaskId.value = null
+}
+
+async function confirmTransfer(t) {
+  if (!t.assignee_id) { window.$message?.warning('请选择开发人员'); return }
+  try {
+    await updateTask(t.id, { assignee_id: t.assignee_id })
+    window.$message?.success('开发人员已转让')
+    transferringTaskId.value = null
+    await loadTasks()
+  } catch (e) { window.$message?.error('转让失败') }
+}
+
+async function handleDeleteTask(t) {
+  window.$dialog?.warning({
+    title: '确认删除',
+    content: `确定删除任务吗？`,
+    positiveText: '确定', negativeText: '取消',
+    onPositiveClick: async () => {
+      try { await deleteTask(t.id); window.$message?.success('已删除'); await loadTasks() }
+      catch (e) { window.$message?.error('删除失败') }
+    }
+  })
 }
 
 async function loadReq() {

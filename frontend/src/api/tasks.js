@@ -8,3 +8,4 @@ export const changeTaskStatus = (id, data) => request.patch(`/tasks/${id}/status
 export const getTaskHistory = (id) => request.get(`/tasks/${id}/history`)
 export const addTaskAssignee = (id, data) => request.post(`/tasks/${id}/assignees`, data)
 export const removeTaskAssignee = (id, userId) => request.delete(`/tasks/${id}/assignees/${userId}`)
+export const deleteTask = (id) => request.delete(`/tasks/${id}`)

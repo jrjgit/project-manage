@@ -75,4 +75,11 @@ public class TaskController {
         taskService.removeAssignee(id, userId);
         return Result.ok(Map.of("message", "assignee removed"));
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('PM')")
+    public Result<Map<String, String>> delete(@PathVariable Long id) {
+        taskService.deleteTask(id);
+        return Result.ok(Map.of("message", "task deleted"));
+    }
 }

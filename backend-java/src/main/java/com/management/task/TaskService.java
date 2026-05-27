@@ -146,6 +146,15 @@ public class TaskService {
     }
 
     /** 填充关联对象 */
+    /** 删除任务 */
+    @Transactional
+    public void deleteTask(Long id) {
+        Task task = taskMapper.selectById(id);
+        if (task == null) throw new BusinessException(404, "任务不存在");
+        taskAssigneeMapper.delete(new LambdaQueryWrapper<TaskAssignee>().eq(TaskAssignee::getTaskId, id));
+        taskMapper.deleteById(id);
+    }
+
     private void fillAssociations(Task t) {
         if (t.getProjectId() != null) {
             Project p = projectMapper.selectById(t.getProjectId());
