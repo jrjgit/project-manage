@@ -50,6 +50,9 @@
           <n-form-item label="邮箱">
             <n-input v-model:value="createForm.email" type="email" placeholder="可选" />
           </n-form-item>
+          <n-form-item label="技能">
+            <n-select v-model:value="createForm.skills" :options="skillOptions" multiple placeholder="选择技能" />
+          </n-form-item>
         </n-form>
         <template #footer>
           <n-space justify="end">
@@ -63,8 +66,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, h } from 'vue'
+import { ref, onMounted, h, computed } from 'vue'
 import { getUsers, updateUserRole, createUser, deleteUser } from '@/api/users'
+import { getDictionaries } from '@/api/dictionaries'
 import AppLayout from '@/components/AppLayout.vue'
 import {
   NDataTable, NTag, NSelect, NButton, NModal,
@@ -72,16 +76,20 @@ import {
 } from 'naive-ui'
 
 const users = ref([])
+const skills = ref([])
 const showModal = ref(false)
 const creating = ref(false)
 const formRef = ref(null)
+
+const skillOptions = computed(() => skills.value.map(s => ({ label: s.dict_value, value: s.dict_key })))
 
 const createForm = ref({
   name: '',
   account: '',
   password: '',
   role: null,
-  email: ''
+  email: '',
+  skills: []
 })
 
 const rules = {
@@ -106,6 +114,7 @@ const columns = [
   { title: 'ID', key: 'id', width: 60 },
   { title: '用户名', key: 'name', ellipsis: { tooltip: true } },
   { title: '账号', key: 'account', ellipsis: { tooltip: true } },
+  { title: '技能', key: 'skills', width: 160, render(row) { return row.skills ? row.skills.split(',').join('、') : '-' } },
   { title: '角色', key: 'role', width: 120,
     render(row) {
       return h(NTag, { type: roleTagTypeMap[row.role], size: 'small', round: true }, { default: () => roleMap[row.role] || row.role })
@@ -140,7 +149,7 @@ const columns = [
 ]
 
 function openCreate() {
-  createForm.value = { name: '', account: '', password: '', role: null, email: '' }
+  createForm.value = { name: '', account: '', password: '', role: null, email: '', skills: [] }
   showModal.value = true
 }
 
@@ -155,7 +164,8 @@ async function handleCreate() {
       account: createForm.value.account,
       password: createForm.value.password,
       role: createForm.value.role,
-      email: createForm.value.email || undefined
+      email: createForm.value.email || undefined,
+      skills: createForm.value.skills.length ? createForm.value.skills.join(',') : undefined
     })
     window.$message.success('用户创建成功')
     showModal.value = false
@@ -184,7 +194,11 @@ async function loadUsers() {
   try { users.value = await getUsers() } catch (e) {}
 }
 
-onMounted(loadUsers)
+async function loadSkills() {
+  try { skills.value = await getDictionaries('skill') } catch (e) {}
+}
+
+onMounted(() => { loadUsers(); loadSkills() })
 </script>
 
 <style scoped>

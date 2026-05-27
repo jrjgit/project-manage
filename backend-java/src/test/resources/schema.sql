@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     dingtalk_id VARCHAR(255),
     feishu_id VARCHAR(255),
     email VARCHAR(255),
+    skills VARCHAR(500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

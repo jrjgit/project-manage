@@ -257,23 +257,28 @@
       </template>
     </n-modal>
 
-    <!-- Assign Developer to Feature Modal -->
-    <n-modal v-model:show="showAssignModal" preset="card" style="width: 420px" title="分配开发人员" :mask-closable="false">
+    <!-- Assign Developers to Feature Modal -->
+    <n-modal v-model:show="showAssignModal" preset="card" style="width: 520px" title="分配开发人员" :mask-closable="false">
       <n-form :model="assignForm" label-placement="top">
         <n-form-item label="功能点">
           <n-input :value="assigningFeature?.title" disabled />
         </n-form-item>
-        <n-form-item label="终端" path="terminal" :rule="{ required: true, message: '请选择终端' }">
-          <n-select v-model:value="assignForm.terminal" :options="platformOptions" placeholder="选择终端" />
+        <n-form-item label="选择人员">
+          <n-select v-model:value="assignForm.developer_ids" :options="projectDevOptions" multiple placeholder="选择人员（可多选）" filterable />
         </n-form-item>
-        <n-form-item label="开发人员" path="developer_id" :rule="{ required: true, message: '请选择开发人员' }">
-          <n-select v-model:value="assignForm.developer_id" :options="devOptions" placeholder="选择开发人员" filterable />
-        </n-form-item>
+        <div v-if="previewAssignments.length" class="preview-list">
+          <div class="preview-title">将创建以下分配：</div>
+          <div v-for="(item, idx) in previewAssignments" :key="idx" class="preview-item">
+            <span class="preview-name">{{ item.name }}</span>
+            <n-tag size="tiny" type="info">{{ item.skill }}</n-tag>
+            <n-button text size="tiny" type="error" @click="removePreview(idx)">移除</n-button>
+          </div>
+        </div>
       </n-form>
       <template #footer>
         <n-space justify="end">
           <n-button @click="showAssignModal = false">取消</n-button>
-          <n-button type="primary" :loading="assignLoading" :disabled="!assignForm.terminal || !assignForm.developer_id" @click="handleCreateAssignment">确定</n-button>
+          <n-button type="primary" :loading="assignLoading" :disabled="!previewAssignments.length" @click="handleBatchAssign">确定分配</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -319,6 +324,7 @@ import {
   deleteFeatureAssignment
 } from '@/api/requirements'
 import { getIterations } from '@/api/iterations'
+import { getDictionaries } from '@/api/dictionaries'
 import { requirementStatusMeta } from '@/constants/requirementMeta'
 import { priorityMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
@@ -345,20 +351,15 @@ const createFeatureForm = ref({ title: '', description: '', developer_id: null, 
 const showAssignModal = ref(false)
 const assignLoading = ref(false)
 const assigningFeature = ref(null)
-const assignForm = ref({ terminal: null, developer_id: null })
+const assignForm = ref({ developer_ids: [] })
+const previewAssignments = ref([])
+const skillsMap = ref({})
 
 const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
 const devOptions = computed(() => users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
-const platformOptions = [
-  { label: 'iOS', value: 'iOS' },
-  { label: 'Android', value: 'Android' },
-  { label: '鸿蒙', value: '鸿蒙' },
-  { label: '小程序', value: '小程序' },
-  { label: 'H5', value: 'H5' },
-  { label: '后台', value: '后台' },
-  { label: '前端', value: '前端' },
-  { label: '其他', value: '其他' }
-]
+const projectDevOptions = computed(() => {
+  return users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: `${u.name}${u.skills ? ' (' + u.skills.split(',').map(s => skillsMap.value[s] || s).join('、') + ')' : ''}`, value: u.id }))
+})
 const showIntegrationBugs = ref(false)
 const showBusinessBugs = ref(false)
 const showIterationSelector = ref(false)
@@ -548,6 +549,14 @@ async function handleRemoveFromRelease() {
 async function loadUsers() {
   try { users.value = await getUsers() } catch (e) {}
 }
+async function loadSkills() {
+  try {
+    const data = await getDictionaries('skill')
+    const map = {}
+    for (const s of data) map[s.dict_key] = s.dict_value
+    skillsMap.value = map
+  } catch (e) {}
+}
 
 async function loadIterations() {
   try {
@@ -587,25 +596,48 @@ async function loadFeatures() {
 
 function openAssign(f) {
   assigningFeature.value = f
-  assignForm.value = { terminal: null, developer_id: null }
+  assignForm.value = { developer_ids: [] }
+  previewAssignments.value = []
   showAssignModal.value = true
 }
 
-async function handleCreateAssignment() {
-  if (!assignForm.value.terminal || !assignForm.value.developer_id) return
-  assignLoading.value = true
-  try {
-    await createFeatureAssignment(assigningFeature.value.id, {
-      terminal: assignForm.value.terminal,
-      developer_id: assignForm.value.developer_id
-    })
-    window.$message?.success('分配成功，任务已自动创建')
-    showAssignModal.value = false
-    await loadFeatures()
-  } catch (e) {
-    window.$message?.error('分配失败')
+function buildPreview() {
+  const ids = assignForm.value.developer_ids || []
+  const result = []
+  for (const uid of ids) {
+    const u = users.value.find(x => x.id === uid)
+    if (!u || !u.skills) continue
+    const userSkills = u.skills.split(',').filter(Boolean)
+    for (const skill of userSkills) {
+      result.push({ userId: uid, name: u.name, skill, skillLabel: skillsMap.value[skill] || skill })
+    }
   }
+  previewAssignments.value = result
+}
+
+watch(() => assignForm.value.developer_ids, buildPreview, { deep: true })
+
+function removePreview(idx) {
+  previewAssignments.value.splice(idx, 1)
+}
+
+async function handleBatchAssign() {
+  if (!previewAssignments.value.length) return
+  assignLoading.value = true
+  let success = 0
+  for (const item of previewAssignments.value) {
+    try {
+      await createFeatureAssignment(assigningFeature.value.id, {
+        terminal: item.skill,
+        developer_id: item.userId
+      })
+      success++
+    } catch (e) { console.error(e) }
+  }
+  window.$message?.success(`分配成功 ${success}/${previewAssignments.value.length} 条`)
+  showAssignModal.value = false
   assignLoading.value = false
+  await loadFeatures()
 }
 
 function startFeatureEdit(type, f) {
@@ -705,6 +737,7 @@ onMounted(() => {
   loadReq()
   loadUsers()
   loadIterations()
+  loadSkills()
 })
 </script>
 
@@ -962,6 +995,33 @@ onMounted(() => {
   color: #334155;
 }
 
+
+.preview-list {
+  margin-top: 8px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+.preview-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.preview-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.preview-name {
+  font-weight: 500;
+  color: #0f172a;
+}
 
 .empty-state {
   padding: 20px;

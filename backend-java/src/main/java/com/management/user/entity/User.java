@@ -23,5 +23,6 @@ public class User {
     private String dingtalkId;
     private String feishuId;
     private String email;
+    private String skills;
     private LocalDateTime createdAt;
 }
