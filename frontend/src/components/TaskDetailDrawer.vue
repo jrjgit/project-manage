@@ -76,6 +76,7 @@
             <div class="section-title">备注</div>
             <div class="description-block" style="white-space:pre-wrap">{{ task.description || '暂无备注' }}</div>
           </div>
+          </div>
         </section>
 
         <!-- 需求文档 -->
