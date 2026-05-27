@@ -32,7 +32,7 @@ public class TaskController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('PM')")
+    @PreAuthorize("hasAnyRole('PM','DEV_LEAD')")
     @ResponseStatus(HttpStatus.CREATED)
     public Result<Task> create(@Valid @RequestBody CreateTaskRequest req) {
         return Result.ok(taskService.createTask(req));
@@ -77,7 +77,7 @@ public class TaskController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('PM')")
+    @PreAuthorize("hasAnyRole('PM','DEV_LEAD')")
     public Result<Map<String, String>> delete(@PathVariable Long id) {
         taskService.deleteTask(id);
         return Result.ok(Map.of("message", "task deleted"));

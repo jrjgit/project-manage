@@ -163,8 +163,8 @@
                     <n-button size="tiny" @click="cancelTransfer">取消</n-button>
                   </template>
                   <template v-else>
-                    <n-button v-if="authStore.isPM" text size="tiny" type="warning" @click="startTransfer(t)">转让</n-button>
-                    <n-button v-if="authStore.isPM" text size="tiny" type="error" @click="handleDeleteTask(t)">删除</n-button>
+                    <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="warning" @click="startTransfer(t)">转让</n-button>
+                    <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteTask(t)">删除</n-button>
                   </template>
                 </div>
               </div>

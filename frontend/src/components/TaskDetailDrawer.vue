@@ -58,7 +58,6 @@
             <div class="info-list">
               <div class="info-item"><span>项目</span><strong>{{ task.project?.name || '-' }}</strong></div>
               <div class="info-item"><span>所属需求</span><strong>{{ task.requirement_name || '-' }}</strong></div>
-              <div class="info-item"><span>备注</span><strong>{{ task.description || '-' }}</strong></div>
               <div class="info-item"><span>创建人</span><strong>{{ task.creator?.name || '-' }}</strong></div>
               <div class="info-item"><span>开发组长</span><strong>{{ task.dev_lead?.name || '-' }}</strong></div>
               <div class="info-item"><span>开发人员</span><strong>{{ task.assignee?.name || '-' }}</strong></div>
@@ -68,9 +67,15 @@
               <div class="info-item"><span>截止日期</span><strong>{{ formatDate(task.deadline) || '-' }}</strong></div>
             </div>
           </div>
-          <div class="section-card">
-            <div class="section-title">说明</div>
-            <div class="description-block">{{ task.requirement_desc || task.description || '暂无描述' }}</div>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="section-card">
+              <div class="section-title">说明</div>
+              <div class="description-block">{{ task.requirement_desc || task.description || '暂无描述' }}</div>
+            </div>
+            <div class="section-card">
+              <div class="section-title">备注</div>
+              <div class="description-block" style="white-space:pre-wrap">{{ task.description || '暂无备注' }}</div>
+            </div>
           </div>
         </section>
 
