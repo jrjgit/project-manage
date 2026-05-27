@@ -48,7 +48,7 @@ public class Task {
     @TableField(exist = false)
     private String requirementName;
     @TableField(exist = false)
-    private String featureName;
+    private String requirementDesc;
     private String terminal;
     private Integer progress;
     private String performance;

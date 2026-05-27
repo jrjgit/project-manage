@@ -167,7 +167,7 @@ public class TaskService {
         if (t.getTesterId() != null) t.setTester(userMapper.selectById(t.getTesterId()));
         if (t.getRequirementId() != null) {
             Requirement req = requirementMapper.selectById(t.getRequirementId());
-            if (req != null) t.setRequirementName(req.getDescription());
+            if (req != null) { t.setRequirementName(req.getNumber()); t.setRequirementDesc(req.getDescription()); }
         }
     }
 

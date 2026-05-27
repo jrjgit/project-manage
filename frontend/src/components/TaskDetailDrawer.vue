@@ -58,9 +58,10 @@
             <div class="info-list">
               <div class="info-item"><span>项目</span><strong>{{ task.project?.name || '-' }}</strong></div>
               <div class="info-item"><span>所属需求</span><strong>{{ task.requirement_name || '-' }}</strong></div>
+              <div class="info-item"><span>备注</span><strong>{{ task.description || '-' }}</strong></div>
               <div class="info-item"><span>创建人</span><strong>{{ task.creator?.name || '-' }}</strong></div>
               <div class="info-item"><span>开发组长</span><strong>{{ task.dev_lead?.name || '-' }}</strong></div>
-              <div class="info-item"><span>指派人</span><strong>{{ task.assignee?.name || '-' }}</strong></div>
+              <div class="info-item"><span>开发人员</span><strong>{{ task.assignee?.name || '-' }}</strong></div>
               <div class="info-item"><span>测试人员</span><strong>{{ task.tester?.name || '-' }}</strong></div>
               <div class="info-item"><span>技能</span><strong>{{ task.terminal || '-' }}</strong></div>
               <div class="info-item"><span>绩效工时</span><strong>{{ task.performance || '-' }}</strong></div>
@@ -69,7 +70,7 @@
           </div>
           <div class="section-card">
             <div class="section-title">说明</div>
-            <div class="description-block">{{ task.description || '暂无描述' }}</div>
+            <div class="description-block">{{ task.requirement_desc || task.description || '暂无描述' }}</div>
           </div>
         </section>
 
@@ -134,10 +135,8 @@ const availableActions = computed(() => {
   if (role === 'pm' && status === 'developing') actions.push({ label: '进入测试', status: 'testing', type: 'primary' })
   if (role === 'pm' && status === 'testing') actions.push({ label: '完成', status: 'closed', type: 'success' })
   if (role === 'pm' && status === 'testing') actions.push({ label: '打回开发', status: 'developing', type: 'error' })
-  if (role === 'dev_lead' && isMyLead && status === 'pending') actions.push({ label: '开始开发', status: 'developing', type: 'primary' })
-  if (role === 'dev_lead' && isMyLead && status === 'developing') actions.push({ label: '完成开发', status: 'testing', type: 'primary' })
-  if (role === 'dev' && isMyTask && status === 'pending') actions.push({ label: '开始开发', status: 'developing', type: 'primary' })
-  if (role === 'dev' && isMyTask && status === 'developing') actions.push({ label: '完成开发', status: 'testing', type: 'primary' })
+  if (['dev', 'dev_lead'].includes(role) && isMyTask && status === 'pending') actions.push({ label: '开始开发', status: 'developing', type: 'primary' })
+  if (['dev', 'dev_lead'].includes(role) && isMyTask && status === 'developing') actions.push({ label: '完成开发', status: 'testing', type: 'primary' })
   if (role === 'tester' && status === 'testing') { actions.push({ label: '测试通过', status: 'closed', type: 'success' }); actions.push({ label: '打回开发', status: 'developing', type: 'error' }) }
   return actions
 })
