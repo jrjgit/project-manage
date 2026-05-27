@@ -23,15 +23,6 @@
         <section v-if="actionGroups.length || canAssignDev || canEditDevLead || canEditTester" class="section-card">
           <div class="section-title">可执行操作</div>
 
-          <div v-if="canAssignDev" class="action-block">
-            <div class="action-block-title">指派开发人员</div>
-            <div class="action-block-copy">指定开发人员负责此任务。</div>
-            <div class="action-row">
-              <n-select v-model:value="selectedDev" :options="devOptions" placeholder="选择开发人员" style="width: 220px;" filterable />
-              <n-button type="primary" :loading="actionLoading" @click="assignDev">确认指派</n-button>
-            </div>
-          </div>
-
           <div v-if="canEditDevLead" class="action-block">
             <div class="action-block-title">切换开发组长</div>
             <div class="action-block-copy">重新指定该任务的开发组长。</div>
@@ -113,18 +104,15 @@ const task = ref(null)
 const histories = ref([])
 const users = ref([])
 const selectedTester = ref(null)
-const selectedDev = ref(null)
 const selectedDevLead = ref(null)
 const actionLoading = ref(false)
 
 const statusMeta = computed(() => taskStatusMeta[task.value?.status] || { label: task.value?.status || '-', tone: 'default' })
 const priorityMetaItem = computed(() => priorityMeta[task.value?.priority] || { label: task.value?.priority || '-', tone: 'default' })
 
-const devOptions = computed(() => users.value.filter(u => ['dev', 'dev_lead'].includes(u.role)).map(u => ({ label: u.name, value: u.id })))
 const testerOptions = computed(() => users.value.filter(u => u.role === 'tester').map(u => ({ label: u.name, value: u.id })))
 const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
 
-const canAssignDev = computed(() => ['dev_lead', 'pm'].includes(authStore.userInfo?.role) && ['pending', 'developing'].includes(task.value?.status))
 const canEditDevLead = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'developing'].includes(task.value?.status))
 const canEditTester = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'developing', 'testing'].includes(task.value?.status))
 
@@ -157,20 +145,6 @@ watch([() => props.taskId, show], async ([id, visible]) => {
 async function loadUsers() { try { users.value = await getUsers() } catch {} }
 async function loadDetail() { try { const res = await getTask(props.taskId); task.value = res.task } catch {} }
 async function loadHistory() { try { histories.value = await getTaskHistory(props.taskId) } catch {} }
-
-async function assignDev() {
-  if (!selectedDev.value) { window.$message?.warning('请选择开发人员'); return }
-  actionLoading.value = true
-  try {
-    await updateTask(props.taskId, { assignee_id: selectedDev.value })
-    if (task.value?.status === 'pending') {
-      await doChangeStatus('developing', '')
-    }
-    selectedDev.value = null
-    window.$message?.success('已指派')
-  } catch (e) { console.error(e) }
-  actionLoading.value = false
-}
 
 async function saveDevLead() {
   if (!selectedDevLead.value) { window.$message?.warning('请选择开发组长'); return }
