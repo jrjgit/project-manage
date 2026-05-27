@@ -127,12 +127,17 @@ const availableActions = computed(() => {
   const status = task.value?.status
   const role = authStore.userInfo?.role
   const actions = []
+  const myId = authStore.userInfo?.id
+  const isMyLead = task.value?.dev_lead_id === myId
+  const isMyTask = task.value?.assignee_id === myId
   if (role === 'pm' && status === 'pending') actions.push({ label: '开始开发', status: 'developing', type: 'primary' })
   if (role === 'pm' && status === 'developing') actions.push({ label: '进入测试', status: 'testing', type: 'primary' })
   if (role === 'pm' && status === 'testing') actions.push({ label: '完成', status: 'closed', type: 'success' })
   if (role === 'pm' && status === 'testing') actions.push({ label: '打回开发', status: 'developing', type: 'error' })
-  if (['dev_lead', 'dev'].includes(role) && status === 'pending') actions.push({ label: '开始开发', status: 'developing', type: 'primary' })
-  if (['dev_lead', 'dev'].includes(role) && status === 'developing') actions.push({ label: '完成开发', status: 'testing', type: 'primary' })
+  if (role === 'dev_lead' && isMyLead && status === 'pending') actions.push({ label: '开始开发', status: 'developing', type: 'primary' })
+  if (role === 'dev_lead' && isMyLead && status === 'developing') actions.push({ label: '完成开发', status: 'testing', type: 'primary' })
+  if (role === 'dev' && isMyTask && status === 'pending') actions.push({ label: '开始开发', status: 'developing', type: 'primary' })
+  if (role === 'dev' && isMyTask && status === 'developing') actions.push({ label: '完成开发', status: 'testing', type: 'primary' })
   if (role === 'tester' && status === 'testing') { actions.push({ label: '测试通过', status: 'closed', type: 'success' }); actions.push({ label: '打回开发', status: 'developing', type: 'error' }) }
   return actions
 })
