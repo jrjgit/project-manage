@@ -208,7 +208,7 @@
     <n-modal v-model:show="showCreateTask" preset="card" style="width:90vw;max-width:1400px;height:90vh;overflow:auto" title="新增任务" :mask-closable="false">
       <n-form :model="createTaskForm" label-placement="top">
         <n-form-item label="选择开发人员">
-          <n-select v-model:value="createTaskForm.developer_ids" :options="projectDevOptions" multiple placeholder="选择人员（可多选，根据技能自动分配）" filterable />
+          <n-transfer v-model:value="createTaskForm.developer_ids" :options="projectDevOptions" :render-source-label="renderTransferLabel" size="small" style="width:100%" />
         </n-form-item>
         <div v-if="taskPreview.length" class="preview-list">
           <div class="preview-title">将创建以下任务：</div>
@@ -276,7 +276,7 @@ import { getDictionaries } from '@/api/dictionaries'
 import { requirementStatusMeta } from '@/constants/requirementMeta'
 import { priorityMeta, taskStatusMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
-import { NButton, NModal, NInput, NSelect, NSpace, NTag, NProgress, NUpload, NForm, NFormItem, NDatePicker } from 'naive-ui'
+import { NButton, NModal, NInput, NSelect, NSpace, NTag, NProgress, NUpload, NForm, NFormItem, NDatePicker, NTransfer } from 'naive-ui'
 
 const route = useRoute()
 const router = useRouter()
@@ -303,6 +303,10 @@ const devOptions = computed(() => users.value.filter(u => u.role === 'dev' || u.
 const projectDevOptions = computed(() => {
   return users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: `${u.name}${u.skills ? ' (' + u.skills.split(',').map(s => skillsMap.value[s] || s).join('、') + ')' : ''}`, value: u.id }))
 })
+
+function renderTransferLabel(option) {
+  return option.label
+}
 const showIntegrationBugs = ref(false)
 const showBusinessBugs = ref(false)
 const showIterationSelector = ref(false)
