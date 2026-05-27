@@ -37,6 +37,12 @@ public class UserController {
         return Result.ok(Map.of("message", "user updated"));
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('PM')")
+    public Result<User> updateUser(@PathVariable Long id, @RequestBody UpdateUserRequest req) {
+        return Result.ok(userService.updateUser(id, req));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('PM')")
     public Result<Map<String, String>> deleteUser(@PathVariable Long id) {
@@ -49,5 +55,13 @@ public class UserController {
         @NotBlank
         private String role;
         private Long groupId;
+    }
+
+    @Data
+    static class UpdateUserRequest {
+        private String name;
+        private String account;
+        private String email;
+        private String skills;
     }
 }

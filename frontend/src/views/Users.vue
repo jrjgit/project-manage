@@ -15,11 +15,6 @@
       <div class="list-container">
         <div class="toolbar">
           <n-button type="primary" size="small" @click="openCreate">
-            <template #icon>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-            </template>
             新增用户
           </n-button>
         </div>
@@ -33,31 +28,31 @@
         />
       </div>
 
-      <n-modal v-model:show="showModal" preset="card" title="新增用户" style="width: 460px;" :mask-closable="false">
-        <n-form ref="formRef" :model="createForm" :rules="rules" label-placement="top">
+      <n-modal v-model:show="showModal" preset="card" :title="editingId ? '编辑用户' : '新增用户'" style="width: 460px;" :mask-closable="false">
+        <n-form ref="formRef" :model="form" :rules="rules" label-placement="top">
           <n-form-item label="用户名" path="name">
-            <n-input v-model:value="createForm.name" placeholder="输入用户名（显示用）" />
+            <n-input v-model:value="form.name" placeholder="输入用户名（显示用）" />
           </n-form-item>
           <n-form-item label="账号" path="account">
-            <n-input v-model:value="createForm.account" placeholder="输入登录账号" />
+            <n-input v-model:value="form.account" placeholder="输入登录账号" />
           </n-form-item>
-          <n-form-item label="密码" path="password">
-            <n-input v-model:value="createForm.password" type="password" placeholder="至少 6 位字符" />
+          <n-form-item v-if="!editingId" label="密码" path="password">
+            <n-input v-model:value="form.password" type="password" placeholder="至少 6 位字符" />
           </n-form-item>
           <n-form-item label="角色" path="role">
-            <n-select v-model:value="createForm.role" :options="roleOptions" placeholder="请选择角色" />
+            <n-select v-model:value="form.role" :options="roleOptions" placeholder="请选择角色" />
           </n-form-item>
           <n-form-item label="邮箱">
-            <n-input v-model:value="createForm.email" type="email" placeholder="可选" />
+            <n-input v-model:value="form.email" type="email" placeholder="可选" />
           </n-form-item>
           <n-form-item label="技能">
-            <n-select v-model:value="createForm.skills" :options="skillOptions" multiple placeholder="选择技能" />
+            <n-select v-model:value="form.skills" :options="skillOptions" multiple placeholder="选择技能" />
           </n-form-item>
         </n-form>
         <template #footer>
           <n-space justify="end">
             <n-button @click="showModal = false">取消</n-button>
-            <n-button type="primary" :loading="creating" @click="handleCreate">确定</n-button>
+            <n-button type="primary" :loading="saving" @click="handleSave">确定</n-button>
           </n-space>
         </template>
       </n-modal>
@@ -67,7 +62,7 @@
 
 <script setup>
 import { ref, onMounted, h, computed } from 'vue'
-import { getUsers, updateUserRole, createUser, deleteUser } from '@/api/users'
+import { getUsers, updateUser, updateUserRole, createUser, deleteUser } from '@/api/users'
 import { getDictionaries } from '@/api/dictionaries'
 import AppLayout from '@/components/AppLayout.vue'
 import {
@@ -78,19 +73,13 @@ import {
 const users = ref([])
 const skills = ref([])
 const showModal = ref(false)
-const creating = ref(false)
+const editingId = ref(null)
+const saving = ref(false)
 const formRef = ref(null)
 
 const skillOptions = computed(() => skills.value.map(s => ({ label: s.dict_value, value: s.dict_key })))
 
-const createForm = ref({
-  name: '',
-  account: '',
-  password: '',
-  role: null,
-  email: '',
-  skills: []
-})
+const form = ref({ name: '', account: '', password: '', role: null, email: '', skills: [] })
 
 const rules = {
   name: { required: true, message: '请输入用户名', trigger: 'blur' },
@@ -130,6 +119,7 @@ const columns = [
   { title: '操作', key: 'actions', width: 210,
     render(row) {
       return h('div', { style: 'display:flex; align-items:center; gap:8px;' }, [
+        h('a', { style: 'cursor:pointer;color:#6366f1;font-size:13px', onClick: () => openEdit(row) }, '编辑'),
         h(NSelect, {
           value: row.role,
           options: roleOptions,
@@ -149,29 +139,48 @@ const columns = [
 ]
 
 function openCreate() {
-  createForm.value = { name: '', account: '', password: '', role: null, email: '', skills: [] }
+  editingId.value = null
+  form.value = { name: '', account: '', password: '', role: null, email: '', skills: [] }
   showModal.value = true
 }
 
-async function handleCreate() {
+function openEdit(row) {
+  editingId.value = row.id
+  form.value = {
+    name: row.name,
+    account: row.account || '',
+    password: '',
+    role: row.role,
+    email: row.email || '',
+    skills: row.skills ? row.skills.split(',') : []
+  }
+  showModal.value = true
+}
+
+async function handleSave() {
   try {
-    await formRef.value.validate()
+    if (!editingId.value) await formRef.value.validate()
   } catch { return }
-  creating.value = true
+  saving.value = true
   try {
-    await createUser({
-      name: createForm.value.name,
-      account: createForm.value.account,
-      password: createForm.value.password,
-      role: createForm.value.role,
-      email: createForm.value.email || undefined,
-      skills: createForm.value.skills.length ? createForm.value.skills.join(',') : undefined
-    })
-    window.$message.success('用户创建成功')
+    const payload = {
+      name: form.value.name,
+      account: form.value.account,
+      role: form.value.role,
+      email: form.value.email || undefined,
+      skills: form.value.skills.length ? form.value.skills.join(',') : undefined
+    }
+    if (editingId.value) {
+      await updateUser(editingId.value, payload)
+      window.$message.success('用户更新成功')
+    } else {
+      await createUser({ ...payload, password: form.value.password })
+      window.$message.success('用户创建成功')
+    }
     showModal.value = false
     loadUsers()
   } catch (e) { console.error(e) }
-  creating.value = false
+  saving.value = false
 }
 
 async function handleRoleChange(id, role) {
@@ -202,71 +211,13 @@ onMounted(() => { loadUsers(); loadSkills() })
 </script>
 
 <style scoped>
-.page-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.hero-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 20px 24px;
-  border-radius: 16px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-}
-
-.section-kicker {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #6366f1;
-}
-
-.hero-title {
-  margin: 6px 0 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.hero-stat {
-  min-width: 80px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  text-align: center;
-}
-
-.hero-stat-value {
-  display: block;
-  font-size: 22px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.hero-stat-label {
-  display: block;
-  margin-top: 2px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.list-container {
-  background: white;
-  border-radius: 16px;
-  padding: 0 8px 8px;
-  border: 1px solid #e5e7eb;
-}
-
-.toolbar {
-  padding: 12px 8px;
-  display: flex;
-  justify-content: flex-end;
-}
+.page-shell { display: flex; flex-direction: column; gap: 20px; }
+.hero-card { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px 24px; border-radius: 16px; background: #fff; border: 1px solid #e5e7eb; }
+.section-kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #6366f1; }
+.hero-title { margin: 6px 0 0; font-size: 22px; font-weight: 700; color: #0f172a; }
+.hero-stat { min-width: 80px; padding: 10px 14px; border-radius: 10px; background: #f1f5f9; border: 1px solid #e2e8f0; text-align: center; }
+.hero-stat-value { display: block; font-size: 22px; font-weight: 700; color: #0f172a; }
+.hero-stat-label { display: block; margin-top: 2px; font-size: 12px; color: #64748b; }
+.list-container { background: white; border-radius: 16px; padding: 0 8px 8px; border: 1px solid #e5e7eb; }
+.toolbar { padding: 12px 8px; display: flex; justify-content: flex-end; }
 </style>

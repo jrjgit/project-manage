@@ -63,6 +63,17 @@ public class UserService {
         userMapper.updateById(user);
     }
 
+    public User updateUser(Long id, com.management.user.UserController.UpdateUserRequest req) {
+        User user = userMapper.selectById(id);
+        if (user == null) throw new BusinessException(404, "user not found");
+        if (req.getName() != null) user.setName(req.getName());
+        if (req.getAccount() != null) user.setAccount(req.getAccount());
+        if (req.getEmail() != null) user.setEmail(req.getEmail());
+        if (req.getSkills() != null) user.setSkills(req.getSkills());
+        userMapper.updateById(user);
+        return user;
+    }
+
     public void deleteUser(Long id) {
         JwtUserDetails current = currentUser();
         if (current.getUserId().equals(id)) throw new BusinessException(400, "不能删除自己");
