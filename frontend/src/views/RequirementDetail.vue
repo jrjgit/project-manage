@@ -126,76 +126,36 @@
         <div v-else class="empty-state">暂无文档</div>
       </section>
 
-      <!-- Features -->
+      <!-- 开发看板（功能点+开发进度合并） -->
       <section v-if="authStore.isPM || authStore.isDevLead" class="section-card">
         <div class="section-header">
-          <h3>功能点 ({{ features.length }})</h3>
-          <n-button size="tiny" text @click="showCreateFeature = true">新增</n-button>
+          <h3>开发看板 ({{ features.length }} 功能点)</h3>
+          <n-button size="tiny" text @click="showCreateFeature = true">新增功能点</n-button>
         </div>
-        <div v-if="features.length > 0" class="feature-list">
-          <div v-for="f in features" :key="f.id" class="feature-item">
-            <div class="feature-header">
-              <span class="feature-title">{{ f.title }}</span>
-              <n-tag :type="featureStatusTag(f.status)" size="tiny" round>{{ featureStatusLabel[f.status] || f.status }}</n-tag>
-              <n-button text size="tiny" type="error" @click="handleDeleteFeature(f)">删除</n-button>
-            </div>
-            <div class="feature-meta-row">
-              <span class="feature-meta-label">开发：</span>
-              <template v-if="editingFeatureDev === f.id">
-                <n-select v-model:value="f.developer_id" :options="userOptions" size="small" style="width:140px" filterable
-                  @blur="saveFeatureDev(f); editingFeatureDev = null"
-                  @keyup.enter="saveFeatureDev(f); editingFeatureDev = null" autofocus />
-              </template>
-              <span v-else class="feature-meta-value" @click="startFeatureEdit('dev', f)">{{ f.developer?.name || '点击设置' }}</span>
-              <span class="feature-meta-label" style="margin-left:12px">测试：</span>
-              <template v-if="editingFeatureTester === f.id">
-                <n-select v-model:value="f.tester_id" :options="userOptions" size="small" style="width:140px" filterable
-                  @blur="saveFeatureTester(f); editingFeatureTester = null"
-                  @keyup.enter="saveFeatureTester(f); editingFeatureTester = null" autofocus />
-              </template>
-              <span v-else class="feature-meta-value" @click="startFeatureEdit('tester', f)">{{ f.tester?.name || '点击设置' }}</span>
-            </div>
-            <div v-if="f.assignments?.length" class="assignment-list">
-              <div v-for="a in f.assignments" :key="a.id" class="assignment-item">
-                <span class="assignment-terminal">{{ a.terminal }}</span>
-                <span class="assignment-dev">{{ a.developer?.name }}</span>
-                <n-tag :type="a.status === 'done' ? 'success' : a.status === 'developing' ? 'warning' : 'default'" size="tiny" round>
-                  {{ a.status === 'done' ? '已完成' : a.status === 'developing' ? '开发中' : '待开始' }}
-                </n-tag>
-                <n-button text size="tiny" type="error" @click="handleDeleteAssignment(a)">移除</n-button>
+        <div v-if="devBoardData.length > 0" class="dev-board">
+          <div v-for="dev in devBoardData" :key="dev.userId" class="dev-card">
+            <div class="dev-card-header">{{ dev.name }}</div>
+            <div class="dev-card-body">
+              <div v-for="item in dev.items" :key="item.featureId + '-' + item.terminal" class="dev-item">
+                <div class="dev-item-title">{{ item.featureTitle }}</div>
+                <div class="dev-item-row">
+                  <n-tag size="tiny" type="info">{{ item.terminalLabel || item.terminal }}</n-tag>
+                  <n-tag size="tiny" :type="item.status === 'done' ? 'success' : item.status === 'developing' ? 'warning' : 'default'">
+                    {{ item.status === 'done' ? '已完成' : item.status === 'developing' ? '开发中' : '待开始' }}
+                  </n-tag>
+                  <n-button v-if="authStore.isDevLead || authStore.isPM" text size="tiny" type="error" @click="handleDeleteAssignment(item.assignmentId)">移除</n-button>
+                </div>
+                <n-progress v-if="item.progress != null" type="line" :percentage="item.progress" :height="6" :border-radius="3"
+                  :color="item.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" />
               </div>
-            </div>
-            <div class="feature-actions">
-              <n-button text size="tiny" @click="openAssign(f)">分配开发</n-button>
+              <div class="dev-card-actions">
+                <n-button text size="tiny" @click="openAssign(features.find(f => f.id === item.featureId))">分配开发</n-button>
+              </div>
+              <div v-if="!dev.items.length" class="empty-state" style="padding:8px">暂无分配</div>
             </div>
           </div>
         </div>
-        <div v-else class="empty-state">暂无功能点</div>
-      </section>
-
-      <!-- Dev Progress -->
-      <section class="section-card">
-        <div class="section-header"><h3>开发进度</h3></div>
-        <div v-if="terminalDevProgress.length > 0" class="progress-list">
-          <div v-for="tp in terminalDevProgress" :key="tp.terminal" class="progress-item" @click="toggleTerminalTasks(tp.terminal)">
-            <div class="progress-item-header">
-              <div class="progress-item-left">
-                <span class="progress-terminal">{{ tp.terminal }}</span>
-                <n-tag v-if="tp.overdue_days > 0" type="error" size="tiny" round>逾期 {{ tp.overdue_days }} 天</n-tag>
-              </div>
-              <span class="progress-percent">{{ tp.progress }}%</span>
-            </div>
-            <n-progress type="line" :percentage="tp.progress" :height="10" :border-radius="5"
-              :color="tp.progress >= 100 ? '#18a058' : '#2080f0'" indicator-placement="inside" />
-            <div v-if="expandedTerminal === tp.terminal && tp.tasks?.length" class="terminal-task-list">
-              <div v-for="task in tp.tasks" :key="task.id" class="terminal-task-item">
-                <span class="terminal-task-name">{{ task.title }}</span>
-                <n-tag :type="task.status === 'done' ? 'success' : 'warning'" size="tiny" round>{{ task.status === 'done' ? '已完成' : '进行中' }}</n-tag>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div v-else class="empty-state">暂无开发进度数据</div>
+        <div v-else class="empty-state">暂无功能点与开发分配</div>
       </section>
 
       <!-- Integration Test Progress -->
@@ -398,6 +358,36 @@ const terminalDevProgress = computed(() => {
     ...tp,
     progress: tp.progress || 0
   }))
+})
+
+const devBoardData = computed(() => {
+  const progressMap = {}
+  if (req.value.dev_progress?.terminals) {
+    for (const tp of req.value.dev_progress.terminals) {
+      progressMap[tp.terminal] = tp.progress || 0
+    }
+  }
+  const devMap = {}
+  for (const f of features.value) {
+    if (!f.assignments) continue
+    for (const a of f.assignments) {
+      const uid = a.developer?.id || a.developer_id
+      if (!uid) continue
+      if (!devMap[uid]) {
+        devMap[uid] = { userId: uid, name: a.developer?.name || '未知', items: [] }
+      }
+      devMap[uid].items.push({
+        featureId: f.id,
+        featureTitle: f.title,
+        terminal: a.terminal,
+        terminalLabel: skillsMap.value[a.terminal] || a.terminal,
+        status: a.status,
+        assignmentId: a.id,
+        progress: progressMap[a.terminal]
+      })
+    }
+  }
+  return Object.values(devMap)
 })
 
 const integrationBugStats = computed(() => {
@@ -1089,95 +1079,62 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* Feature List */
-.feature-list {
+/* Dev Board */
+.dev-board {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.dev-card {
+  flex: 1;
+  min-width: 260px;
+  max-width: 360px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.dev-card-header {
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dev-card-body {
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.feature-item {
-  padding: 12px;
-  border-radius: 12px;
-  background: #f8fafc;
+.dev-item {
+  padding: 10px;
+  background: white;
+  border-radius: 10px;
   border: 1px solid #f1f5f9;
 }
 
-.feature-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.feature-title {
+.dev-item-title {
   font-size: 13px;
   font-weight: 600;
   color: #0f172a;
-  flex: 1;
+  margin-bottom: 6px;
 }
 
-.feature-meta {
-  margin-top: 6px;
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.feature-meta-row {
-  margin-top: 8px;
+.dev-item-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-.feature-meta-label {
-  color: #64748b;
-  white-space: nowrap;
-}
-
-.feature-meta-value {
-  color: #6366f1;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.feature-meta-value:hover {
-  background: #eef2ff;
-}
-
-.assignment-list {
-  margin-top: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.assignment-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  background: #fff;
-  border-radius: 6px;
-  font-size: 12px;
-}
-
-.assignment-terminal {
-  font-weight: 600;
-  color: #6366f1;
-  min-width: 40px;
-}
-
-.assignment-dev {
-  flex: 1;
-  color: #334155;
-}
-
-.feature-actions {
-  margin-top: 6px;
+.dev-card-actions {
+  margin-top: 2px;
 }
 
 .info-grid {
