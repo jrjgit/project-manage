@@ -13,6 +13,231 @@
         </n-button>
       </div>
 
+      <!-- Header -->
+      <section class="header-card">
+        <div class="header-top">
+          <div class="header-number">{{ req.number || `REQ-${String(req.id || '').padStart(4, '0')}` }}</div>
+          <div class="header-tags">
+            <n-tag :type="statusMeta?.tone || 'default'" size="small" round>{{ statusMeta?.label || req.status }}</n-tag>
+            <n-tag :type="priorityMeta[req.priority]?.tone || 'default'" size="small" round>{{ priorityMeta[req.priority]?.label || req.priority }}</n-tag>
+            <n-tag v-if="req.project?.name" size="small" round>{{ req.project.name }}</n-tag>
+          </div>
+        </div>
+        <div class="header-actions">
+          <n-button v-if="authStore.isPM && !req.iteration_id" size="small" type="primary" ghost @click="showIterationSelector = true">纳入发布清单</n-button>
+          <n-button v-if="authStore.isPM && req.iteration_id" size="small" type="error" ghost @click="handleRemoveFromRelease">从发布库移除</n-button>
+        </div>
+      </section>
+
+      <!-- Description (read-only) -->
+      <section class="section-card">
+        <div class="section-header"><h3>需求描述</h3></div>
+        <div class="description-text">{{ req.description || '暂无描述' }}</div>
+      </section>
+
+      <!-- Basic Info -->
+      <section class="section-card">
+        <div class="section-header"><h3>基本信息</h3></div>
+        <div class="info-grid">
+          <div class="info-cell"><span class="info-label">业务负责人</span><span class="info-value">{{ req.person_name || req.person?.name || '-' }}</span></div>
+          <div class="info-cell editable-cell" @click="startEdit('person_id')">
+            <span class="info-label">指派业务负责人</span>
+            <template v-if="editingField === 'person_id'">
+              <n-select v-model:value="req.person_id" :options="userOptions" size="small" filterable
+                @blur="saveField('person_id'); editingField = null"
+                @keyup.enter="saveField('person_id'); editingField = null" autofocus @click.stop />
+            </template>
+            <span v-else class="info-value edit-hint">{{ req.person?.name || '点击选择' }}</span>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">项目类型</span>
+            <span class="info-value">{{ req.project_type === 'project' ? '项目需求' : req.project_type === 'ops' ? '运维需求' : '-' }}</span>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">所属系统</span>
+            <span class="info-value">{{ req.system || '-' }}</span>
+          </div>
+          <div class="info-cell editable-cell" @click="startEdit('dev_lead_id')">
+            <span class="info-label">开发组长</span>
+            <template v-if="editingField === 'dev_lead_id'">
+              <div class="inline-edit-row" @click.stop>
+                <n-select v-model:value="req.dev_lead_id" :options="devLeadOptions" size="small" style="width:140px" filterable
+                  @keyup.enter="saveAssignDevLead(); editingField = null" autofocus />
+                <n-button size="tiny" type="primary" @click="saveAssignDevLead(); editingField = null">确定</n-button>
+                <n-button size="tiny" type="error" ghost @click="editingField = null">取消</n-button>
+              </div>
+            </template>
+            <span v-else class="info-value edit-hint">{{ req.dev_lead?.name || '点击指派' }}</span>
+          </div>
+          <div class="info-cell editable-cell" @click="startEdit('priority')">
+            <span class="info-label">优先级</span>
+            <template v-if="editingField === 'priority'">
+              <n-select v-model:value="req.priority" :options="priorityOptions" size="small"
+                @blur="saveField('priority'); editingField = null"
+                @keyup.enter="saveField('priority'); editingField = null" autofocus @click.stop />
+            </template>
+            <span v-else class="info-value edit-hint">{{ priorityMeta[req.priority]?.label || req.priority || '点击选择' }}</span>
+          </div>
+          <div class="info-cell editable-cell" @click="startEdit('iteration_id')">
+            <span class="info-label">发布迭代</span>
+            <template v-if="editingField === 'iteration_id'">
+              <n-select v-model:value="req.iteration_id" :options="iterationOptions" size="small" clearable
+                @blur="editingField = null"
+                @update:value="onIterationChange" autofocus @click.stop />
+            </template>
+            <span v-else class="info-value edit-hint">{{ req.iteration_name || (req.iteration_id ? `迭代 #${req.iteration_id}` : '未纳入') }}</span>
+          </div>
+          <div class="info-cell">
+            <span class="info-label">计划完成时间</span>
+            <span class="info-value">{{ req.planned_completion_time ? formatDate2(req.planned_completion_time) : '-' }}</span>
+          </div>
+          <div class="info-cell"><span class="info-label">开发人天</span><span class="info-value">{{ req.dev_total || '-' }}</span></div>
+          <div class="info-cell"><span class="info-label">开发单价</span><span class="info-value">{{ req.dev_price || '-' }}</span></div>
+          <div class="info-cell"><span class="info-label">测试人天</span><span class="info-value">{{ req.test_total || '-' }}</span></div>
+          <div class="info-cell"><span class="info-label">测试单价</span><span class="info-value">{{ req.test_price || '-' }}</span></div>
+          <div class="info-cell"><span class="info-label">总人天</span><span class="info-value">{{ req.total_amount || '-' }}</span></div>
+          <div class="info-cell"><span class="info-label">总价</span><span class="info-value">{{ req.total_price || '-' }}</span></div>
+        </div>
+      </section>
+
+      <!-- Notes -->
+      <section class="section-card">
+        <div class="section-header"><h3>备注信息</h3></div>
+        <n-input v-model:value="localNotes" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" placeholder="添加备注..." @blur="saveNotes" />
+      </section>
+
+      <!-- Document -->
+      <section class="section-card">
+        <div class="section-header"><h3>需求文档</h3></div>
+        <div v-if="req.document_name" class="document-row">
+          <div class="document-info">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;flex-shrink:0">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+            </svg>
+            <span class="document-name">{{ req.document_name }}</span>
+            <span v-if="req.document_size" class="document-size">({{ formatSize(req.document_size) }})</span>
+          </div>
+          <n-space>
+            <n-button size="small" @click="handleDownloadDocument">下载</n-button>
+            <n-button v-if="authStore.isPM" size="small" type="error" ghost @click="handleDeleteDocument">删除</n-button>
+          </n-space>
+        </div>
+        <div v-else-if="authStore.isPM" class="document-upload">
+          <n-upload :show-file-list="false" :custom-request="handleCustomUpload" accept="*/*">
+            <n-button size="small" :loading="documentLoading">上传文档</n-button>
+          </n-upload>
+        </div>
+        <div v-else class="empty-state">暂无文档</div>
+      </section>
+
+      <!-- Features -->
+      <section v-if="authStore.isDevLead" class="section-card">
+        <div class="section-header">
+          <h3>功能点 ({{ features.length }})</h3>
+          <n-button size="tiny" text @click="showCreateFeature = true">新增</n-button>
+        </div>
+        <div v-if="features.length > 0" class="feature-list">
+          <div v-for="f in features" :key="f.id" class="feature-item">
+            <div class="feature-header">
+              <span class="feature-title">{{ f.title }}</span>
+              <n-tag :type="featureStatusTag(f.status)" size="tiny" round>{{ featureStatusLabel[f.status] || f.status }}</n-tag>
+              <n-button text size="tiny" type="error" @click="handleDeleteFeature(f)">删除</n-button>
+            </div>
+            <div class="feature-meta-row">
+              <span class="feature-meta-label">开发：</span>
+              <template v-if="editingFeatureDev === f.id">
+                <n-select v-model:value="f.developer_id" :options="userOptions" size="small" style="width:140px" filterable
+                  @blur="saveFeatureDev(f); editingFeatureDev = null"
+                  @keyup.enter="saveFeatureDev(f); editingFeatureDev = null" autofocus />
+              </template>
+              <span v-else class="feature-meta-value" @click="startFeatureEdit('dev', f)">{{ f.developer?.name || '点击设置' }}</span>
+              <span class="feature-meta-label" style="margin-left:12px">测试：</span>
+              <template v-if="editingFeatureTester === f.id">
+                <n-select v-model:value="f.tester_id" :options="userOptions" size="small" style="width:140px" filterable
+                  @blur="saveFeatureTester(f); editingFeatureTester = null"
+                  @keyup.enter="saveFeatureTester(f); editingFeatureTester = null" autofocus />
+              </template>
+              <span v-else class="feature-meta-value" @click="startFeatureEdit('tester', f)">{{ f.tester?.name || '点击设置' }}</span>
+            </div>
+            <div v-if="f.assignments?.length" class="assignment-list">
+              <div v-for="a in f.assignments" :key="a.id" class="assignment-item">
+                <span class="assignment-terminal">{{ a.terminal }}</span>
+                <span class="assignment-dev">{{ a.developer?.name }}</span>
+                <n-tag :type="a.status === 'done' ? 'success' : a.status === 'developing' ? 'warning' : 'default'" size="tiny" round>
+                  {{ a.status === 'done' ? '已完成' : a.status === 'developing' ? '开发中' : '待开始' }}
+                </n-tag>
+                <n-button text size="tiny" type="error" @click="handleDeleteAssignment(a)">移除</n-button>
+              </div>
+            </div>
+            <div class="feature-actions">
+              <n-button text size="tiny" @click="openAssign(f)">分配开发</n-button>
+            </div>
+          </div>
+        </div>
+        <div v-else class="empty-state">暂无功能点</div>
+      </section>
+
+      <!-- Dev Progress -->
+      <section class="section-card">
+        <div class="section-header"><h3>开发进度</h3></div>
+        <div v-if="terminalDevProgress.length > 0" class="progress-list">
+          <div v-for="tp in terminalDevProgress" :key="tp.terminal" class="progress-item" @click="toggleTerminalTasks(tp.terminal)">
+            <div class="progress-item-header">
+              <div class="progress-item-left">
+                <span class="progress-terminal">{{ tp.terminal }}</span>
+                <n-tag v-if="tp.overdue_days > 0" type="error" size="tiny" round>逾期 {{ tp.overdue_days }} 天</n-tag>
+              </div>
+              <span class="progress-percent">{{ tp.progress }}%</span>
+            </div>
+            <n-progress type="line" :percentage="tp.progress" :height="10" :border-radius="5"
+              :color="tp.progress >= 100 ? '#18a058' : '#2080f0'" indicator-placement="inside" />
+            <div v-if="expandedTerminal === tp.terminal && tp.tasks?.length" class="terminal-task-list">
+              <div v-for="task in tp.tasks" :key="task.id" class="terminal-task-item">
+                <span class="terminal-task-name">{{ task.title }}</span>
+                <n-tag :type="task.status === 'done' ? 'success' : 'warning'" size="tiny" round>{{ task.status === 'done' ? '已完成' : '进行中' }}</n-tag>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else class="empty-state">暂无开发进度数据</div>
+      </section>
+
+      <!-- Integration Test Progress -->
+      <section class="section-card">
+        <div class="section-header"><h3>综合测试进度</h3></div>
+        <div class="bug-stat-grid" @click="showIntegrationBugs = !showIntegrationBugs">
+          <div class="bug-stat-item"><span class="bug-stat-value">{{ integrationBugStats.total }}</span><span class="bug-stat-label">Bug 总数</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#18a058">{{ integrationBugStats.closed }}</span><span class="bug-stat-label">已关闭</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#f59e0b">{{ integrationBugStats.fixing }}</span><span class="bug-stat-label">修复中</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#d03050">{{ integrationBugStats.pending }}</span><span class="bug-stat-label">待验证</span></div>
+        </div>
+        <div v-if="showIntegrationBugs && integrationBugs.length" class="bug-list">
+          <div v-for="bug in integrationBugs" :key="bug.id" class="bug-item">
+            <span class="bug-name">{{ bug.title }}</span>
+            <n-tag :type="bug.status === 'closed' ? 'success' : 'warning'" size="tiny" round>{{ bug.status }}</n-tag>
+          </div>
+        </div>
+      </section>
+
+      <!-- Business Test Progress -->
+      <section class="section-card">
+        <div class="section-header"><h3>业务测试进度</h3></div>
+        <div class="bug-stat-grid" @click="showBusinessBugs = !showBusinessBugs">
+          <div class="bug-stat-item"><span class="bug-stat-value">{{ businessBugStats.total }}</span><span class="bug-stat-label">Bug 总数</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#18a058">{{ businessBugStats.closed }}</span><span class="bug-stat-label">已关闭</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#f59e0b">{{ businessBugStats.fixing }}</span><span class="bug-stat-label">修复中</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#d03050">{{ businessBugStats.pending }}</span><span class="bug-stat-label">待验证</span></div>
+        </div>
+        <div v-if="showBusinessBugs && businessBugs.length" class="bug-list">
+          <div v-for="bug in businessBugs" :key="bug.id" class="bug-item">
+            <span class="bug-name">{{ bug.title }}</span>
+            <n-tag :type="bug.status === 'closed' ? 'success' : 'warning'" size="tiny" round>{{ bug.status }}</n-tag>
+          </div>
+        </div>
+      </section>
+    </div>
+
       <!-- Hero Card -->
       <section class="hero-card">
         <div class="hero-left">
@@ -929,91 +1154,95 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* Hero Card */
-.hero-card {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 28px 30px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #312e81 100%);
-  color: white;
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
-}
-
-.hero-eyebrow {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.72);
-  margin-bottom: 8px;
-}
-
-.hero-title {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.hero-tags {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.hero-right {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 200px;
-}
-
-.hero-field {
+/* Header Card */
+.header-card {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  background: white;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+.header-top {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.hero-field-label {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
-  min-width: 60px;
+.header-number {
+  font-size: 20px;
+  font-weight: 700;
+  color: #6366f1;
+  letter-spacing: 0.02em;
 }
 
-.hero-field-value {
+.header-tags {
+  display: flex;
+  gap: 8px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Description text (read-only) */
+.description-text {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #334155;
+  white-space: pre-wrap;
+}
+
+/* Info grid */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.info-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+.info-label {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.info-value {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.editable-cell {
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
   transition: background 0.15s;
 }
 
-.hero-field-value:hover {
-  background: rgba(255, 255, 255, 0.1);
+.editable-cell:hover {
+  background: #eef2ff;
 }
 
-.hero-field-inline {
+.edit-hint {
+  color: #6366f1 !important;
+}
+
+.inline-edit-row {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-/* Detail Grid */
-.detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.detail-left,
-.detail-right {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
 }
 
 /* Section Card */
@@ -1162,17 +1391,6 @@ onMounted(() => {
   color: #334155;
 }
 
-/* Action Bar */
-.action-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.action-bar-left {
-  display: flex;
-  gap: 12px;
-}
 
 .empty-state {
   padding: 20px;
@@ -1334,16 +1552,13 @@ onMounted(() => {
 }
 
 @media (max-width: 1100px) {
-  .hero-card {
+  .header-card {
     flex-direction: column;
+    align-items: stretch;
   }
 
-  .hero-right {
-    width: 100%;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
+  .info-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .bug-stat-grid {
