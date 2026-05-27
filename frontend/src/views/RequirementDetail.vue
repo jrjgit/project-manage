@@ -201,7 +201,7 @@
     </div>
 
     <!-- Create Feature Modal -->
-    <n-modal v-model:show="showCreateFeature" preset="card" style="width: 680px" title="新增功能点" :mask-closable="false" :style="{maxHeight:'80vh',overflow:'auto'}">
+    <n-modal v-model:show="showCreateFeature" preset="card" style="width:90vw;max-width:1400px;max-height:90vh;overflow:auto" title="新增功能点" :mask-closable="false">
       <n-form :model="createFeatureForm" label-placement="top">
         <n-form-item label="选择开发人员">
           <n-select v-model:value="createFeatureForm.developer_ids" :options="projectDevOptions" multiple placeholder="选择人员（可多选，根据技能自动分配）" filterable />
@@ -219,7 +219,7 @@
               <div class="preview-row-3">
                 <n-input v-model:value="item.performance" placeholder="绩效工时" size="small" />
                 <n-date-picker v-model:value="item.deadline" type="date" placeholder="计划完成时间" size="small" clearable style="width:100%" />
-                <n-input v-model:value="item.notes" type="textarea" :autosize="{ minRows: 1, maxRows: 3 }" placeholder="备注" />
+                <n-input v-model:value="item.notes" type="textarea" :autosize="{ minRows: 2, maxRows: 5 }" placeholder="备注" />
               </div>
             </div>
           </div>
@@ -1076,7 +1076,7 @@ onMounted(() => {
 
 .preview-row-3 {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 2fr;
   gap: 8px;
 }
 
