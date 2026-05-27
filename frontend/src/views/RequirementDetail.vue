@@ -82,9 +82,14 @@
             </template>
             <span v-else class="info-value edit-hint">{{ req.iteration_name || (req.iteration_id ? `迭代 #${req.iteration_id}` : '未纳入') }}</span>
           </div>
-          <div class="info-cell">
+          <div class="info-cell editable-cell" @click="startEdit('planned_completion_time')">
             <span class="info-label">计划完成时间</span>
-            <span class="info-value">{{ req.planned_completion_time ? formatDate2(req.planned_completion_time) : '-' }}</span>
+            <template v-if="editingField === 'planned_completion_time'">
+              <n-date-picker v-model:value="localPlannedTime" type="date" size="small" clearable
+                @blur="savePlannedTime(); editingField = null"
+                @keyup.enter="savePlannedTime(); editingField = null" autofocus @click.stop />
+            </template>
+            <span v-else class="info-value edit-hint">{{ req.planned_completion_time ? formatDate2(req.planned_completion_time) : '点击设置' }}</span>
           </div>
           <div class="info-cell"><span class="info-label">开发人天</span><span class="info-value">{{ req.dev_total || '-' }}</span></div>
           <div class="info-cell"><span class="info-label">开发单价</span><span class="info-value">{{ req.dev_price || '-' }}</span></div>
@@ -318,6 +323,7 @@ const iterations = ref([])
 const editingField = ref(null)
 const localDescription = ref('')
 const localNotes = ref('')
+const localPlannedTime = ref(null)
 
 const expandedTerminal = ref(null)
 const features = ref([])
@@ -423,6 +429,13 @@ async function saveDescription() {
   } catch (e) {
     window.$message?.error('保存描述失败')
   }
+}
+
+async function savePlannedTime() {
+  try {
+    await updateRequirement(req.value.id, { planned_completion_time: localPlannedTime.value ? new Date(localPlannedTime.value).toISOString() : null })
+    req.value.planned_completion_time = localPlannedTime.value ? new Date(localPlannedTime.value).toISOString() : null
+  } catch (e) { window.$message?.error('保存失败') }
 }
 
 async function saveNotes() {
@@ -668,6 +681,7 @@ async function loadReq() {
     req.value = data
     localDescription.value = data.description || ''
     localNotes.value = data.notes || ''
+    localPlannedTime.value = data.planned_completion_time ? new Date(data.planned_completion_time).getTime() : null
     await loadFeatures()
   } catch (e) {
     window.$message?.error('加载需求详情失败')
@@ -820,17 +834,17 @@ onMounted(() => {
 /* Info grid */
 .info-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 8px;
 }
 
 .info-cell {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 10px 14px;
+  gap: 1px;
+  padding: 6px 10px;
   background: #f8fafc;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .info-label {
@@ -1166,21 +1180,7 @@ onMounted(() => {
   margin-top: 8px;
 }
 
-.info-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 8px;
-}
 
-.info-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 12px;
-  background: #f8fafc;
-  border-radius: 8px;
-}
 
 .info-label {
   font-size: 11px;
