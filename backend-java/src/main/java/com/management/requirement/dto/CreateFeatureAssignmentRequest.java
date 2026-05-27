@@ -12,4 +12,5 @@ public class CreateFeatureAssignmentRequest {
     private String description;
     private String performance;
     private String deadline;
+    private String notes;
 }

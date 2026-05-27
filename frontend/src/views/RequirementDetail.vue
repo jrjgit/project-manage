@@ -196,19 +196,13 @@
     </div>
 
     <!-- Create Feature Modal -->
-    <n-modal v-model:show="showCreateFeature" preset="card" style="width: 520px" title="新增功能点" :mask-closable="false">
+    <n-modal v-model:show="showCreateFeature" preset="card" style="width: 680px" title="新增功能点" :mask-closable="false" :style="{maxHeight:'80vh',overflow:'auto'}">
       <n-form :model="createFeatureForm" label-placement="top">
-        <n-form-item label="功能点名称" path="title" :rule="{ required: true, message: '请输入功能点名称' }">
-          <n-input v-model:value="createFeatureForm.title" placeholder="输入功能点名称" />
-        </n-form-item>
-        <n-form-item label="描述">
-          <n-input v-model:value="createFeatureForm.description" type="textarea" placeholder="功能点描述" />
-        </n-form-item>
         <n-form-item label="选择开发人员">
           <n-select v-model:value="createFeatureForm.developer_ids" :options="projectDevOptions" multiple placeholder="选择人员（可多选，根据技能自动分配）" filterable />
         </n-form-item>
         <div v-if="createPreview.length" class="preview-list">
-          <div class="preview-title">将创建以下分配：</div>
+          <div class="preview-title">将创建以下任务：</div>
           <div v-for="(item, idx) in createPreview" :key="idx" class="preview-assign">
             <div class="preview-header">
               <span class="preview-name">{{ item.name }}</span>
@@ -216,9 +210,12 @@
               <n-button text size="tiny" type="error" @click="removeCreatePreview(idx)">移除</n-button>
             </div>
             <div class="preview-fields">
-              <n-input v-model:value="item.description" placeholder="任务描述（可选）" size="small" />
-              <n-input v-model:value="item.performance" placeholder="绩效工时（可选）" size="small" />
-              <n-date-picker v-model:value="item.deadline" type="date" placeholder="计划完成时间" size="small" clearable style="width:100%" />
+              <n-input v-model:value="item.description" type="textarea" :autosize="{ minRows: 1, maxRows: 3 }" placeholder="任务描述" />
+              <div class="preview-row-3">
+                <n-input v-model:value="item.performance" placeholder="绩效工时" size="small" />
+                <n-date-picker v-model:value="item.deadline" type="date" placeholder="计划完成时间" size="small" clearable style="width:100%" />
+                <n-input v-model:value="item.notes" type="textarea" :autosize="{ minRows: 1, maxRows: 3 }" placeholder="备注" />
+              </div>
             </div>
           </div>
         </div>
@@ -226,7 +223,7 @@
       <template #footer>
         <n-space justify="end">
           <n-button @click="showCreateFeature = false">取消</n-button>
-          <n-button type="primary" :loading="creatingFeature" :disabled="!createFeatureForm.title.trim() || !createPreview.length" @click="handleCreateFeature">确定创建</n-button>
+          <n-button type="primary" :loading="creatingFeature" :disabled="!createPreview.length" @click="handleCreateFeature">确定创建</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -691,11 +688,12 @@ function featureStatusTag(status) {
 function buildCreatePreview() {
   const ids = createFeatureForm.value.developer_ids || []
   const result = []
+  const defaultDesc = req.value.description || ''
   for (const uid of ids) {
     const u = users.value.find(x => x.id === uid)
     if (!u || !u.skills) continue
     for (const skill of u.skills.split(',').filter(Boolean)) {
-      result.push({ userId: uid, name: u.name, skill, skillLabel: skillsMap.value[skill] || skill, description: '', performance: '', deadline: null })
+      result.push({ userId: uid, name: u.name, skill, skillLabel: skillsMap.value[skill] || skill, description: defaultDesc, performance: '', deadline: null, notes: '' })
     }
   }
   createPreview.value = result
@@ -719,7 +717,8 @@ async function handleCreateFeature() {
           developer_id: item.userId,
           description: item.description || undefined,
           performance: item.performance || undefined,
-          deadline: item.deadline ? new Date(item.deadline).toISOString() : undefined
+          deadline: item.deadline ? new Date(item.deadline).toISOString() : undefined,
+          notes: item.notes || undefined
         })
       } catch (e) { console.error(e) }
     }
@@ -1059,6 +1058,12 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.preview-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
 }
 
 .empty-state {
