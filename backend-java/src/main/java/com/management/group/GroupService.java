@@ -137,11 +137,16 @@ public class GroupService {
         JwtUserDetails u = currentUser();
         Group group = groupMapper.selectOne(new LambdaQueryWrapper<Group>()
                 .eq(Group::getDevLeadId, u.getUserId()));
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
         if (group == null) {
-            return Map.of("group", null, "members", List.of());
+            result.put("group", null);
+            result.put("members", List.of());
+            return result;
         }
         List<User> members = userMapper.selectList(new LambdaQueryWrapper<User>()
                 .eq(User::getGroupId, group.getId()));
-        return Map.of("group", group, "members", members);
+        result.put("group", group);
+        result.put("members", members);
+        return result;
     }
 }
