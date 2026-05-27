@@ -217,7 +217,7 @@
             </div>
             <div class="preview-fields">
               <n-input v-model:value="item.description" placeholder="任务描述（可选）" size="small" />
-              <n-input v-model:value="item.performance" placeholder="绩效公式（可选）" size="small" />
+              <n-input v-model:value="item.performance" placeholder="绩效工时（可选）" size="small" />
               <n-date-picker v-model:value="item.deadline" type="date" placeholder="计划完成时间" size="small" clearable style="width:100%" />
             </div>
           </div>
@@ -250,7 +250,7 @@
             </div>
             <div class="preview-fields">
               <n-input v-model:value="item.description" placeholder="任务描述（可选）" size="small" />
-              <n-input v-model:value="item.performance" placeholder="绩效公式（可选）" size="small" />
+              <n-input v-model:value="item.performance" placeholder="绩效工时（可选）" size="small" />
               <n-date-picker v-model:value="item.deadline" type="date" placeholder="计划完成时间" size="small" clearable style="width:100%" />
             </div>
           </div>

@@ -185,7 +185,7 @@ public class TaskService {
         if (req.getDeadline() != null && !req.getDeadline().isBlank()) {
             String d = req.getDeadline().trim();
             if (d.contains("T")) {
-                deadline = LocalDateTime.parse(d, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                deadline = java.time.OffsetDateTime.parse(d).toLocalDateTime();
             } else {
                 deadline = LocalDate.parse(d, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
             }
