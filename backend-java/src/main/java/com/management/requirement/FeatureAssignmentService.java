@@ -72,12 +72,15 @@ public class FeatureAssignmentService {
         // auto-create task
         CreateTaskRequest taskReq = new CreateTaskRequest();
         taskReq.setTitle(requirement.getDescription());
+        taskReq.setDescription(req.getDescription());
         taskReq.setRequirementId(requirement.getId());
         taskReq.setFeatureId(req.getFeatureId());
         taskReq.setTerminal(req.getTerminal());
         taskReq.setProjectId(requirement.getProjectId());
         taskReq.setDevLeadId(requirement.getDevLeadId());
         taskReq.setAssigneeId(req.getDeveloperId());
+        taskReq.setDeadline(req.getDeadline());
+        if (req.getPerformance() != null) taskReq.setPerformance(req.getPerformance());
 
         Task task = taskService.createTask(taskReq);
         a.setAutoTaskId(task.getId());

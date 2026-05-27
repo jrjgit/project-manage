@@ -20,6 +20,7 @@ public class CreateTaskRequest {
     private List<TaskAssigneeItem> assignees;
     private Long testerId;
     private String deadline;
+    private String performance;
     private Long requirementId;
     private Long featureId;
     private String terminal;

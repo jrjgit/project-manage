@@ -213,6 +213,7 @@ public class TaskService {
         task.setCreatorId(userId);
         task.setDevLeadId(req.getDevLeadId());
         task.setDeadline(deadline);
+        if (req.getPerformance() != null) task.setPerformance(req.getPerformance());
         if (req.getAssigneeId() != null) task.setAssigneeId(req.getAssigneeId());
         if (req.getTesterId() != null) task.setTesterId(req.getTesterId());
         if (req.getRequirementId() != null) task.setRequirementId(req.getRequirementId());

@@ -209,10 +209,17 @@
         </n-form-item>
         <div v-if="createPreview.length" class="preview-list">
           <div class="preview-title">将创建以下分配：</div>
-          <div v-for="(item, idx) in createPreview" :key="idx" class="preview-item">
-            <span class="preview-name">{{ item.name }}</span>
-            <n-tag size="tiny" type="info">{{ item.skillLabel }}</n-tag>
-            <n-button text size="tiny" type="error" @click="removeCreatePreview(idx)">移除</n-button>
+          <div v-for="(item, idx) in createPreview" :key="idx" class="preview-assign">
+            <div class="preview-header">
+              <span class="preview-name">{{ item.name }}</span>
+              <n-tag size="tiny" type="info">{{ item.skillLabel }}</n-tag>
+              <n-button text size="tiny" type="error" @click="removeCreatePreview(idx)">移除</n-button>
+            </div>
+            <div class="preview-fields">
+              <n-input v-model:value="item.description" placeholder="任务描述（可选）" size="small" />
+              <n-input v-model:value="item.performance" placeholder="绩效公式（可选）" size="small" />
+              <n-date-picker v-model:value="item.deadline" type="date" placeholder="计划完成时间" size="small" clearable style="width:100%" />
+            </div>
           </div>
         </div>
       </n-form>
@@ -235,10 +242,17 @@
         </n-form-item>
         <div v-if="previewAssignments.length" class="preview-list">
           <div class="preview-title">将创建以下分配：</div>
-          <div v-for="(item, idx) in previewAssignments" :key="idx" class="preview-item">
-            <span class="preview-name">{{ item.name }}</span>
-            <n-tag size="tiny" type="info">{{ item.skill }}</n-tag>
-            <n-button text size="tiny" type="error" @click="removePreview(idx)">移除</n-button>
+          <div v-for="(item, idx) in previewAssignments" :key="idx" class="preview-assign">
+            <div class="preview-header">
+              <span class="preview-name">{{ item.name }}</span>
+              <n-tag size="tiny" type="info">{{ item.skillLabel }}</n-tag>
+              <n-button text size="tiny" type="error" @click="removePreview(idx)">移除</n-button>
+            </div>
+            <div class="preview-fields">
+              <n-input v-model:value="item.description" placeholder="任务描述（可选）" size="small" />
+              <n-input v-model:value="item.performance" placeholder="绩效公式（可选）" size="small" />
+              <n-date-picker v-model:value="item.deadline" type="date" placeholder="计划完成时间" size="small" clearable style="width:100%" />
+            </div>
           </div>
         </div>
       </n-form>
@@ -295,7 +309,7 @@ import { getDictionaries } from '@/api/dictionaries'
 import { requirementStatusMeta } from '@/constants/requirementMeta'
 import { priorityMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
-import { NButton, NModal, NInput, NSelect, NSpace, NTag, NProgress, NUpload, NForm, NFormItem } from 'naive-ui'
+import { NButton, NModal, NInput, NSelect, NSpace, NTag, NProgress, NUpload, NForm, NFormItem, NDatePicker } from 'naive-ui'
 
 const route = useRoute()
 const router = useRouter()
@@ -581,7 +595,7 @@ function buildPreview() {
     if (!u || !u.skills) continue
     const userSkills = u.skills.split(',').filter(Boolean)
     for (const skill of userSkills) {
-      result.push({ userId: uid, name: u.name, skill, skillLabel: skillsMap.value[skill] || skill })
+      result.push({ userId: uid, name: u.name, skill, skillLabel: skillsMap.value[skill] || skill, description: '', performance: '', deadline: null })
     }
   }
   previewAssignments.value = result
@@ -601,7 +615,10 @@ async function handleBatchAssign() {
     try {
       await createFeatureAssignment(assigningFeature.value.id, {
         terminal: item.skill,
-        developer_id: item.userId
+        developer_id: item.userId,
+        description: item.description || undefined,
+        performance: item.performance || undefined,
+        deadline: item.deadline ? new Date(item.deadline).toISOString() : undefined
       })
       success++
     } catch (e) { console.error(e) }
@@ -678,7 +695,7 @@ function buildCreatePreview() {
     const u = users.value.find(x => x.id === uid)
     if (!u || !u.skills) continue
     for (const skill of u.skills.split(',').filter(Boolean)) {
-      result.push({ userId: uid, name: u.name, skill, skillLabel: skillsMap.value[skill] || skill })
+      result.push({ userId: uid, name: u.name, skill, skillLabel: skillsMap.value[skill] || skill, description: '', performance: '', deadline: null })
     }
   }
   createPreview.value = result
@@ -697,7 +714,13 @@ async function handleCreateFeature() {
     const feature = await createFeature(route.params.id, { title: createFeatureForm.value.title, description: createFeatureForm.value.description })
     for (const item of createPreview.value) {
       try {
-        await createFeatureAssignment(feature.id, { terminal: item.skill, developer_id: item.userId })
+        await createFeatureAssignment(feature.id, {
+          terminal: item.skill,
+          developer_id: item.userId,
+          description: item.description || undefined,
+          performance: item.performance || undefined,
+          deadline: item.deadline ? new Date(item.deadline).toISOString() : undefined
+        })
       } catch (e) { console.error(e) }
     }
     window.$message?.success(`功能点已创建，已分配 ${createPreview.value.length} 个开发任务`)
@@ -1011,9 +1034,31 @@ onMounted(() => {
   font-size: 13px;
 }
 
+.preview-assign {
+  padding: 10px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 8px;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
 .preview-name {
-  font-weight: 500;
+  font-weight: 600;
   color: #0f172a;
+}
+
+.preview-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .empty-state {
