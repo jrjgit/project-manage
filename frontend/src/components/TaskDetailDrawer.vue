@@ -194,7 +194,7 @@ const platformOptions = [
 const statusMeta = computed(() => taskStatusMeta[task.value?.status] || { label: task.value?.status || '-', tone: 'default' })
 const priorityMetaItem = computed(() => priorityMeta[task.value?.priority] || { label: task.value?.priority || '-', tone: 'default' })
 
-const devOptions = computed(() => users.value.filter((user) => user.role === 'dev').map((user) => ({ label: user.name, value: user.id })))
+const devOptions = computed(() => users.value.filter((user) => user.role === 'dev' || user.role === 'dev_lead').map((user) => ({ label: user.name, value: user.id })))
 const testerLeadOptions = computed(() => users.value.filter((user) => user.role === 'tester_lead').map((user) => ({ label: user.name, value: user.id })))
 const testerOptions = computed(() => users.value.filter((user) => user.role === 'tester').map((user) => ({ label: user.name, value: user.id })))
 

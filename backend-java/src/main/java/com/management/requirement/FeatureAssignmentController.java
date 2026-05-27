@@ -23,7 +23,7 @@ public class FeatureAssignmentController {
     }
 
     @PostMapping("/api/features/{featureId}/assignments")
-    @PreAuthorize("hasRole('DEV_LEAD')")
+    @PreAuthorize("hasAnyRole('PM','DEV_LEAD')")
     @ResponseStatus(HttpStatus.CREATED)
     public Result<FeatureAssignment> create(@PathVariable Long featureId,
                                              @Valid @RequestBody CreateFeatureAssignmentRequest req) {
@@ -32,7 +32,7 @@ public class FeatureAssignmentController {
     }
 
     @DeleteMapping("/api/feature-assignments/{id}")
-    @PreAuthorize("hasRole('DEV_LEAD')")
+    @PreAuthorize("hasAnyRole('PM','DEV_LEAD')")
     public Result<Map<String, String>> delete(@PathVariable Long id) {
         assignmentService.delete(id);
         return Result.ok(Map.of("message", "deleted"));

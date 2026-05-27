@@ -127,7 +127,7 @@
       </section>
 
       <!-- Features -->
-      <section v-if="authStore.isDevLead" class="section-card">
+      <section v-if="authStore.isPM || authStore.isDevLead" class="section-card">
         <div class="section-header">
           <h3>功能点 ({{ features.length }})</h3>
           <n-button size="tiny" text @click="showCreateFeature = true">新增</n-button>
@@ -348,7 +348,7 @@ const assigningFeature = ref(null)
 const assignForm = ref({ terminal: null, developer_id: null })
 
 const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
-const devOptions = computed(() => users.value.filter(u => u.role === 'dev').map(u => ({ label: u.name, value: u.id })))
+const devOptions = computed(() => users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
 const platformOptions = [
   { label: 'iOS', value: 'iOS' },
   { label: 'Android', value: 'Android' },
