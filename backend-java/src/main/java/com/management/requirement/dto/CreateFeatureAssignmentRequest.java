@@ -9,6 +9,5 @@ public class CreateFeatureAssignmentRequest {
     private Long featureId;
     @NotBlank
     private String terminal;
-    @NotNull
     private Long developerId;
 }

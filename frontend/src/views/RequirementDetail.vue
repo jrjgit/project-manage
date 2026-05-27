@@ -234,7 +234,7 @@
     </div>
 
     <!-- Create Feature Modal -->
-    <n-modal v-model:show="showCreateFeature" preset="card" style="width: 480px" title="新增功能点" :mask-closable="false">
+    <n-modal v-model:show="showCreateFeature" preset="card" style="width: 520px" title="新增功能点" :mask-closable="false">
       <n-form :model="createFeatureForm" label-placement="top">
         <n-form-item label="功能点名称" path="title" :rule="{ required: true, message: '请输入功能点名称' }">
           <n-input v-model:value="createFeatureForm.title" placeholder="输入功能点名称" />
@@ -242,17 +242,22 @@
         <n-form-item label="描述">
           <n-input v-model:value="createFeatureForm.description" type="textarea" placeholder="功能点描述" />
         </n-form-item>
-        <n-form-item label="开发负责人">
-          <n-select v-model:value="createFeatureForm.developer_id" :options="userOptions" placeholder="选择开发负责人" clearable filterable />
+        <n-form-item label="选择开发人员">
+          <n-select v-model:value="createFeatureForm.developer_ids" :options="projectDevOptions" multiple placeholder="选择人员（可多选，根据技能自动分配）" filterable />
         </n-form-item>
-        <n-form-item label="测试负责人">
-          <n-select v-model:value="createFeatureForm.tester_id" :options="userOptions" placeholder="选择测试负责人" clearable filterable />
-        </n-form-item>
+        <div v-if="createPreview.length" class="preview-list">
+          <div class="preview-title">将创建以下分配：</div>
+          <div v-for="(item, idx) in createPreview" :key="idx" class="preview-item">
+            <span class="preview-name">{{ item.name }}</span>
+            <n-tag size="tiny" type="info">{{ item.skillLabel }}</n-tag>
+            <n-button text size="tiny" type="error" @click="removeCreatePreview(idx)">移除</n-button>
+          </div>
+        </div>
       </n-form>
       <template #footer>
         <n-space justify="end">
           <n-button @click="showCreateFeature = false">取消</n-button>
-          <n-button type="primary" :loading="creatingFeature" :disabled="!createFeatureForm.title.trim()" @click="handleCreateFeature">确定</n-button>
+          <n-button type="primary" :loading="creatingFeature" :disabled="!createFeatureForm.title.trim() || !createPreview.length" @click="handleCreateFeature">确定创建</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -347,7 +352,8 @@ const editingFeatureDev = ref(null)
 const editingFeatureTester = ref(null)
 const showCreateFeature = ref(false)
 const creatingFeature = ref(false)
-const createFeatureForm = ref({ title: '', description: '', developer_id: null, tester_id: null })
+const createFeatureForm = ref({ title: '', description: '', developer_ids: [] })
+const createPreview = ref([])
 const showAssignModal = ref(false)
 const assignLoading = ref(false)
 const assigningFeature = ref(null)
@@ -698,21 +704,41 @@ function featureStatusTag(status) {
   return map[status] || 'default'
 }
 
-async function handleCreateFeature() {
-  if (!createFeatureForm.value.title.trim()) {
-    window.$message?.warning('请输入功能点名称')
-    return
+function buildCreatePreview() {
+  const ids = createFeatureForm.value.developer_ids || []
+  const result = []
+  for (const uid of ids) {
+    const u = users.value.find(x => x.id === uid)
+    if (!u || !u.skills) continue
+    for (const skill of u.skills.split(',').filter(Boolean)) {
+      result.push({ userId: uid, name: u.name, skill, skillLabel: skillsMap.value[skill] || skill })
+    }
   }
+  createPreview.value = result
+}
+
+watch(() => createFeatureForm.value.developer_ids, buildCreatePreview, { deep: true })
+
+function removeCreatePreview(idx) {
+  createPreview.value.splice(idx, 1)
+}
+
+async function handleCreateFeature() {
+  if (!createFeatureForm.value.title.trim()) { window.$message?.warning('请输入功能点名称'); return }
   creatingFeature.value = true
   try {
-    await createFeature(route.params.id, createFeatureForm.value)
-    window.$message?.success('功能点已创建')
+    const feature = await createFeature(route.params.id, { title: createFeatureForm.value.title, description: createFeatureForm.value.description })
+    for (const item of createPreview.value) {
+      try {
+        await createFeatureAssignment(feature.id, { terminal: item.skill, developer_id: item.userId })
+      } catch (e) { console.error(e) }
+    }
+    window.$message?.success(`功能点已创建，已分配 ${createPreview.value.length} 个开发任务`)
     showCreateFeature.value = false
-    createFeatureForm.value = { title: '', description: '', developer_id: null, tester_id: null }
+    createFeatureForm.value = { title: '', description: '', developer_ids: [] }
+    createPreview.value = []
     await loadFeatures()
-  } catch (e) {
-    window.$message?.error('创建失败')
-  }
+  } catch (e) { window.$message?.error('创建失败') }
   creatingFeature.value = false
 }
 
