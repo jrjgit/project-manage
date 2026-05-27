@@ -131,39 +131,45 @@
         <div v-else class="empty-state">暂无文档</div>
       </section>
 
-      <!-- 任务列表 -->
+      <!-- 任务看板（按人员分组） -->
       <section v-if="authStore.isPM || authStore.isDevLead" class="section-card">
         <div class="section-header">
           <h3>任务 ({{ tasks.length }})</h3>
           <n-button size="tiny" text @click="showCreateTask = true">新增任务</n-button>
         </div>
-        <div v-if="tasks.length > 0" class="task-list">
-          <div v-for="t in tasks" :key="t.id" class="task-item" @click="openTaskDetail(t.id)">
-            <div class="task-item-header">
-              <span class="task-item-title">{{ t.title }}</span>
-              <div class="task-item-badges">
-                <n-tag v-if="calcOverdueDays(t.deadline) > 0" type="error" size="tiny" round>逾期 {{ calcOverdueDays(t.deadline) }} 天</n-tag>
-                <n-tag :type="taskStatusMeta[t.status]?.tone || 'default'" size="tiny" round>{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag>
+        <div v-if="tasksByPerson.length > 0" class="person-board">
+          <div v-for="person in tasksByPerson" :key="person.id" class="person-card">
+            <div class="person-card-header">{{ person.name }}</div>
+            <div class="person-card-body">
+              <div v-for="t in person.tasks" :key="t.id" class="person-task-row">
+                <div class="person-task-top">
+                  <div class="person-task-title">{{ t.title }}</div>
+                  <div class="person-task-badges">
+                    <n-tag v-if="calcOverdueDays(t.deadline) > 0" type="error" size="tiny" round>逾期{{ calcOverdueDays(t.deadline) }}天</n-tag>
+                    <n-tag :type="taskStatusMeta[t.status]?.tone || 'default'" size="tiny" round>{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag>
+                  </div>
+                </div>
+                <div class="person-task-info">
+                  <n-tag size="tiny" type="info">{{ skillsMap[t.terminal] || t.terminal }}</n-tag>
+                  <span class="info-text">绩效 {{ t.performance || '-' }}</span>
+                  <span class="info-text">截止 {{ t.deadline ? formatDate2(t.deadline) : '-' }}</span>
+                </div>
+                <n-progress v-if="t.progress != null" type="line" :percentage="t.progress" :height="5" :border-radius="3"
+                  :color="t.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" />
+                <div class="person-task-actions">
+                  <template v-if="transferringTaskId === t.id">
+                    <n-select v-model:value="t.assignee_id" :options="devOptions" size="tiny" style="width:130px" filterable />
+                    <n-button size="tiny" type="primary" @click="confirmTransfer(t)">确定</n-button>
+                    <n-button size="tiny" @click="cancelTransfer">取消</n-button>
+                  </template>
+                  <template v-else>
+                    <n-button v-if="authStore.isPM" text size="tiny" type="warning" @click="startTransfer(t)">转让</n-button>
+                    <n-button v-if="authStore.isPM" text size="tiny" type="error" @click="handleDeleteTask(t)">删除</n-button>
+                  </template>
+                </div>
               </div>
+              <div v-if="!person.tasks.length" class="empty-state" style="padding:8px">暂无任务</div>
             </div>
-            <div class="task-item-meta">
-              <span class="task-meta-label">指派:</span>
-              <template v-if="transferringTaskId === t.id">
-                <n-select v-model:value="t.assignee_id" :options="devOptions" size="small" style="width:140px" filterable
-                  @keyup.enter="confirmTransfer(t)" @blur="cancelTransfer" autofocus />
-                <n-button size="tiny" type="primary" @click="confirmTransfer(t)">确定</n-button>
-                <n-button size="tiny" @click="cancelTransfer">取消</n-button>
-              </template>
-              <span v-else>{{ t.assignee?.name || t.creator?.name || '-' }}</span>
-              <n-tag v-if="t.terminal" size="tiny" type="info">{{ skillsMap[t.terminal] || t.terminal }}</n-tag>
-              <span class="task-meta-label">绩效: {{ t.performance || '-' }}</span>
-              <span class="task-meta-label">截止: {{ t.deadline ? formatDate2(t.deadline) : '-' }}</span>
-              <n-button v-if="authStore.isPM && transferringTaskId !== t.id" text size="tiny" type="warning" @click.stop="startTransfer(t)">转让</n-button>
-              <n-button v-if="authStore.isPM && transferringTaskId !== t.id" text size="tiny" type="error" @click.stop="handleDeleteTask(t)">删除</n-button>
-            </div>
-            <n-progress v-if="t.progress != null" type="line" :percentage="t.progress" :height="6" :border-radius="3"
-              :color="t.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" />
-            <div v-if="t.description" class="task-item-desc">{{ t.description }}</div>
           </div>
         </div>
         <div v-else class="empty-state">暂无任务</div>
@@ -306,6 +312,17 @@ const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_le
 const devOptions = computed(() => users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
 const projectDevOptions = computed(() => {
   return users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: `${u.name}${u.skills ? ' (' + u.skills.split(',').map(s => skillsMap.value[s] || s).join('、') + ')' : ''}`, value: u.id }))
+})
+
+const tasksByPerson = computed(() => {
+  const map = {}
+  for (const t of tasks.value) {
+    const uid = t.assignee?.id || t.assignee_id || t.creator?.id
+    if (!uid) continue
+    if (!map[uid]) map[uid] = { id: uid, name: t.assignee?.name || t.creator?.name || '未知', tasks: [] }
+    map[uid].tasks.push(t)
+  }
+  return Object.values(map)
 })
 
 function toggleDev(id) {
@@ -1016,36 +1033,56 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* Task List */
-.task-list {
+/* Person Board */
+.person-board {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.task-item {
-  padding: 12px 16px;
+.person-card {
+  flex: 1;
+  min-width: 240px;
+  max-width: 320px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: box-shadow 0.15s, border-color 0.15s;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
-.task-item:hover {
-  border-color: #6366f1;
-  box-shadow: 0 2px 8px rgba(99,102,241,0.1);
-}
-
-.task-item-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.task-item-title {
+.person-card-header {
+  padding: 10px 14px;
   font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.person-card-body {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.person-task-row {
+  padding: 10px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+}
+
+.person-task-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.person-task-title {
+  font-size: 13px;
   font-weight: 600;
   color: #0f172a;
   flex: 1;
@@ -1055,40 +1092,36 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.task-item-badges {
+.person-task-badges {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
-.task-item-meta {
+.person-task-info {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 11px;
   color: #64748b;
+  margin-bottom: 4px;
   flex-wrap: wrap;
-  margin-bottom: 6px;
 }
 
-.task-meta-label {
+.info-text {
   color: #64748b;
+  white-space: nowrap;
 }
 
-.task-item .n-progress {
-  margin-bottom: 6px;
+.person-task-row .n-progress {
+  margin-bottom: 4px;
 }
 
-.task-item-desc {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #475569;
-  line-height: 1.6;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.person-task-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
 }
 
 
