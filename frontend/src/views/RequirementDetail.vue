@@ -126,36 +126,38 @@
         <div v-else class="empty-state">暂无文档</div>
       </section>
 
-      <!-- 开发看板（功能点+开发进度合并） -->
+      <!-- 开发看板（按功能点分组） -->
       <section v-if="authStore.isPM || authStore.isDevLead" class="section-card">
         <div class="section-header">
-          <h3>开发看板 ({{ features.length }} 功能点)</h3>
+          <h3>功能点 ({{ features.length }})</h3>
           <n-button size="tiny" text @click="showCreateFeature = true">新增功能点</n-button>
         </div>
-        <div v-if="devBoardData.length > 0" class="dev-board">
-          <div v-for="dev in devBoardData" :key="dev.userId" class="dev-card">
-            <div class="dev-card-header">{{ dev.name }}</div>
-            <div class="dev-card-body">
-              <div v-for="item in dev.items" :key="item.featureId + '-' + item.terminal" class="dev-item">
-                <div class="dev-item-title">{{ item.featureTitle }}</div>
-                <div class="dev-item-row">
-                  <n-tag size="tiny" type="info">{{ item.terminalLabel || item.terminal }}</n-tag>
-                  <n-tag size="tiny" :type="item.status === 'done' ? 'success' : item.status === 'developing' ? 'warning' : 'default'">
-                    {{ item.status === 'done' ? '已完成' : item.status === 'developing' ? '开发中' : '待开始' }}
+        <div v-if="features.length > 0" class="feature-board">
+          <div v-for="f in features" :key="f.id" class="feature-card">
+            <div class="feature-card-header">
+              <span class="feature-card-title">{{ f.title }}</span>
+              <n-tag :type="featureStatusTag(f.status)" size="tiny" round>{{ featureStatusLabel[f.status] || f.status }}</n-tag>
+              <n-button text size="tiny" type="error" @click="handleDeleteFeature(f)">删除</n-button>
+            </div>
+            <div class="feature-card-body">
+              <div v-if="getAssignments(f).length" class="assign-grid">
+                <div v-for="a in getAssignments(f)" :key="a.id" class="assign-row">
+                  <span class="assign-name">{{ a.developer?.name || '未知' }}</span>
+                  <n-tag size="tiny" type="info">{{ skillsMap[a.terminal] || a.terminal }}</n-tag>
+                  <n-tag size="tiny" :type="a.status === 'done' ? 'success' : a.status === 'developing' ? 'warning' : 'default'">
+                    {{ a.status === 'done' ? '已完成' : a.status === 'developing' ? '开发中' : '待开始' }}
                   </n-tag>
-                  <n-button v-if="authStore.isDevLead || authStore.isPM" text size="tiny" type="error" @click="handleDeleteAssignment(item.assignmentId)">移除</n-button>
+                  <n-button v-if="authStore.isDevLead || authStore.isPM" text size="tiny" type="error" @click="handleDeleteAssignment(a.id)">移除</n-button>
                 </div>
-                <n-progress v-if="item.progress != null" type="line" :percentage="item.progress" :height="6" :border-radius="3"
-                  :color="item.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" />
               </div>
-              <div class="dev-card-actions" style="display:flex;gap:6px;margin-top:4px">
-                <n-button text size="tiny" @click="openAssignForFeature(item.featureId)">+ 添加开发</n-button>
+              <div v-else class="empty-state" style="padding:8px">暂无分配</div>
+              <div class="feature-card-actions">
+                <n-button text size="tiny" @click="openAssign(f)">+ 分配开发</n-button>
               </div>
-              <div v-if="!dev.items.length" class="empty-state" style="padding:8px">暂无分配</div>
             </div>
           </div>
         </div>
-        <div v-else class="empty-state">暂无功能点与开发分配</div>
+        <div v-else class="empty-state">暂无功能点</div>
       </section>
 
       <!-- Integration Test Progress -->
@@ -352,42 +354,16 @@ const iterationOptions = computed(() => {
   return iterations.value.map((it) => ({ label: it.name, value: String(it.id) }))
 })
 
+function getAssignments(f) {
+  return f.assignments || []
+}
+
 const terminalDevProgress = computed(() => {
   if (!req.value.dev_progress?.terminals) return []
   return req.value.dev_progress.terminals.map((tp) => ({
     ...tp,
     progress: tp.progress || 0
   }))
-})
-
-const devBoardData = computed(() => {
-  const progressMap = {}
-  if (req.value.dev_progress?.terminals) {
-    for (const tp of req.value.dev_progress.terminals) {
-      progressMap[tp.terminal] = tp.progress || 0
-    }
-  }
-  const devMap = {}
-  for (const f of features.value) {
-    if (!f.assignments) continue
-    for (const a of f.assignments) {
-      const uid = a.developer?.id || a.developer_id
-      if (!uid) continue
-      if (!devMap[uid]) {
-        devMap[uid] = { userId: uid, name: a.developer?.name || '未知', items: [] }
-      }
-      devMap[uid].items.push({
-        featureId: f.id,
-        featureTitle: f.title,
-        terminal: a.terminal,
-        terminalLabel: skillsMap.value[a.terminal] || a.terminal,
-        status: a.status,
-        assignmentId: a.id,
-        progress: progressMap[a.terminal]
-      })
-    }
-  }
-  return Object.values(devMap)
 })
 
 const integrationBugStats = computed(() => {
@@ -595,12 +571,6 @@ function openAssign(f) {
   assignForm.value = { developer_ids: [] }
   previewAssignments.value = []
   showAssignModal.value = true
-}
-
-function openAssignForFeature(featureId) {
-  const f = features.value.find(x => x.id === featureId)
-  if (!f) { window.$message?.warning('功能点不存在'); return }
-  openAssign(f)
 }
 
 function buildPreview() {
@@ -1086,62 +1056,64 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* Dev Board */
-.dev-board {
+/* Feature Board */
+.feature-board {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.dev-card {
-  flex: 1;
-  min-width: 260px;
-  max-width: 360px;
+.feature-card {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   overflow: hidden;
 }
 
-.dev-card-header {
-  padding: 10px 14px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #0f172a;
+.feature-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
   background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);
   border-bottom: 1px solid #e2e8f0;
 }
 
-.dev-card-body {
-  padding: 10px 14px;
+.feature-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  flex: 1;
+}
+
+.feature-card-body {
+  padding: 12px 16px;
+}
+
+.assign-grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
-.dev-item {
-  padding: 10px;
-  background: white;
-  border-radius: 10px;
-  border: 1px solid #f1f5f9;
-}
-
-.dev-item-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #0f172a;
-  margin-bottom: 6px;
-}
-
-.dev-item-row {
+.assign-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 10px;
+  background: white;
+  border-radius: 8px;
+  font-size: 13px;
 }
 
-.dev-card-actions {
-  margin-top: 2px;
+.assign-name {
+  font-weight: 600;
+  color: #0f172a;
+  min-width: 60px;
+}
+
+.feature-card-actions {
+  margin-top: 8px;
 }
 
 .info-grid {
