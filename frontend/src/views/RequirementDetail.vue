@@ -148,8 +148,8 @@
                 <n-progress v-if="item.progress != null" type="line" :percentage="item.progress" :height="6" :border-radius="3"
                   :color="item.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" />
               </div>
-              <div class="dev-card-actions">
-                <n-button text size="tiny" @click="openAssign(features.find(f => f.id === item.featureId))">分配开发</n-button>
+              <div class="dev-card-actions" style="display:flex;gap:6px;margin-top:4px">
+                <n-button text size="tiny" @click="openAssignForFeature(item.featureId)">+ 添加开发</n-button>
               </div>
               <div v-if="!dev.items.length" class="empty-state" style="padding:8px">暂无分配</div>
             </div>
@@ -597,6 +597,12 @@ function openAssign(f) {
   showAssignModal.value = true
 }
 
+function openAssignForFeature(featureId) {
+  const f = features.value.find(x => x.id === featureId)
+  if (!f) { window.$message?.warning('功能点不存在'); return }
+  openAssign(f)
+}
+
 function buildPreview() {
   const ids = assignForm.value.developer_ids || []
   const result = []
@@ -659,9 +665,10 @@ async function saveFeatureTester(f) {
   } catch (e) { window.$message?.error('更新失败') }
 }
 
-async function handleDeleteAssignment(a) {
+async function handleDeleteAssignment(assignmentId) {
+  if (!assignmentId) { window.$message?.error('分配ID无效'); return }
   try {
-    await deleteFeatureAssignment(a.id)
+    await deleteFeatureAssignment(assignmentId)
     window.$message?.success('已移除分配')
     await loadFeatures()
   } catch (e) {
