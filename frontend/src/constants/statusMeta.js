@@ -1,13 +1,8 @@
 export const taskStatusMeta = {
-  pending: { label: '待分配', tone: 'default', color: '#94a3b8' },
-  assigned_lead: { label: '待开发接手', tone: 'info', color: '#3b82f6' },
-  developing: { label: '开发中', tone: 'warning', color: '#f59e0b' },
-  developed: { label: '开发完成', tone: 'success', color: '#10b981' },
-  pending_test: { label: '待测试', tone: 'info', color: '#2563eb' },
-  testing: { label: '测试中', tone: 'warning', color: '#f97316' },
-  passed: { label: '测试通过', tone: 'success', color: '#10b981' },
-  rejected: { label: '打回修改', tone: 'error', color: '#ef4444' },
-  closed: { label: '已关闭', tone: 'default', color: '#94a3b8' }
+  pending:    { label: '待受理',     tone: 'default', color: '#94a3b8' },
+  developing: { label: '开发中',     tone: 'warning', color: '#f59e0b' },
+  testing:    { label: '综合测试中', tone: 'info',    color: '#2563eb' },
+  closed:     { label: '已完成',     tone: 'success', color: '#10b981' }
 }
 
 export const bugStatusMeta = {

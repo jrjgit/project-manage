@@ -1,0 +1,1 @@
+ALTER TABLE tasks ADD COLUMN iteration_id VARCHAR(128) COMMENT '关联发布迭代ID';

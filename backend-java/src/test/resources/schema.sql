@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     tester_id BIGINT,
     reject_reason TEXT,
     deadline TIMESTAMP,
+    iteration_id VARCHAR(128),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

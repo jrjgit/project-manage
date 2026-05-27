@@ -62,15 +62,6 @@
             </div>
           </div>
 
-          <div v-if="canEditTesterLead" class="action-block">
-            <div class="action-block-title">切换测试组长</div>
-            <div class="action-block-copy">重新指定该任务的测试组长。</div>
-            <div class="action-row">
-              <n-select v-model:value="selectedTesterLead" :options="testerLeadOptions" placeholder="选择测试组长" style="width: 220px;" />
-              <n-button :loading="actionLoading" @click="saveTesterLead">确认</n-button>
-            </div>
-          </div>
-
           <div v-if="canEditTester" class="action-block">
             <div class="action-block-title">指派测试人员</div>
             <div class="action-block-copy">项目经理可为任务指定测试负责人。</div>
@@ -207,15 +198,17 @@ const devOptions = computed(() => users.value.filter((user) => user.role === 'de
 const testerLeadOptions = computed(() => users.value.filter((user) => user.role === 'tester_lead').map((user) => ({ label: user.name, value: user.id })))
 const testerOptions = computed(() => users.value.filter((user) => user.role === 'tester').map((user) => ({ label: user.name, value: user.id })))
 
-const canAssignDev = computed(() => authStore.userInfo?.role === 'dev_lead' && task.value?.status === 'assigned_lead')
+const canAssignDev = computed(() =>
+  ['dev_lead', 'pm'].includes(authStore.userInfo?.role) &&
+  ['pending', 'developing'].includes(task.value?.status)
+)
 const canManageDevAssignees = computed(() =>
-  authStore.userInfo?.role === 'dev_lead' &&
-  ['assigned_lead', 'developing'].includes(task.value?.status)
+  ['dev_lead', 'pm'].includes(authStore.userInfo?.role) &&
+  ['pending', 'developing'].includes(task.value?.status)
 )
 const devLeadOptions = computed(() => users.value.filter((user) => user.role === 'dev_lead').map((user) => ({ label: user.name, value: user.id })))
-const canEditDevLead = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'assigned_lead', 'developing'].includes(task.value?.status))
-const canEditTesterLead = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'assigned_lead', 'developing', 'developed', 'pending_test'].includes(task.value?.status))
-const canEditTester = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'assigned_lead', 'developing', 'developed', 'pending_test'].includes(task.value?.status))
+const canEditDevLead = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'developing'].includes(task.value?.status))
+const canEditTester = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'developing', 'testing'].includes(task.value?.status))
 
 const availableDevOptions = computed(() => {
   const existingIds = taskAssignees.value.map((a) => a.user_id)
@@ -242,14 +235,9 @@ const summaryText = computed(() => {
 })
 
 const nextActionMap = {
-  pending: '等待项目经理分配开发组长。',
-  assigned_lead: '开发组长需要指定开发负责人并让任务开始进入开发。',
-  developing: '开发负责人完成实现后，将任务推进到开发完成。',
-  developed: '系统会把任务加入测试池，等待测试侧接手。',
-  pending_test: '测试人员开始执行验证，给出通过或打回结果。',
-  testing: '测试人员执行验证，并给出通过或打回结果。',
-  passed: '项目经理确认结果后关闭任务。',
-  rejected: '开发负责人根据打回原因重新进入开发。',
+  pending: '等待分配开发人员进行开发。',
+  developing: '开发中，完成后将进入综合测试。',
+  testing: '测试人员执行验证，通过后即可完成。',
   closed: '任务流程已完成。'
 }
 const nextActionText = computed(() => nextActionMap[task.value?.status] || '查看当前状态并继续推进。')
@@ -259,31 +247,27 @@ const availableActions = computed(() => {
   const status = task.value?.status
   const actions = []
 
-  // dev 逻辑：有 taskAssignees 时根据自己的记录判断，没有时按原逻辑
-  if (role.value === 'dev' && (status === 'assigned_lead' || status === 'rejected')) {
-    const canStart = !myAssigneeRecord.value || myAssigneeRecord.value.status === 'pending'
-    if (canStart) {
-      actions.push({ label: status === 'rejected' ? '重新进入开发' : '开始开发', status: 'developing', type: 'primary' })
-    }
+  if (role.value === 'pm' && status === 'pending') {
+    actions.push({ label: '开始开发', status: 'developing', type: 'primary' })
   }
-  if (role.value === 'dev' && status === 'developing') {
-    const canComplete = !myAssigneeRecord.value || myAssigneeRecord.value.status !== 'developed'
-    if (canComplete) {
-      actions.push({ label: '标记开发完成', status: 'developed', type: 'primary' })
-    }
+  if (role.value === 'pm' && status === 'developing') {
+    actions.push({ label: '进入测试', status: 'testing', type: 'primary' })
   }
-  if (role.value === 'tester' && status === 'pending_test') {
-    actions.push({ label: '开始测试', status: 'testing', type: 'primary' })
+  if (role.value === 'pm' && status === 'testing') {
+    actions.push({ label: '完成', status: 'closed', type: 'success' })
+  }
+  if (['dev_lead', 'dev'].includes(role.value) && status === 'pending') {
+    actions.push({ label: '开始开发', status: 'developing', type: 'primary' })
+  }
+  if (['dev_lead', 'dev'].includes(role.value) && status === 'developing') {
+    actions.push({ label: '完成开发', status: 'testing', type: 'primary' })
   }
   if (role.value === 'tester' && status === 'testing') {
-    actions.push({ label: '测试通过', status: 'passed', type: 'primary' })
-    actions.push({ label: '打回修改', status: 'rejected', type: 'error' })
+    actions.push({ label: '测试通过', status: 'closed', type: 'success' })
+    actions.push({ label: '打回开发', status: 'developing', type: 'error' })
   }
-  if (role.value === 'pm' && status === 'pending') {
-    actions.push({ label: '分配开发组长', status: 'assigned_lead', type: 'primary' })
-  }
-  if (role.value === 'pm' && (status === 'passed' || status === 'rejected')) {
-    actions.push({ label: '关闭任务', status: 'closed', type: 'default' })
+  if (role.value === 'pm' && status === 'testing') {
+    actions.push({ label: '打回开发', status: 'developing', type: 'error' })
   }
 
   return actions
@@ -367,7 +351,9 @@ async function assignDevAndStart() {
   try {
     await updateTask(props.taskId, { assignee_id: selectedDev.value })
     await addTaskAssignee(props.taskId, { user_id: selectedDev.value })
-    await doChangeStatus('developing', '')
+    if (task.value?.status === 'pending') {
+      await doChangeStatus('developing', '')
+    }
     selectedDev.value = null
   } catch (error) {
     console.error(error)
