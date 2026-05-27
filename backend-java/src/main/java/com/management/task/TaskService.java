@@ -8,9 +8,7 @@ import com.management.common.notification.NotificationService;
 import com.management.common.workflow.WorkflowService;
 import com.management.project.entity.Project;
 import com.management.project.mapper.ProjectMapper;
-import com.management.requirement.entity.Feature;
 import com.management.requirement.entity.Requirement;
-import com.management.requirement.mapper.FeatureMapper;
 import com.management.requirement.mapper.RequirementMapper;
 import com.management.task.dto.*;
 import com.management.task.entity.*;
@@ -43,8 +41,6 @@ public class TaskService {
     private final WorkflowService workflowService;
     private final NotificationService notificationService;
     private final RequirementMapper requirementMapper;
-    private final FeatureMapper featureMapper;
-
     /** 获取当前用户 */
     public JwtUserDetails currentUser() {
         return (JwtUserDetails) SecurityContextHolder.getContext()
@@ -163,10 +159,6 @@ public class TaskService {
             Requirement req = requirementMapper.selectById(t.getRequirementId());
             if (req != null) t.setRequirementName(req.getDescription());
         }
-        if (t.getFeatureId() != null) {
-            Feature f = featureMapper.selectById(t.getFeatureId());
-            if (f != null) t.setFeatureName(f.getTitle());
-        }
     }
 
     /** Task 详情 DTO */
@@ -201,9 +193,6 @@ public class TaskService {
             throw new BusinessException(400, "测试人员不存在");
         if (req.getRequirementId() != null && requirementMapper.selectById(req.getRequirementId()) == null)
             throw new BusinessException(400, "关联需求不存在");
-        if (req.getFeatureId() != null && featureMapper.selectById(req.getFeatureId()) == null)
-            throw new BusinessException(400, "关联功能点不存在");
-
         Task task = new Task();
         task.setTitle(req.getTitle());
         task.setDescription(req.getDescription());
@@ -217,7 +206,6 @@ public class TaskService {
         if (req.getAssigneeId() != null) task.setAssigneeId(req.getAssigneeId());
         if (req.getTesterId() != null) task.setTesterId(req.getTesterId());
         if (req.getRequirementId() != null) task.setRequirementId(req.getRequirementId());
-        if (req.getFeatureId() != null) task.setFeatureId(req.getFeatureId());
         if (req.getTerminal() != null) task.setTerminal(req.getTerminal());
         taskMapper.insert(task);
 
@@ -303,11 +291,6 @@ public class TaskService {
             if (requirementMapper.selectById(req.getRequirementId()) == null)
                 throw new BusinessException(400, "关联需求不存在");
             task.setRequirementId(req.getRequirementId());
-        }
-        if (req.getFeatureId() != null) {
-            if (featureMapper.selectById(req.getFeatureId()) == null)
-                throw new BusinessException(400, "关联功能点不存在");
-            task.setFeatureId(req.getFeatureId());
         }
         if (req.getDeadline() != null && !req.getDeadline().isBlank()) {
             String d = req.getDeadline().trim();

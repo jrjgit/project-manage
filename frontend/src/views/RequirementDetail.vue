@@ -131,38 +131,28 @@
         <div v-else class="empty-state">暂无文档</div>
       </section>
 
-      <!-- 开发看板（按功能点分组） -->
+      <!-- 任务列表 -->
       <section v-if="authStore.isPM || authStore.isDevLead" class="section-card">
         <div class="section-header">
-          <h3>功能点 ({{ features.length }})</h3>
-          <n-button size="tiny" text @click="showCreateFeature = true">新增功能点</n-button>
+          <h3>任务 ({{ tasks.length }})</h3>
+          <n-button size="tiny" text @click="showCreateTask = true">新增任务</n-button>
         </div>
-        <div v-if="features.length > 0" class="feature-board">
-          <div v-for="f in features" :key="f.id" class="feature-card">
-            <div class="feature-card-header">
-              <span class="feature-card-title">{{ f.title }}</span>
-              <n-tag :type="featureStatusTag(f.status)" size="tiny" round>{{ featureStatusLabel[f.status] || f.status }}</n-tag>
-              <n-button text size="tiny" type="error" @click="handleDeleteFeature(f)">删除</n-button>
+        <div v-if="tasks.length > 0" class="task-list">
+          <div v-for="t in tasks" :key="t.id" class="task-item">
+            <div class="task-item-header">
+              <span class="task-item-title">{{ t.title }}</span>
+              <n-tag :type="taskStatusMeta[t.status]?.tone || 'default'" size="tiny" round>{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag>
             </div>
-            <div class="feature-card-body">
-              <div v-if="getAssignments(f).length" class="assign-grid">
-                <div v-for="a in getAssignments(f)" :key="a.id" class="assign-row">
-                  <span class="assign-name">{{ a.developer?.name || '未知' }}</span>
-                  <n-tag size="tiny" type="info">{{ skillsMap[a.terminal] || a.terminal }}</n-tag>
-                  <n-tag size="tiny" :type="a.status === 'done' ? 'success' : a.status === 'developing' ? 'warning' : 'default'">
-                    {{ a.status === 'done' ? '已完成' : a.status === 'developing' ? '开发中' : '待开始' }}
-                  </n-tag>
-                  <n-button v-if="authStore.isDevLead || authStore.isPM" text size="tiny" type="error" @click="handleDeleteAssignment(a.id)">移除</n-button>
-                </div>
-              </div>
-              <div v-else class="empty-state" style="padding:8px">暂无分配</div>
-              <div class="feature-card-actions">
-                <n-button text size="tiny" @click="openAssign(f)">+ 分配开发</n-button>
-              </div>
+            <div class="task-item-meta">
+              <span class="task-meta-label">指派: {{ t.assignee?.name || '-' }}</span>
+              <n-tag v-if="t.terminal" size="tiny" type="info">{{ skillsMap[t.terminal] || t.terminal }}</n-tag>
+              <span class="task-meta-label">绩效: {{ t.performance || '-' }}</span>
+              <span class="task-meta-label">截止: {{ t.deadline ? formatDate2(t.deadline) : '-' }}</span>
             </div>
+            <div v-if="t.description" class="task-item-desc">{{ t.description }}</div>
           </div>
         </div>
-        <div v-else class="empty-state">暂无功能点</div>
+        <div v-else class="empty-state">暂无任务</div>
       </section>
 
       <!-- Integration Test Progress -->
@@ -200,19 +190,19 @@
       </section>
     </div>
 
-    <!-- Create Feature Modal -->
-    <n-modal v-model:show="showCreateFeature" preset="card" style="width:90vw;max-width:1400px;max-height:90vh;overflow:auto" title="新增功能点" :mask-closable="false">
-      <n-form :model="createFeatureForm" label-placement="top">
+    <!-- Create Task Modal -->
+    <n-modal v-model:show="showCreateTask" preset="card" style="width:90vw;max-width:1400px;height:90vh;overflow:auto" title="新增任务" :mask-closable="false">
+      <n-form :model="createTaskForm" label-placement="top">
         <n-form-item label="选择开发人员">
-          <n-select v-model:value="createFeatureForm.developer_ids" :options="projectDevOptions" multiple placeholder="选择人员（可多选，根据技能自动分配）" filterable />
+          <n-select v-model:value="createTaskForm.developer_ids" :options="projectDevOptions" multiple placeholder="选择人员（可多选，根据技能自动分配）" filterable />
         </n-form-item>
-        <div v-if="createPreview.length" class="preview-list">
+        <div v-if="taskPreview.length" class="preview-list">
           <div class="preview-title">将创建以下任务：</div>
-          <div v-for="(item, idx) in createPreview" :key="idx" class="preview-assign">
+          <div v-for="(item, idx) in taskPreview" :key="idx" class="preview-assign">
             <div class="preview-header">
               <span class="preview-name">{{ item.name }}</span>
               <n-tag size="tiny" type="info">{{ item.skillLabel }}</n-tag>
-              <n-button text size="tiny" type="error" @click="removeCreatePreview(idx)">移除</n-button>
+              <n-button text size="tiny" type="error" @click="removeTaskPreview(idx)">移除</n-button>
             </div>
             <div class="preview-fields">
               <n-input v-model:value="item.description" type="textarea" :autosize="{ minRows: 1, maxRows: 3 }" placeholder="任务描述" />
@@ -227,41 +217,8 @@
       </n-form>
       <template #footer>
         <n-space justify="end">
-          <n-button @click="showCreateFeature = false">取消</n-button>
-          <n-button type="primary" :loading="creatingFeature" :disabled="!createPreview.length" @click="handleCreateFeature">确定创建</n-button>
-        </n-space>
-      </template>
-    </n-modal>
-
-    <!-- Assign Developers to Feature Modal -->
-    <n-modal v-model:show="showAssignModal" preset="card" style="width: 520px" title="分配开发人员" :mask-closable="false">
-      <n-form :model="assignForm" label-placement="top">
-        <n-form-item label="功能点">
-          <n-input :value="assigningFeature?.title" disabled />
-        </n-form-item>
-        <n-form-item label="选择人员">
-          <n-select v-model:value="assignForm.developer_ids" :options="projectDevOptions" multiple placeholder="选择人员（可多选）" filterable />
-        </n-form-item>
-        <div v-if="previewAssignments.length" class="preview-list">
-          <div class="preview-title">将创建以下分配：</div>
-          <div v-for="(item, idx) in previewAssignments" :key="idx" class="preview-assign">
-            <div class="preview-header">
-              <span class="preview-name">{{ item.name }}</span>
-              <n-tag size="tiny" type="info">{{ item.skillLabel }}</n-tag>
-              <n-button text size="tiny" type="error" @click="removePreview(idx)">移除</n-button>
-            </div>
-            <div class="preview-fields">
-              <n-input v-model:value="item.description" placeholder="任务描述（可选）" size="small" />
-              <n-input v-model:value="item.performance" placeholder="绩效工时（可选）" size="small" />
-              <n-date-picker v-model:value="item.deadline" type="date" placeholder="计划完成时间" size="small" clearable style="width:100%" />
-            </div>
-          </div>
-        </div>
-      </n-form>
-      <template #footer>
-        <n-space justify="end">
-          <n-button @click="showAssignModal = false">取消</n-button>
-          <n-button type="primary" :loading="assignLoading" :disabled="!previewAssignments.length" @click="handleBatchAssign">确定分配</n-button>
+          <n-button @click="showCreateTask = false">取消</n-button>
+          <n-button type="primary" :loading="creatingTask" :disabled="!taskPreview.length" @click="handleCreateTasks">确定创建</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -289,6 +246,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getUsers } from '@/api/users'
+import { getTasks, createTask } from '@/api/tasks'
 import {
   getRequirement,
   updateRequirement,
@@ -297,19 +255,12 @@ import {
   uploadRequirementDocument,
   downloadRequirementDocument,
   deleteRequirementDocument,
-  getFeatures,
-  createFeature,
-  updateFeature,
-  deleteFeature,
-  assignDevLead,
-  getFeatureAssignments,
-  createFeatureAssignment,
-  deleteFeatureAssignment
+  assignDevLead
 } from '@/api/requirements'
 import { getIterations } from '@/api/iterations'
 import { getDictionaries } from '@/api/dictionaries'
 import { requirementStatusMeta } from '@/constants/requirementMeta'
-import { priorityMeta } from '@/constants/statusMeta'
+import { priorityMeta, taskStatusMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
 import { NButton, NModal, NInput, NSelect, NSpace, NTag, NProgress, NUpload, NForm, NFormItem, NDatePicker } from 'naive-ui'
 
@@ -325,19 +276,11 @@ const localDescription = ref('')
 const localNotes = ref('')
 const localPlannedTime = ref(null)
 
-const expandedTerminal = ref(null)
-const features = ref([])
-const editingFeatureDev = ref(null)
-const editingFeatureTester = ref(null)
-const showCreateFeature = ref(false)
-const creatingFeature = ref(false)
-const createFeatureForm = ref({ title: '', description: '', developer_ids: [] })
-const createPreview = ref([])
-const showAssignModal = ref(false)
-const assignLoading = ref(false)
-const assigningFeature = ref(null)
-const assignForm = ref({ developer_ids: [] })
-const previewAssignments = ref([])
+const tasks = ref([])
+const showCreateTask = ref(false)
+const creatingTask = ref(false)
+const createTaskForm = ref({ developer_ids: [] })
+const taskPreview = ref([])
 const skillsMap = ref({})
 
 const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
@@ -370,10 +313,6 @@ const statusOptions = Object.entries(requirementStatusMeta).map(([value, meta]) 
 const iterationOptions = computed(() => {
   return iterations.value.map((it) => ({ label: it.name, value: String(it.id) }))
 })
-
-function getAssignments(f) {
-  return f.assignments || []
-}
 
 const terminalDevProgress = computed(() => {
   if (!req.value.dev_progress?.terminals) return []
@@ -572,13 +511,7 @@ async function saveAssignDevLead() {
   }
 }
 
-async function loadAssignments(f) {
-  try {
-    f.assignments = await getFeatureAssignments(f.id)
-  } catch (e) { f.assignments = [] }
-}
-
-async function loadFeatures() {
+async function loadTasks() {
   const id = route.params.id
   if (!id) return
   try {
@@ -586,91 +519,56 @@ async function loadFeatures() {
     for (const f of data) {
       await loadAssignments(f)
     }
-    features.value = data
+    tasks.value = data || []
   } catch (e) { console.error(e) }
 }
 
-function openAssign(f) {
-  assigningFeature.value = f
-  assignForm.value = { developer_ids: [] }
-  previewAssignments.value = []
-  showAssignModal.value = true
-}
-
-function buildPreview() {
-  const ids = assignForm.value.developer_ids || []
+function buildTaskPreview() {
+  const ids = createTaskForm.value.developer_ids || []
   const result = []
+  const defaultDesc = req.value.description || ''
   for (const uid of ids) {
     const u = users.value.find(x => x.id === uid)
     if (!u || !u.skills) continue
-    const userSkills = u.skills.split(',').filter(Boolean)
-    for (const skill of userSkills) {
-      result.push({ userId: uid, name: u.name, skill, skillLabel: skillsMap.value[skill] || skill, description: '', performance: '', deadline: null })
+    for (const skill of u.skills.split(',').filter(Boolean)) {
+      result.push({ userId: uid, name: u.name, skill, skillLabel: skillsMap.value[skill] || skill, description: defaultDesc, performance: '', deadline: null, notes: '' })
     }
   }
-  previewAssignments.value = result
+  taskPreview.value = result
 }
 
-watch(() => assignForm.value.developer_ids, buildPreview, { deep: true })
+watch(() => createTaskForm.value.developer_ids, buildTaskPreview, { deep: true })
 
-function removePreview(idx) {
-  previewAssignments.value.splice(idx, 1)
+function removeTaskPreview(idx) {
+  taskPreview.value.splice(idx, 1)
 }
 
-async function handleBatchAssign() {
-  if (!previewAssignments.value.length) return
-  assignLoading.value = true
+async function handleCreateTasks() {
+  if (!taskPreview.value.length) return
+  creatingTask.value = true
   let success = 0
-  for (const item of previewAssignments.value) {
+  for (const item of taskPreview.value) {
     try {
-      await createFeatureAssignment(assigningFeature.value.id, {
-        terminal: item.skill,
-        developer_id: item.userId,
+      await createTask({
+        title: req.value.description || '任务',
         description: item.description || undefined,
+        requirement_id: req.value.id,
+        project_id: req.value.project_id,
+        dev_lead_id: req.value.dev_lead_id,
+        assignee_id: item.userId,
+        terminal: item.skill,
         performance: item.performance || undefined,
         deadline: item.deadline ? new Date(item.deadline).toISOString() : undefined
       })
       success++
     } catch (e) { console.error(e) }
   }
-  window.$message?.success(`分配成功 ${success}/${previewAssignments.value.length} 条`)
-  showAssignModal.value = false
-  assignLoading.value = false
-  await loadFeatures()
-}
-
-function startFeatureEdit(type, f) {
-  if (type === 'dev') editingFeatureDev.value = f.id
-  else editingFeatureTester.value = f.id
-}
-
-async function saveFeatureDev(f) {
-  if (!f.developer_id) return
-  try {
-    await updateFeature(f.id, { developer_id: f.developer_id })
-    window.$message?.success('开发负责人已更新')
-    await loadFeatures()
-  } catch (e) { window.$message?.error('更新失败') }
-}
-
-async function saveFeatureTester(f) {
-  if (!f.tester_id) return
-  try {
-    await updateFeature(f.id, { tester_id: f.tester_id })
-    window.$message?.success('测试负责人已更新')
-    await loadFeatures()
-  } catch (e) { window.$message?.error('更新失败') }
-}
-
-async function handleDeleteAssignment(assignmentId) {
-  if (!assignmentId) { window.$message?.error('分配ID无效'); return }
-  try {
-    await deleteFeatureAssignment(assignmentId)
-    window.$message?.success('已移除分配')
-    await loadFeatures()
-  } catch (e) {
-    window.$message?.error('移除失败')
-  }
+  window.$message?.success(`创建成功 ${success}/${taskPreview.value.length} 条`)
+  showCreateTask.value = false
+  createTaskForm.value = { developer_ids: [] }
+  taskPreview.value = []
+  creatingTask.value = false
+  await loadTasks()
 }
 
 async function loadReq() {
@@ -682,76 +580,9 @@ async function loadReq() {
     localDescription.value = data.description || ''
     localNotes.value = data.notes || ''
     localPlannedTime.value = data.planned_completion_time ? new Date(data.planned_completion_time).getTime() : null
-    await loadFeatures()
+    await loadTasks()
   } catch (e) {
     window.$message?.error('加载需求详情失败')
-  }
-}
-
-const featureStatusLabel = {
-  planned: '已计划', locked: '已锁定', developing: '开发中',
-  developed: '已开发', pending_test: '待测试', closed: '已关闭',
-  pending_dev: '待开发'
-}
-
-function featureStatusTag(status) {
-  const map = { planned: 'default', locked: 'info', developing: 'warning', developed: 'success', pending_dev: 'info' }
-  return map[status] || 'default'
-}
-
-function buildCreatePreview() {
-  const ids = createFeatureForm.value.developer_ids || []
-  const result = []
-  const defaultDesc = req.value.description || ''
-  for (const uid of ids) {
-    const u = users.value.find(x => x.id === uid)
-    if (!u || !u.skills) continue
-    for (const skill of u.skills.split(',').filter(Boolean)) {
-      result.push({ userId: uid, name: u.name, skill, skillLabel: skillsMap.value[skill] || skill, description: defaultDesc, performance: '', deadline: null, notes: '' })
-    }
-  }
-  createPreview.value = result
-}
-
-watch(() => createFeatureForm.value.developer_ids, buildCreatePreview, { deep: true })
-
-function removeCreatePreview(idx) {
-  createPreview.value.splice(idx, 1)
-}
-
-async function handleCreateFeature() {
-  if (!createFeatureForm.value.title.trim()) { window.$message?.warning('请输入功能点名称'); return }
-  creatingFeature.value = true
-  try {
-    const feature = await createFeature(route.params.id, { title: createFeatureForm.value.title, description: createFeatureForm.value.description })
-    for (const item of createPreview.value) {
-      try {
-        await createFeatureAssignment(feature.id, {
-          terminal: item.skill,
-          developer_id: item.userId,
-          description: item.description || undefined,
-          performance: item.performance || undefined,
-          deadline: item.deadline ? new Date(item.deadline).toISOString() : undefined,
-          notes: item.notes || undefined
-        })
-      } catch (e) { console.error(e) }
-    }
-    window.$message?.success(`功能点已创建，已分配 ${createPreview.value.length} 个开发任务`)
-    showCreateFeature.value = false
-    createFeatureForm.value = { title: '', description: '', developer_ids: [] }
-    createPreview.value = []
-    await loadFeatures()
-  } catch (e) { window.$message?.error('创建失败') }
-  creatingFeature.value = false
-}
-
-async function handleDeleteFeature(f) {
-  try {
-    await deleteFeature(f.id)
-    window.$message?.success('功能点已删除')
-    await loadFeatures()
-  } catch (e) {
-    window.$message?.error('删除失败')
   }
 }
 
@@ -1076,8 +907,9 @@ onMounted(() => {
 
 .preview-row-3 {
   display: grid;
-  grid-template-columns: 1fr 1fr 2fr;
+  grid-template-columns: 80px 140px 1fr;
   gap: 8px;
+  align-items: start;
 }
 
 .empty-state {
@@ -1120,64 +952,52 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* Feature Board */
-.feature-board {
+/* Task List */
+.task-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
-.feature-card {
+.task-item {
+  padding: 12px 16px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  overflow: hidden;
+  border-radius: 10px;
 }
 
-.feature-card-header {
+.task-item-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);
-  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 6px;
 }
 
-.feature-card-title {
+.task-item-title {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: #0f172a;
   flex: 1;
 }
 
-.feature-card-body {
-  padding: 12px 16px;
-}
-
-.assign-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.assign-row {
+.task-item-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  background: white;
-  border-radius: 8px;
-  font-size: 13px;
+  gap: 12px;
+  font-size: 12px;
+  color: #64748b;
+  flex-wrap: wrap;
 }
 
-.assign-name {
-  font-weight: 600;
-  color: #0f172a;
-  min-width: 60px;
+.task-meta-label {
+  color: #64748b;
 }
 
-.feature-card-actions {
-  margin-top: 8px;
+.task-item-desc {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.6;
 }
 
 

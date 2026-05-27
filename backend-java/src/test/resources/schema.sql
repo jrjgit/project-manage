@@ -193,3 +193,4 @@ CREATE TABLE IF NOT EXISTS site_messages (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     read_at TIMESTAMP NULL
 );
+

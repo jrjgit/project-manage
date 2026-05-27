@@ -7,11 +7,7 @@ import com.management.group.entity.Group;
 import com.management.group.mapper.GroupMapper;
 import com.management.project.entity.Project;
 import com.management.project.mapper.ProjectMapper;
-import com.management.requirement.entity.Feature;
-import com.management.requirement.entity.FeatureAssignment;
 import com.management.requirement.entity.Requirement;
-import com.management.requirement.mapper.FeatureAssignmentMapper;
-import com.management.requirement.mapper.FeatureMapper;
 import com.management.requirement.mapper.RequirementMapper;
 import com.management.task.entity.Task;
 import com.management.task.mapper.TaskMapper;
@@ -31,8 +27,6 @@ public class UserService {
     private final ProjectMapper projectMapper;
     private final TaskMapper taskMapper;
     private final RequirementMapper requirementMapper;
-    private final FeatureMapper featureMapper;
-    private final FeatureAssignmentMapper featureAssignmentMapper;
     private final GroupMapper groupMapper;
 
     public JwtUserDetails currentUser() {
@@ -87,20 +81,12 @@ public class UserService {
         if (c2 > 0) refs.add(c2 + " 个任务(作为指派人)");
         long c3 = taskMapper.selectCount(new LambdaQueryWrapper<Task>().eq(Task::getDevLeadId, id));
         if (c3 > 0) refs.add(c3 + " 个任务(作为开发组长)");
-        long c4 = taskMapper.selectCount(new LambdaQueryWrapper<Task>().eq(Task::getTesterLeadId, id));
-        if (c4 > 0) refs.add(c4 + " 个任务(作为测试组长)");
         long c5 = taskMapper.selectCount(new LambdaQueryWrapper<Task>().eq(Task::getTesterId, id));
         if (c5 > 0) refs.add(c5 + " 个任务(作为测试人员)");
         long c6 = requirementMapper.selectCount(new LambdaQueryWrapper<Requirement>().eq(Requirement::getPersonId, id));
         if (c6 > 0) refs.add(c6 + " 个需求(作为业务负责人)");
         long c7 = requirementMapper.selectCount(new LambdaQueryWrapper<Requirement>().eq(Requirement::getDevLeadId, id));
         if (c7 > 0) refs.add(c7 + " 个需求(作为开发组长)");
-        long c8 = featureMapper.selectCount(new LambdaQueryWrapper<Feature>().eq(Feature::getDeveloperId, id));
-        if (c8 > 0) refs.add(c8 + " 个功能点(作为开发负责人)");
-        long c9 = featureMapper.selectCount(new LambdaQueryWrapper<Feature>().eq(Feature::getTesterId, id));
-        if (c9 > 0) refs.add(c9 + " 个功能点(作为测试负责人)");
-        long c10 = featureAssignmentMapper.selectCount(new LambdaQueryWrapper<FeatureAssignment>().eq(FeatureAssignment::getDeveloperId, id));
-        if (c10 > 0) refs.add(c10 + " 个功能分配(作为开发人员)");
         long c11 = groupMapper.selectCount(new LambdaQueryWrapper<Group>().eq(Group::getPmId, id));
         if (c11 > 0) refs.add(c11 + " 个小组(作为项目经理)");
         long c12 = groupMapper.selectCount(new LambdaQueryWrapper<Group>().eq(Group::getDevLeadId, id));
