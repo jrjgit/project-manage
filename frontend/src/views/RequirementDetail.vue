@@ -602,7 +602,7 @@ async function handleCreateTasks() {
     try {
       await createTask({
         title: req.value.description || '任务',
-        description: item.description || undefined,
+        description: item.notes || undefined,
         requirement_id: req.value.id,
         project_id: req.value.project_id,
         dev_lead_id: req.value.dev_lead_id,
