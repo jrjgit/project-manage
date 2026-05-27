@@ -8,6 +8,6 @@ import lombok.Data;
 public class CreateFeatureRequest {
     @NotBlank private String title;
     private String description;
-    @NotNull private Long developerId;
+    private Long developerId;
     private Long testerId;
 }
