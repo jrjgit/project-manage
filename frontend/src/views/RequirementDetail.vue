@@ -138,17 +138,22 @@
           <n-button size="tiny" text @click="showCreateTask = true">新增任务</n-button>
         </div>
         <div v-if="tasks.length > 0" class="task-list">
-          <div v-for="t in tasks" :key="t.id" class="task-item">
+          <div v-for="t in tasks" :key="t.id" class="task-item" @click="openTaskDetail(t.id)">
             <div class="task-item-header">
               <span class="task-item-title">{{ t.title }}</span>
-              <n-tag :type="taskStatusMeta[t.status]?.tone || 'default'" size="tiny" round>{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag>
+              <div class="task-item-badges">
+                <n-tag v-if="calcOverdueDays(t.deadline) > 0" type="error" size="tiny" round>逾期 {{ calcOverdueDays(t.deadline) }} 天</n-tag>
+                <n-tag :type="taskStatusMeta[t.status]?.tone || 'default'" size="tiny" round>{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag>
+              </div>
             </div>
             <div class="task-item-meta">
-              <span class="task-meta-label">指派: {{ t.assignee?.name || '-' }}</span>
+              <span class="task-meta-label">指派: {{ t.assignee?.name || t.creator?.name || '-' }}</span>
               <n-tag v-if="t.terminal" size="tiny" type="info">{{ skillsMap[t.terminal] || t.terminal }}</n-tag>
               <span class="task-meta-label">绩效: {{ t.performance || '-' }}</span>
               <span class="task-meta-label">截止: {{ t.deadline ? formatDate2(t.deadline) : '-' }}</span>
             </div>
+            <n-progress v-if="t.progress != null" type="line" :percentage="t.progress" :height="6" :border-radius="3"
+              :color="t.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" />
             <div v-if="t.description" class="task-item-desc">{{ t.description }}</div>
           </div>
         </div>
@@ -387,6 +392,18 @@ async function saveNotes() {
   }
 }
 
+function calcOverdueDays(deadline) {
+  if (!deadline) return 0
+  const now = new Date()
+  const end = new Date(deadline)
+  const diff = Math.floor((now - end) / (1000 * 60 * 60 * 24))
+  return diff > 0 ? diff : 0
+}
+
+function openTaskDetail(taskId) {
+  router.push(`/tasks?taskId=${taskId}`)
+}
+
 function formatSize(bytes) {
   if (!bytes) return '0 B'
   if (bytes < 1024) return bytes + ' B'
@@ -515,10 +532,7 @@ async function loadTasks() {
   const id = route.params.id
   if (!id) return
   try {
-    const data = await getFeatures(id)
-    for (const f of data) {
-      await loadAssignments(f)
-    }
+    const data = await getTasks({ requirement_id: id })
     tasks.value = data || []
   } catch (e) { console.error(e) }
 }
@@ -964,13 +978,20 @@ onMounted(() => {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.task-item:hover {
+  border-color: #6366f1;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.1);
 }
 
 .task-item-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 
 .task-item-title {
@@ -978,6 +999,17 @@ onMounted(() => {
   font-weight: 600;
   color: #0f172a;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-item-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .task-item-meta {
@@ -987,17 +1019,26 @@ onMounted(() => {
   font-size: 12px;
   color: #64748b;
   flex-wrap: wrap;
+  margin-bottom: 6px;
 }
 
 .task-meta-label {
   color: #64748b;
 }
 
+.task-item .n-progress {
+  margin-bottom: 6px;
+}
+
 .task-item-desc {
-  margin-top: 6px;
+  margin-top: 4px;
   font-size: 12px;
   color: #475569;
   line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 
