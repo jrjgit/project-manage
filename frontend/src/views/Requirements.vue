@@ -338,7 +338,7 @@ function openEdit(row) {
     total_price: row.total_price || '',
     planned_completion_time: row.planned_completion_time ? new Date(row.planned_completion_time).getTime() : null
   }
-  attachFileName.value = ''
+  attachFileName.value = row.document_name || ''
   attachFile.value = null
   showModal.value = true
 }
@@ -356,6 +356,9 @@ async function submit() {
     }
     if (editingId.value) {
       await updateRequirement(editingId.value, payload)
+      if (attachFile.value) {
+        await uploadRequirementDocument(editingId.value, attachFile.value)
+      }
       window.$message?.success('更新成功')
     } else {
       const created = await createRequirement(payload)
