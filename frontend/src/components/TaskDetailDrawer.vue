@@ -73,9 +73,21 @@
               <div class="description-block">{{ task.requirement_desc || task.description || '暂无描述' }}</div>
             </div>
             <div class="section-card">
-              <div class="section-title">备注</div>
-              <div class="description-block" style="white-space:pre-wrap">{{ task.description || '暂无备注' }}</div>
-            </div>
+            <div class="section-title">备注</div>
+            <div class="description-block" style="white-space:pre-wrap">{{ task.description || '暂无备注' }}</div>
+          </div>
+        </section>
+
+        <!-- 需求文档 -->
+        <section v-if="reqDoc?.document_name" class="section-card">
+          <div class="section-title">需求文档</div>
+          <div class="doc-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;flex-shrink:0">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span class="doc-name">{{ reqDoc.document_name }}</span>
+            <n-button size="tiny" @click="downloadDoc">下载</n-button>
           </div>
         </section>
 
@@ -97,6 +109,7 @@
 import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getTask, getTaskHistory, changeTaskStatus, updateTask } from '@/api/tasks'
+import { getRequirement, downloadRequirementDocument } from '@/api/requirements'
 import { getUsers } from '@/api/users'
 import { priorityMeta, taskStatusMeta } from '@/constants/statusMeta'
 import { NDrawer, NDrawerContent, NTag, NButton, NTimeline, NTimelineItem, NSelect } from 'naive-ui'
@@ -112,6 +125,7 @@ const users = ref([])
 const selectedTester = ref(null)
 const selectedDevLead = ref(null)
 const actionLoading = ref(false)
+const reqDoc = ref(null)
 
 const statusMeta = computed(() => taskStatusMeta[task.value?.status] || { label: task.value?.status || '-', tone: 'default' })
 const priorityMetaItem = computed(() => priorityMeta[task.value?.priority] || { label: task.value?.priority || '-', tone: 'default' })
@@ -152,8 +166,31 @@ watch([() => props.taskId, show], async ([id, visible]) => {
 })
 
 async function loadUsers() { try { users.value = await getUsers() } catch {} }
-async function loadDetail() { try { const res = await getTask(props.taskId); task.value = res.task } catch {} }
+async function loadDetail() {
+  try {
+    const res = await getTask(props.taskId)
+    task.value = res.task
+    if (task.value?.requirement_id) {
+      const reqData = await getRequirement(task.value.requirement_id)
+      if (reqData.document_name) reqDoc.value = reqData
+      else reqDoc.value = null
+    }
+  } catch {}
+}
 async function loadHistory() { try { histories.value = await getTaskHistory(props.taskId) } catch {} }
+
+async function downloadDoc() {
+  if (!reqDoc.value?.id) return
+  try {
+    const res = await downloadRequirementDocument(reqDoc.value.id)
+    const blob = new Blob([res])
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = reqDoc.value.document_name || 'document'
+    document.body.appendChild(a); a.click(); document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  } catch (e) { window.$message?.error('下载失败') }
+}
 
 async function saveDevLead() {
   if (!selectedDevLead.value) { window.$message?.warning('请选择开发组长'); return }
@@ -240,5 +277,7 @@ function formatDate(value) {
 .timeline { margin-top: 16px; }
 .timeline-title { font-size: 13px; color: #0f172a; font-weight: 600; }
 .timeline-meta { margin-top: 4px; font-size: 12px; color: #94a3b8; }
+.doc-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px; background: #f8fafc; border-radius: 8px; }
+.doc-name { flex: 1; font-size: 13px; color: #0f172a; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
 </style>
