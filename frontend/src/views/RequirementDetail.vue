@@ -208,7 +208,11 @@
     <n-modal v-model:show="showCreateTask" preset="card" style="width:90vw;max-width:1400px;height:90vh;overflow:auto" title="新增任务" :mask-closable="false">
       <n-form :model="createTaskForm" label-placement="top">
         <n-form-item label="选择开发人员">
-          <n-transfer v-model:value="createTaskForm.developer_ids" :options="projectDevOptions" :render-source-label="renderTransferLabel" size="small" style="width:100%" />
+          <div class="dev-select-grid">
+            <div v-for="opt in projectDevOptions" :key="opt.value" class="dev-select-item" :class="{ selected: createTaskForm.developer_ids.includes(opt.value) }" @click="toggleDev(opt.value)">
+              <span class="dev-select-name">{{ opt.label }}</span>
+            </div>
+          </div>
         </n-form-item>
         <div v-if="taskPreview.length" class="preview-list">
           <div class="preview-title">将创建以下任务：</div>
@@ -304,8 +308,10 @@ const projectDevOptions = computed(() => {
   return users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: `${u.name}${u.skills ? ' (' + u.skills.split(',').map(s => skillsMap.value[s] || s).join('、') + ')' : ''}`, value: u.id }))
 })
 
-function renderTransferLabel(option) {
-  return option.label
+function toggleDev(id) {
+  const idx = createTaskForm.value.developer_ids.indexOf(id)
+  if (idx >= 0) createTaskForm.value.developer_ids.splice(idx, 1)
+  else createTaskForm.value.developer_ids.push(id)
 }
 const showIntegrationBugs = ref(false)
 const showBusinessBugs = ref(false)
@@ -1112,5 +1118,34 @@ onMounted(() => {
   .bug-stat-grid {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+.dev-select-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dev-select-item {
+  padding: 6px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #334155;
+  background: white;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.dev-select-item:hover {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+
+.dev-select-item.selected {
+  border-color: #6366f1;
+  background: #6366f1;
+  color: white;
 }
 </style>
