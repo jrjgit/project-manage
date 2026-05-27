@@ -54,6 +54,7 @@ public class SystemInfoService {
         if (req.getItContact() != null) s.setItContact(req.getItContact());
         if (req.getBizContact() != null) s.setBizContact(req.getBizContact());
         if (req.getTechContact() != null) s.setTechContact(req.getTechContact());
+        if (req.getAddress() != null) s.setAddress(req.getAddress());
         systemInfoMapper.updateById(s);
         fillCreator(s);
         return s;

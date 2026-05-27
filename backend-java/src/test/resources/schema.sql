@@ -168,6 +168,7 @@ CREATE TABLE IF NOT EXISTS systems (
     it_contact VARCHAR(255),
     biz_contact VARCHAR(255),
     tech_contact VARCHAR(255),
+    address TEXT,
     created_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

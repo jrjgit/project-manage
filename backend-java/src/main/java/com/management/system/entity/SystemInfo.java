@@ -17,6 +17,7 @@ public class SystemInfo {
     private String itContact;
     private String bizContact;
     private String techContact;
+    private String address;
     private Long createdBy;
     @TableField(exist = false)
     private User creator;

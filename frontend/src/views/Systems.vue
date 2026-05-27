@@ -38,6 +38,9 @@
         <n-form-item label="内部技术权限负责人">
           <n-input v-model:value="form.tech_contact" placeholder="输入内部技术权限负责人" />
         </n-form-item>
+        <n-form-item label="系统地址">
+          <n-input v-model:value="form.address" type="textarea" :autosize="{ minRows: 3, maxRows: 6 }" placeholder="输入系统地址" />
+        </n-form-item>
       </n-form>
       <template #footer>
         <n-space justify="end">
@@ -61,13 +64,14 @@ const systems = ref([])
 const showModal = ref(false)
 const editingId = ref(null)
 const submitting = ref(false)
-const form = ref({ name: '', it_contact: '', biz_contact: '', tech_contact: '' })
+const form = ref({ name: '', it_contact: '', biz_contact: '', tech_contact: '', address: '' })
 
 const columns = [
-  { title: '系统名称', key: 'name', width: 100 },
-  { title: '甲方IT负责人', key: 'it_contact', width: 160, render(row) { return row.it_contact || '-' } },
-  { title: '甲方业务负责人', key: 'biz_contact', width: 200, render(row) { return row.biz_contact || '-' } },
-  { title: '内部技术权限负责人', key: 'tech_contact', width: 160, render(row) { return row.tech_contact || '-' } },
+  { title: '系统名称', key: 'name', width: 120 },
+  { title: '系统地址', key: 'address', width: 200, ellipsis: { tooltip: true }, render(row) { return row.address || '-' } },
+  { title: '甲方IT负责人', key: 'it_contact', width: 140, render(row) { return row.it_contact || '-' } },
+  { title: '甲方业务负责人', key: 'biz_contact', width: 180, ellipsis: { tooltip: true }, render(row) { return row.biz_contact || '-' } },
+  { title: '内部技术权限负责人', key: 'tech_contact', width: 140, render(row) { return row.tech_contact || '-' } },
   { title: '创建人', key: 'creator', width: 100, render(row) { return row.creator?.name || '-' } },
   { title: '创建时间', key: 'created_at', width: 160, render(row) { return row.created_at ? new Date(row.created_at).toLocaleString() : '-' } },
   {
@@ -84,13 +88,13 @@ const columns = [
 
 function openCreate() {
   editingId.value = null
-  form.value = { name: '', it_contact: '', biz_contact: '', tech_contact: '' }
+  form.value = { name: '', it_contact: '', biz_contact: '', tech_contact: '', address: '' }
   showModal.value = true
 }
 
 function openEdit(row) {
   editingId.value = row.id
-  form.value = { name: row.name, it_contact: row.it_contact || '', biz_contact: row.biz_contact || '', tech_contact: row.tech_contact || '' }
+  form.value = { name: row.name, it_contact: row.it_contact || '', biz_contact: row.biz_contact || '', tech_contact: row.tech_contact || '', address: row.address || '' }
   showModal.value = true
 }
 
