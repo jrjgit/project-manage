@@ -212,21 +212,49 @@
 
     <!-- Create Task Modal -->
     <n-modal v-model:show="showCreateTask" preset="card" style="width:90vw;max-width:1400px;height:90vh;overflow:auto" title="任务派发/修改" :mask-closable="false">
-      <n-form :model="createTaskForm" label-placement="top">
-        <n-form-item label="选择开发人员">
-          <div class="dev-select-grid">
-            <div v-for="opt in projectDevOptions" :key="opt.value" class="dev-select-item" :class="{ selected: createTaskForm.developer_ids.includes(opt.value) }" @click="toggleDev(opt.value)">
-              <span class="dev-select-name">{{ opt.label }}</span>
+      <div class="dispatch-layout">
+        <div class="dispatch-select-area">
+          <div class="dispatch-select-inner">
+            <div class="dispatch-left">
+              <div class="dispatch-section-title">选择开发人员</div>
+              <div class="dev-select-grid">
+                <div v-for="opt in projectDevOptions" :key="opt.value" class="dev-select-item" :class="{ selected: createTaskForm.developer_ids.includes(opt.value) }" @click="toggleDev(opt.value)">
+                  <span class="dev-select-name">{{ opt.label }}</span>
+                </div>
+              </div>
+              <div v-if="createTaskForm.developer_ids.length === 0" class="empty-hint">请选择开发人员</div>
+            </div>
+            <div class="dispatch-divider"></div>
+            <div class="dispatch-right">
+              <div v-if="createTaskForm.developer_ids.length > 0" class="skill-area">
+                <div class="dispatch-section-title">选择技能（点击技能以生成任务）</div>
+                <div v-for="uid in createTaskForm.developer_ids" :key="uid" class="skill-section">
+                  <div class="skill-section-title">{{ userNameMap[uid] || '未知' }}</div>
+                  <div class="skill-tag-group">
+                    <div v-for="skill in (userSkillMap[uid] || [])" :key="skill"
+                      class="skill-tag-item"
+                      :class="{ active: (selectedSkills[uid] || []).includes(skill) }"
+                      @click="toggleSkill(uid, skill)">
+                      <span>{{ skillsMap[skill] || skill }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty-hint" style="margin-top:60px">请先在左侧选择开发人员</div>
             </div>
           </div>
-        </n-form-item>
-        <div v-if="taskPreview.length" class="preview-list">
-          <div class="preview-title">将创建以下任务：</div>
-          <div v-for="(item, idx) in taskPreview" :key="idx" class="preview-assign">
+        </div>
+
+        <div v-if="taskPreview.length" class="dispatch-task-area">
+          <div class="dispatch-section-title">任务列表（{{ taskPreview.length }}）</div>
+          <div v-for="(item, idx) in taskPreview" :key="item._key || idx" class="preview-assign">
             <div class="preview-header">
               <span class="preview-name">{{ item.name }}</span>
               <n-tag size="tiny" type="info">{{ item.skillLabel }}</n-tag>
-              <n-button text size="tiny" type="error" @click="removeTaskPreview(idx)">移除</n-button>
+              <span v-if="item.id" style="font-size:11px;color:#94a3b8">已有任务</span>
+              <span style="flex:1"></span>
+              <n-button size="tiny" type="primary" ghost @click="appendTask(item.userId, item.skill)">+ 追加</n-button>
+              <n-button size="tiny" type="error" ghost @click="removeTaskItem(item)">删除</n-button>
             </div>
             <div class="preview-fields">
               <n-input v-model:value="item.description" type="textarea" :autosize="{ minRows: 1, maxRows: 3 }" placeholder="任务描述" />
@@ -238,17 +266,8 @@
             </div>
           </div>
         </div>
-        <div v-if="removedItems.length" class="preview-list" style="margin-top:8px">
-          <div class="preview-title">已移除的任务（点击恢复）：</div>
-          <div v-for="(item, idx) in removedItems" :key="'rm-' + idx" class="preview-assign" style="opacity:0.6">
-            <div class="preview-header">
-              <span class="preview-name">{{ item.name }}</span>
-              <n-tag size="tiny" type="default">{{ item.skillLabel }}</n-tag>
-              <n-button text size="tiny" type="primary" @click="restoreTask(item)">恢复</n-button>
-            </div>
-          </div>
-        </div>
-      </n-form>
+        <div v-else-if="createTaskForm.developer_ids.length > 0" class="empty-state" style="margin-top:16px">请在上方选择技能以生成任务</div>
+      </div>
       <template #footer>
         <n-space justify="end">
           <n-button @click="showCreateTask = false">取消</n-button>
@@ -318,16 +337,27 @@ const createTaskForm = ref({ developer_ids: [] })
 const taskPreview = ref([])
 const skillsMap = ref({})
 
-// 每个开发人员的任务预览缓存（切换人员时保留编辑状态）
+// 弹窗：每个人员已勾选的技能  { [userId]: string[] }
+const selectedSkills = ref({})
+// 弹窗：取消勾选后待删除的已有任务 ID
+const pendingDeleteTaskIds = ref([])
+// 弹窗：已有任务的缓存数据 { [userId]: { [skill]: item } }
 const devTaskCache = ref({})
-
-// 跟踪单个删除的任务（用于恢复）
-const removedTaskKeys = ref(new Set())
 
 const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
 const devOptions = computed(() => users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
 const projectDevOptions = computed(() => {
   return users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: `${u.name}${u.skills ? ' (' + u.skills.split(',').map(s => skillsMap.value[s] || s).join('、') + ')' : ''}`, value: u.id }))
+})
+const userNameMap = computed(() => {
+  const map = {}
+  for (const u of users.value) map[u.id] = u.name
+  return map
+})
+const userSkillMap = computed(() => {
+  const map = {}
+  for (const u of users.value) map[u.id] = u.skills ? u.skills.split(',').filter(Boolean) : []
+  return map
 })
 
 const tasksByPerson = computed(() => {
@@ -341,62 +371,83 @@ const tasksByPerson = computed(() => {
   return Object.values(map)
 })
 
-const removedItems = computed(() => {
-  const keys = Array.from(removedTaskKeys.value)
-  const result = []
-  for (const uid of Object.keys(devTaskCache.value)) {
-    for (const item of devTaskCache.value[uid]) {
-      if (keys.includes(item.userId + '-' + item.skill)) {
-        result.push(item)
-      }
-    }
-  }
-  return result
-})
-
 function toggleDev(id) {
   const idx = createTaskForm.value.developer_ids.indexOf(id)
-  if (idx >= 0) createTaskForm.value.developer_ids.splice(idx, 1)
-  else createTaskForm.value.developer_ids.push(id)
-}
-
-function openTaskDispatch() {
-  // 清空状态，加载已有任务到编辑表单
-  createTaskForm.value = { developer_ids: [] }
-  taskPreview.value = []
-  devTaskCache.value = {}
-  removedTaskKeys.value = new Set()
-
-  // 将已有任务加载到预览中（包含 id 以便编辑更新）
-  for (const t of tasks.value) {
-    const uid = t.assignee?.id || t.assignee_id
-    if (!uid) continue
-    const u = users.value.find(x => x.id === uid)
-    if (!u || !u.skills) continue
-    const name = t.assignee?.name || u.name
-
-    for (const skill of u.skills.split(',').filter(Boolean)) {
-      const existing = taskPreview.value.find(item => item.userId === uid && item.skill === skill)
-      if (!existing) {
-        taskPreview.value.push({
-          id: t.id,
-          userId: uid,
-          name,
-          skill,
-          skillLabel: skillsMap.value[skill] || skill,
-          description: t.title || t.description || req.value.description || '',
-          performance: t.performance || '',
-          deadline: t.deadline ? new Date(t.deadline).getTime() : null,
-          notes: t.description || ''
-        })
-        if (!createTaskForm.value.developer_ids.includes(uid)) {
-          createTaskForm.value.developer_ids.push(uid)
+  if (idx >= 0) {
+    createTaskForm.value.developer_ids.splice(idx, 1)
+    delete selectedSkills.value[id]
+    for (const item of taskPreview.value) {
+      if (item.userId === id && item.id && !pendingDeleteTaskIds.value.includes(item.id)) {
+        pendingDeleteTaskIds.value.push(item.id)
+      }
+    }
+    rebuildTaskPreview()
+  } else {
+    // 重新选中人员时，把之前标记删除的该人员任务恢复
+    const cache = devTaskCache.value[id]
+    if (cache) {
+      for (const skill of Object.keys(cache)) {
+        for (const c of cache[skill]) {
+          if (c.id) {
+            const delIdx = pendingDeleteTaskIds.value.indexOf(c.id)
+            if (delIdx >= 0) pendingDeleteTaskIds.value.splice(delIdx, 1)
+          }
         }
       }
     }
+    createTaskForm.value.developer_ids.push(id)
+    if (!selectedSkills.value[id]) selectedSkills.value[id] = []
+    rebuildTaskPreview()
+  }
+}
+
+async function openTaskDispatch() {
+  createTaskForm.value = { developer_ids: [] }
+  taskPreview.value = []
+  devTaskCache.value = {}
+  selectedSkills.value = {}
+  pendingDeleteTaskIds.value = []
+
+  // 从后端查询该需求的最新任务列表
+  let latestTasks = []
+  try {
+    latestTasks = await getTasks({ requirement_id: route.params.id }) || []
+  } catch (e) { console.error(e) }
+
+  let seq = 0
+  for (const t of latestTasks) {
+    const uid = t.assignee?.id || t.assignee_id
+    const skill = t.terminal
+    if (!uid || !skill) continue
+    const u = users.value.find(x => x.id === uid)
+    if (!u) continue
+
+    if (!devTaskCache.value[uid]) devTaskCache.value[uid] = {}
+    if (!devTaskCache.value[uid][skill]) devTaskCache.value[uid][skill] = []
+    const _key = uid + '-' + skill + '-' + (seq++)
+    devTaskCache.value[uid][skill].push({
+      _key,
+      id: t.id,
+      userId: uid,
+      name: t.assignee?.name || u.name,
+      skill,
+      skillLabel: skillsMap.value[skill] || skill,
+      description: t.title || t.description || req.value.description || '',
+      performance: t.performance || '',
+      deadline: t.deadline ? new Date(t.deadline).getTime() : null,
+      notes: t.description || ''
+    })
+
+    if (!createTaskForm.value.developer_ids.includes(uid)) {
+      createTaskForm.value.developer_ids.push(uid)
+    }
+    if (!selectedSkills.value[uid]) selectedSkills.value[uid] = []
+    if (!selectedSkills.value[uid].includes(skill)) {
+      selectedSkills.value[uid].push(skill)
+    }
   }
 
-  // 没有已有任务时不做额外操作，用户自己选人
+  rebuildTaskPreview()
   showCreateTask.value = true
 }
 const showIntegrationBugs = ref(false)
@@ -643,64 +694,121 @@ async function loadTasks() {
   } catch (e) { console.error(e) }
 }
 
-function buildTaskPreview(newIds, oldIds) {
-  if (!oldIds) oldIds = []
-  const addedIds = newIds.filter(id => !oldIds.includes(id))
-  const removedIds = oldIds.filter(id => !newIds.includes(id))
-
-  // 缓存被移除人员的任务（含用户编辑内容）
-  for (const uid of removedIds) {
-    devTaskCache.value[uid] = taskPreview.value.filter(item => item.userId === uid)
+function rebuildTaskPreview() {
+  // 先将当前编辑内容同步到缓存
+  for (const item of taskPreview.value) {
+    const uid = item.userId
+    const skill = item.skill
+    if (!uid || !skill || !item._key) continue
+    if (!devTaskCache.value[uid]) devTaskCache.value[uid] = {}
+    if (!devTaskCache.value[uid][skill]) devTaskCache.value[uid][skill] = []
+    const idx = devTaskCache.value[uid][skill].findIndex(c => c._key === item._key)
+    if (idx >= 0) {
+      devTaskCache.value[uid][skill][idx] = { ...item }
+    } else {
+      devTaskCache.value[uid][skill].push({ ...item })
+    }
   }
 
-  // 从当前预览中移除
-  taskPreview.value = taskPreview.value.filter(item => !removedIds.includes(item.userId))
-
-  // 只对新增人员生成默认任务
-  const defaultDesc = req.value.description || ''
-  for (const uid of addedIds) {
-    if (devTaskCache.value[uid]) {
-      // 从缓存恢复（保留之前的编辑）
-      const cached = devTaskCache.value[uid].filter(item => !removedTaskKeys.value.has(item.userId + '-' + item.skill))
-      if (cached.length > 0) {
-        taskPreview.value.push(...cached)
-        continue
+  // 从缓存重建已勾选技能的预览项
+  const result = []
+  let seq = 0
+  for (const uid of createTaskForm.value.developer_ids) {
+    const skills = selectedSkills.value[uid] || []
+    const u = users.value.find(x => x.id === uid)
+    if (!u) continue
+    for (const skill of skills) {
+      const cachedList = devTaskCache.value[uid]?.[skill] || []
+      if (cachedList.length > 0) {
+        result.push(...cachedList.map(c => ({ ...c })))
+      } else {
+        const _key = uid + '-' + skill + '-' + (seq++)
+        result.push({
+          _key,
+          userId: uid,
+          name: u.name,
+          skill,
+          skillLabel: skillsMap.value[skill] || skill,
+          description: req.value.description || '',
+          performance: '',
+          deadline: null,
+          notes: ''
+        })
       }
     }
-    const u = users.value.find(x => x.id === uid)
-    if (!u || !u.skills) continue
-    for (const skill of u.skills.split(',').filter(Boolean)) {
-      const key = uid + '-' + skill
-      if (removedTaskKeys.value.has(key)) continue
-      taskPreview.value.push({ userId: uid, name: u.name, skill, skillLabel: skillsMap.value[skill] || skill, description: defaultDesc, performance: '', deadline: null, notes: '' })
+  }
+  taskPreview.value = result
+}
+
+function toggleSkill(uid, skill) {
+  if (!selectedSkills.value[uid]) selectedSkills.value[uid] = []
+  const idx = selectedSkills.value[uid].indexOf(skill)
+  if (idx >= 0) {
+    const currentItems = taskPreview.value.filter(p => p.userId === uid && p.skill === skill)
+    for (const item of currentItems) {
+      if (item.id && !pendingDeleteTaskIds.value.includes(item.id)) {
+        pendingDeleteTaskIds.value.push(item.id)
+      }
     }
+    selectedSkills.value[uid].splice(idx, 1)
+    rebuildTaskPreview()
+  } else {
+    const cachedList = devTaskCache.value[uid]?.[skill] || []
+    for (const c of cachedList) {
+      if (c.id) {
+        const delIdx = pendingDeleteTaskIds.value.indexOf(c.id)
+        if (delIdx >= 0) pendingDeleteTaskIds.value.splice(delIdx, 1)
+      }
+    }
+    selectedSkills.value[uid].push(skill)
+    rebuildTaskPreview()
   }
 }
 
-// 旧版 watch 替换为带旧值的监听
-watch(() => [...createTaskForm.value.developer_ids], (newIds, oldIds) => {
-  buildTaskPreview(newIds, oldIds)
-})
+function appendTask(uid, skill) {
+  const u = users.value.find(x => x.id === uid)
+  if (!u) return
+  const existing = taskPreview.value.filter(p => p.userId === uid && p.skill === skill)
+  const seq = existing.length
+  const _key = uid + '-' + skill + '-' + Date.now() + '-' + seq
 
-function removeTaskPreview(idx) {
-  const item = taskPreview.value[idx]
-  if (item) {
-    const key = item.userId + '-' + item.skill
-    removedTaskKeys.value.add(key)
+  const newItem = {
+    _key,
+    userId: uid,
+    name: u.name,
+    skill,
+    skillLabel: skillsMap.value[skill] || skill,
+    description: req.value.description || '',
+    performance: '',
+    deadline: null,
+    notes: ''
+  }
+
+  if (!devTaskCache.value[uid]) devTaskCache.value[uid] = {}
+  if (!devTaskCache.value[uid][skill]) devTaskCache.value[uid][skill] = []
+  devTaskCache.value[uid][skill].push({ ...newItem })
+  taskPreview.value.push(newItem)
+}
+
+function removeTaskItem(item) {
+  const idx = taskPreview.value.findIndex(p => p._key === item._key)
+  if (idx < 0) return
+  if (item.id && !pendingDeleteTaskIds.value.includes(item.id)) {
+    pendingDeleteTaskIds.value.push(item.id)
   }
   taskPreview.value.splice(idx, 1)
-}
-
-function restoreTask(item) {
-  const key = item.userId + '-' + item.skill
-  removedTaskKeys.value.delete(key)
-  taskPreview.value.push(item)
 }
 
 async function handleCreateTasks() {
   if (!taskPreview.value.length) return
   creatingTask.value = true
   let success = 0
+
+  // 先删除被取消勾选的已有任务
+  for (const id of pendingDeleteTaskIds.value) {
+    try { await deleteTask(id); success++ } catch (e) { console.error(e) }
+  }
+
   for (const item of taskPreview.value) {
     try {
       const payload = {
@@ -727,7 +835,8 @@ async function handleCreateTasks() {
   createTaskForm.value = { developer_ids: [] }
   taskPreview.value = []
   devTaskCache.value = {}
-  removedTaskKeys.value = new Set()
+  selectedSkills.value = {}
+  pendingDeleteTaskIds.value = []
   creatingTask.value = false
   await loadTasks()
 }
@@ -1287,6 +1396,94 @@ onMounted(() => {
 }
 
 .dev-select-item.selected {
+  border-color: #6366f1;
+  background: #6366f1;
+  color: white;
+}
+
+.dispatch-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 300px;
+}
+.dispatch-select-area {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  background: #fafbfc;
+}
+.dispatch-select-inner {
+  display: flex;
+  gap: 24px;
+}
+.dispatch-divider {
+  width: 1px;
+  flex-shrink: 0;
+  background: #e2e8f0;
+}
+.dispatch-left {
+  width: 220px;
+  flex-shrink: 0;
+}
+.dispatch-right {
+  flex: 1;
+  min-width: 0;
+}
+.dispatch-task-area {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+}
+.dispatch-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+.empty-hint {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+}
+.skill-area {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.skill-section {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px;
+}
+.skill-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+.skill-tag-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.skill-tag-item {
+  padding: 4px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #334155;
+  background: white;
+  transition: all 0.15s;
+  user-select: none;
+}
+.skill-tag-item:hover {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+.skill-tag-item.active {
   border-color: #6366f1;
   background: #6366f1;
   color: white;
