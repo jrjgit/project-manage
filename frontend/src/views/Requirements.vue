@@ -13,8 +13,6 @@
 
     <div class="requirements-page">
       <section class="section-card">
-
-      <section class="section-card">
         <div class="filter-bar">
           <n-input v-model:value="filters.number" placeholder="需求编号" clearable style="width:140px" size="small" />
           <n-input v-model:value="filters.description" placeholder="需求描述" clearable style="width:180px" size="small" />
