@@ -15,8 +15,7 @@
       <section class="hero-card">
         <div>
           <div class="hero-eyebrow">需求总览</div>
-          <h2 class="hero-title">需求交付看板</h2>
-          <p class="hero-subtitle">集中管理运维需求与项目需求，跟踪开发、测试与发布全流程。</p>
+          <h2 class="hero-title">需求清单</h2>
         </div>
         <div class="hero-meta">
           <div class="meta-pill"><span class="meta-value">{{ allData.length }}</span><span class="meta-label">需求总数</span></div>
@@ -32,6 +31,7 @@
           <n-select v-model:value="filters.status" :options="statusOptions" placeholder="状态" clearable style="width:130px" size="small" />
           <n-select v-model:value="filters.project_type" :options="projectTypeOptions" placeholder="项目类型" clearable style="width:130px" size="small" />
           <n-select v-model:value="filters.project_id" :options="projectOptions" placeholder="项目名称" clearable filterable style="width:160px" size="small" />
+          <n-select v-model:value="filters.system" :options="filterSystemOptions" placeholder="所属系统" clearable filterable style="width:140px" size="small" />
           <n-select v-model:value="filters.iteration_id" :options="iterationOptions" placeholder="需求迭代" clearable filterable style="width:160px" size="small" />
           <n-button size="small" quaternary @click="resetFilters">重置</n-button>
         </div>
@@ -202,7 +202,7 @@ const attachFileName = ref('')
 const attachUploading = ref(false)
 const form = ref(emptyForm())
 
-const filters = ref({ number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null })
+const filters = ref({ number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null, system: null })
 
 function emptyForm() {
   return {
@@ -235,6 +235,13 @@ const projectTypeLabel = computed(() => {
   return p.project_type === 'invite_bidding' ? '项目需求' : '运维需求'
 })
 const priorityOptions = Object.entries(priorityMeta).map(([v, m]) => ({ label: m.label, value: v }))
+const projectTypeOptions = [
+  { label: '运维需求', value: 'ops' },
+  { label: '项目需求', value: 'project' }
+]
+const filterSystemOptions = computed(() =>
+  systems.value.map(s => ({ label: s.name, value: s.name }))
+)
 
 const inProgressCount = computed(() => allData.value.filter(r => r.status === 'in_progress').length)
 const pendingReleaseCount = computed(() => allData.value.filter(r => r.status === 'pending_release').length)
@@ -248,6 +255,7 @@ const filteredData = computed(() => {
     if (f.project_type && r.project_type !== f.project_type) return false
     if (f.project_id && r.project_id !== f.project_id) return false
     if (f.iteration_id && r.iteration_id !== f.iteration_id) return false
+    if (f.system && r.system !== f.system) return false
     return true
   })
 })
@@ -302,7 +310,7 @@ const columns = [
 ]
 
 function resetFilters() {
-  filters.value = { number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null }
+  filters.value = { number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null, system: null }
 }
 
 function onProjectChange() {
