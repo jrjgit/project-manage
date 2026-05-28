@@ -206,6 +206,13 @@ function openDetail(id) {
   showDetailDrawer.value = true
 }
 
+// 通过路由参数打开任务详情（消息跳转）
+watch(() => route.params.id, (id) => {
+  if (id) {
+    openDetail(Number(id))
+  }
+}, { immediate: true })
+
 watch(
   () => route.query.mode,
   (mode) => {

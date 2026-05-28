@@ -1,6 +1,7 @@
 package com.management.common.notification;
 
 import com.management.bug.entity.Bug;
+import com.management.requirement.entity.Requirement;
 import com.management.task.entity.Task;
 import com.management.user.entity.User;
 import jakarta.annotation.PostConstruct;
@@ -61,6 +62,15 @@ public class NotificationService {
             "reopened", "重新打开"
     );
 
+    private static final Map<String, String> REQUIREMENT_STATUS_LABELS = Map.of(
+            "planned", "规划中",
+            "assigned", "已分配",
+            "pending_task", "待拆任务",
+            "in_progress", "进行中",
+            "completed", "已完成",
+            "closed", "已关闭"
+    );
+
     @PostConstruct
     void init() {
         multiNotifier.addDelegate(logNotifier);
@@ -72,9 +82,9 @@ public class NotificationService {
                                String operatorName, List<User> targets, String comment) {
         String msg = buildTaskMessage(task.getTitle(), oldStatus, newStatus, operatorName, comment);
         if (asyncEnabled) {
-            asyncSender.sendAsync(targets, operatorName, msg);
+            asyncSender.sendAsync(targets, operatorName, msg, "task", task.getId());
         } else {
-            sendToTargets(targets, operatorName, msg);
+            sendToTargets(targets, operatorName, msg, "task", task.getId());
         }
     }
 
@@ -82,17 +92,43 @@ public class NotificationService {
                               String operatorName, List<User> targets, String comment) {
         String msg = buildBugMessage(bug.getTitle(), oldStatus, newStatus, operatorName, comment);
         if (asyncEnabled) {
-            asyncSender.sendAsync(targets, operatorName, msg);
+            asyncSender.sendAsync(targets, operatorName, msg, "bug", bug.getId());
         } else {
-            sendToTargets(targets, operatorName, msg);
+            sendToTargets(targets, operatorName, msg, "bug", bug.getId());
+        }
+    }
+
+    public void emitRequirementEvent(Requirement req, String oldStatus, String newStatus,
+                                      String operatorName, List<User> targets, String comment) {
+        String msg = buildRequirementMessage(req.getDescription(), oldStatus, newStatus, operatorName, comment);
+        if (asyncEnabled) {
+            asyncSender.sendAsync(targets, operatorName, msg, "requirement", req.getId());
+        } else {
+            sendToTargets(targets, operatorName, msg, "requirement", req.getId());
+        }
+    }
+
+    public void emitGenericEvent(String message, String operatorName, List<User> targets) {
+        emitGenericEvent(message, operatorName, targets, "system", null);
+    }
+
+    public void emitGenericEvent(String message, String operatorName, List<User> targets, String type, Long relatedId) {
+        if (asyncEnabled) {
+            asyncSender.sendAsync(targets, operatorName, message, type, relatedId);
+        } else {
+            sendToTargets(targets, operatorName, message, type, relatedId);
         }
     }
 
     private void sendToTargets(List<User> targets, String operatorName, String message) {
+        sendToTargets(targets, operatorName, message, "system", null);
+    }
+
+    private void sendToTargets(List<User> targets, String operatorName, String message, String type, Long relatedId) {
         if (targets == null) return;
         for (User target : targets) {
             if (operatorName != null && operatorName.equals(target.getName())) continue;
-            multiNotifier.notify(target.getName(), message);
+            multiNotifier.notify(target.getName(), message, type, relatedId);
         }
     }
 
@@ -117,6 +153,21 @@ public class NotificationService {
         String newLabel = BUG_STATUS_LABELS.getOrDefault(newStatus, newStatus);
         StringBuilder sb = new StringBuilder();
         sb.append("Bug【").append(title).append("】状态已从【")
+                .append(oldLabel).append("】变更为【").append(newLabel)
+                .append("】，操作人：").append(operator);
+        if (comment != null && !comment.isBlank()) {
+            sb.append("，备注：").append(comment);
+        }
+        sb.append("。请及时处理。");
+        return sb.toString();
+    }
+
+    private String buildRequirementMessage(String description, String oldStatus, String newStatus,
+                                            String operator, String comment) {
+        String oldLabel = REQUIREMENT_STATUS_LABELS.getOrDefault(oldStatus, oldStatus);
+        String newLabel = REQUIREMENT_STATUS_LABELS.getOrDefault(newStatus, newStatus);
+        StringBuilder sb = new StringBuilder();
+        sb.append("需求【").append(description).append("】状态已从【")
                 .append(oldLabel).append("】变更为【").append(newLabel)
                 .append("】，操作人：").append(operator);
         if (comment != null && !comment.isBlank()) {

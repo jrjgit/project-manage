@@ -78,7 +78,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getBugs } from '@/api/bugs'
@@ -179,6 +179,12 @@ function openDetail(id) {
   selectedBugId.value = id
   showDetailDrawer.value = true
 }
+
+watch(() => route.params.id, (id) => {
+  if (id) {
+    openDetail(Number(id))
+  }
+}, { immediate: true })
 
 onMounted(() => {
   loadBugs()

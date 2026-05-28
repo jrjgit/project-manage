@@ -15,10 +15,15 @@ public class AsyncNotificationSender {
 
     @Async("notifyExecutor")
     public void sendAsync(List<User> targets, String operatorName, String message) {
+        sendAsync(targets, operatorName, message, "system", null);
+    }
+
+    @Async("notifyExecutor")
+    public void sendAsync(List<User> targets, String operatorName, String message, String type, Long relatedId) {
         if (targets == null) return;
         for (User target : targets) {
             if (operatorName != null && operatorName.equals(target.getName())) continue;
-            multiNotifier.notify(target.getName(), message);
+            multiNotifier.notify(target.getName(), message, type, relatedId);
         }
     }
 }

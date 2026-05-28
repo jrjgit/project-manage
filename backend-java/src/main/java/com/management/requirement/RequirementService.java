@@ -5,6 +5,7 @@ import com.management.bug.entity.Bug;
 import com.management.bug.mapper.BugMapper;
 import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
+import com.management.common.notification.NotificationService;
 import com.management.iteration.mapper.IterationMapper;
 import com.management.project.mapper.ProjectMapper;
 import com.management.requirement.dto.CreateRequirementRequest;
@@ -14,6 +15,7 @@ import com.management.requirement.entity.Requirement;
 import com.management.requirement.mapper.RequirementMapper;
 import com.management.task.entity.Task;
 import com.management.task.mapper.TaskMapper;
+import com.management.user.entity.User;
 import com.management.user.mapper.UserMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -45,6 +48,7 @@ public class RequirementService {
     private final IterationMapper iterationMapper;
     private final TaskMapper taskMapper;
     private final BugMapper bugMapper;
+    private final NotificationService notificationService;
 
     @Value("${app.upload-dir:./uploads}")
     private String uploadDir;
@@ -95,6 +99,22 @@ public class RequirementService {
         }
         requirementMapper.updateById(r);
         fillAssociations(r);
+
+        JwtUserDetails operator = currentUser();
+        List<User> notifyTargets = new ArrayList<>();
+        if (r.getDevLeadId() != null) {
+            User devLead = userMapper.selectById(r.getDevLeadId());
+            if (devLead != null) notifyTargets.add(devLead);
+        }
+        if (r.getPersonId() != null) {
+            User person = userMapper.selectById(r.getPersonId());
+            if (person != null) notifyTargets.add(person);
+        }
+        if (!notifyTargets.isEmpty()) {
+            String msg = "需求【" + r.getDescription() + "】已创建，当前状态：待拆任务，操作人：" + operator.getName();
+            notificationService.emitGenericEvent(msg, operator.getName(), notifyTargets);
+        }
+
         log.info("Requirement created: id={}, description={}", r.getRequirementId(), r.getDescription());
         return r;
     }
@@ -225,8 +245,19 @@ public class RequirementService {
     public void changeStatus(Long id, String newStatus) {
         Requirement r = requirementMapper.selectById(id);
         if (r == null) throw new BusinessException(404, "需求不存在");
+        String oldStatus = r.getStatus();
         r.setStatus(newStatus);
         requirementMapper.updateById(r);
+
+        List<User> notifyTargets = new ArrayList<>();
+        if (r.getDevLeadId() != null) {
+            User devLead = userMapper.selectById(r.getDevLeadId());
+            if (devLead != null) notifyTargets.add(devLead);
+        }
+        if (!notifyTargets.isEmpty()) {
+            String operatorName = currentUser().getName();
+            notificationService.emitRequirementEvent(r, oldStatus, newStatus, operatorName, notifyTargets, null);
+        }
     }
 
     public void delete(Long id) {
@@ -336,6 +367,13 @@ public class RequirementService {
             r.setStatus("assigned");
         }
         requirementMapper.updateById(r);
+
+        User devLead = userMapper.selectById(devLeadId);
+        if (devLead != null) {
+            String operatorName = currentUser().getName();
+            String msg = "需求【" + r.getDescription() + "】您被指派为开发组长，操作人：" + operatorName;
+            notificationService.emitGenericEvent(msg, operatorName, List.of(devLead));
+        }
     }
 
     private void fillAssociations(Requirement r) {

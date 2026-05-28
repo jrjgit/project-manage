@@ -69,10 +69,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { NPagination } from 'naive-ui'
 import { fetchMessages, markRead, markAllRead } from '@/api/message'
 import { useMessageStore } from '@/store/useMessageStore'
 
+const router = useRouter()
 const messageStore = useMessageStore()
 
 const messages = ref([])
@@ -133,11 +135,21 @@ async function loadMessages() {
   }
 }
 
+function navigateToDetail(msg) {
+  const routes = { task: '/tasks/', bug: '/bugs/', requirement: '/requirements/' }
+  const path = routes[msg.type]
+  if (path && msg.relatedId) {
+    router.push(path + msg.relatedId)
+  }
+}
+
 async function handleMarkRead(msg) {
-  if (msg.isRead) return
-  await markRead(msg.id)
-  msg.isRead = true
-  messageStore.refreshUnreadCount()
+  if (!msg.isRead) {
+    await markRead(msg.id)
+    msg.isRead = true
+    messageStore.refreshUnreadCount()
+  }
+  navigateToDetail(msg)
 }
 
 async function handleMarkAllRead() {

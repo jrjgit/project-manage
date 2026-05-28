@@ -121,6 +121,7 @@ public class BugService {
     public Bug updateBug(Long id, UpdateBugRequest req) {
         Bug bug = bugMapper.selectById(id);
         if (bug == null) throw new BusinessException(404, "bug not found");
+        Long oldAssigneeId = bug.getAssigneeId();
         if (req.getTitle() != null && !req.getTitle().isBlank()) bug.setTitle(req.getTitle());
         if (req.getDescription() != null) bug.setDescription(req.getDescription());
         if (req.getSeverity() != null && !req.getSeverity().isBlank()) bug.setSeverity(req.getSeverity());
@@ -137,6 +138,17 @@ public class BugService {
         if (req.getFixComment() != null) bug.setFixComment(req.getFixComment());
         if (req.getReopenReason() != null) bug.setReopenReason(req.getReopenReason());
         bugMapper.updateById(bug);
+
+        // assignee_id 变化时通知新指派人
+        if (req.getAssigneeId() != null && (oldAssigneeId == null || !req.getAssigneeId().equals(oldAssigneeId))) {
+            User newAssignee = userMapper.selectById(req.getAssigneeId());
+            if (newAssignee != null) {
+                notificationService.emitGenericEvent(
+                        "Bug【" + bug.getTitle() + "】您被指派为处理人，操作人：" + currentUser().getName(),
+                        currentUser().getName(), List.of(newAssignee));
+            }
+        }
+
         fillAssociations(bug);
         return bug;
     }

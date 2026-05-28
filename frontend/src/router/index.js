@@ -31,8 +31,20 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/tasks/:id',
+    name: 'TaskDetail',
+    component: () => import('@/views/Tasks.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/bugs',
     name: 'Bugs',
+    component: () => import('@/views/Bugs.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/bugs/:id',
+    name: 'BugDetail',
     component: () => import('@/views/Bugs.vue'),
     meta: { requiresAuth: true }
   },

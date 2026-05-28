@@ -18,6 +18,11 @@ public class SiteMessageNotifier implements Notifier {
 
     @Override
     public void notify(String recipient, String message) {
+        notify(recipient, message, detectType(message), null);
+    }
+
+    @Override
+    public void notify(String recipient, String message, String type, Long relatedId) {
         User user = userMapper.selectOne(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User>()
                         .eq(User::getName, recipient));
@@ -32,10 +37,19 @@ public class SiteMessageNotifier implements Notifier {
         msg.setUserId(user.getId());
         msg.setTitle(title);
         msg.setContent(message);
-        msg.setType("system");
+        msg.setType(type);
+        msg.setRelatedId(relatedId);
         msg.setIsRead(false);
         siteMessageMapper.insert(msg);
 
-        log.debug("SiteMessage saved for user={}, title={}", user.getName(), title);
+        log.debug("SiteMessage saved for user={}, title={}, type={}, relatedId={}",
+                user.getName(), title, type, relatedId);
+    }
+
+    private String detectType(String message) {
+        if (message.startsWith("任务")) return "task";
+        if (message.startsWith("Bug")) return "bug";
+        if (message.startsWith("需求")) return "requirement";
+        return "system";
     }
 }

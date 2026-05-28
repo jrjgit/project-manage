@@ -258,6 +258,18 @@ public class TaskService {
         }
 
         fillAssociations(task);
+
+        // 通知相关人员
+        JwtUserDetails operator = currentUser();
+        List<User> notifyTargets = new ArrayList<>();
+        if (task.getDevLeadId() != null) addUser(notifyTargets, task.getDevLeadId());
+        if (task.getAssigneeId() != null) addUser(notifyTargets, task.getAssigneeId());
+        if (task.getTesterId() != null) addUser(notifyTargets, task.getTesterId());
+        if (!notifyTargets.isEmpty()) {
+            String msg = "任务【" + task.getTitle() + "】已创建，操作人：" + operator.getName() + "。请及时处理。";
+            notificationService.emitGenericEvent(msg, operator.getName(), notifyTargets);
+        }
+
         log.info("Task created: id={}, title={}", task.getId(), task.getTitle());
         return task;
     }
@@ -267,6 +279,9 @@ public class TaskService {
         Task task = taskMapper.selectById(id);
         if (task == null) throw new BusinessException(404, "task not found");
 
+        Long oldDevLeadId = task.getDevLeadId();
+        Long oldAssigneeId = task.getAssigneeId();
+        Long oldTesterLeadId = task.getTesterLeadId();
         Long oldTesterId = task.getTesterId();
 
         if (req.getTitle() != null && !req.getTitle().isBlank()) task.setTitle(req.getTitle());
@@ -312,13 +327,46 @@ public class TaskService {
         }
         taskMapper.updateById(task);
 
-        // tester_id 变化时通知新 tester
-        if (req.getTesterId() != null && oldTesterId != null && !req.getTesterId().equals(oldTesterId)) {
+        JwtUserDetails op = currentUser();
+        String title = task.getTitle();
+
+        // dev_lead_id 变化时通知新开发组长
+        if (req.getDevLeadId() != null && (oldDevLeadId == null || !req.getDevLeadId().equals(oldDevLeadId))) {
+            User newDevLead = userMapper.selectById(req.getDevLeadId());
+            if (newDevLead != null) {
+                notificationService.emitGenericEvent(
+                        "任务【" + title + "】您被指派为开发组长，操作人：" + op.getName(),
+                        op.getName(), List.of(newDevLead));
+            }
+        }
+
+        // assignee_id 变化时通知新指派人
+        if (req.getAssigneeId() != null && (oldAssigneeId == null || !req.getAssigneeId().equals(oldAssigneeId))) {
+            User newAssignee = userMapper.selectById(req.getAssigneeId());
+            if (newAssignee != null) {
+                notificationService.emitGenericEvent(
+                        "任务【" + title + "】您被指派为开发人员，操作人：" + op.getName(),
+                        op.getName(), List.of(newAssignee));
+            }
+        }
+
+        // tester_lead_id 变化时通知新测试组长
+        if (req.getTesterLeadId() != null && (oldTesterLeadId == null || !req.getTesterLeadId().equals(oldTesterLeadId))) {
+            User newTesterLead = userMapper.selectById(req.getTesterLeadId());
+            if (newTesterLead != null) {
+                notificationService.emitGenericEvent(
+                        "任务【" + title + "】您被指派为测试组长，操作人：" + op.getName(),
+                        op.getName(), List.of(newTesterLead));
+            }
+        }
+
+        // tester_id 变化时通知新测试人员
+        if (req.getTesterId() != null && (oldTesterId == null || !req.getTesterId().equals(oldTesterId))) {
             User newTester = userMapper.selectById(req.getTesterId());
             if (newTester != null) {
-                JwtUserDetails op = currentUser();
-                notificationService.emitTaskEvent(task, task.getStatus(), task.getStatus(),
-                        op.getName(), List.of(newTester), "您被分配为测试人员");
+                notificationService.emitGenericEvent(
+                        "任务【" + title + "】您被指派为测试人员，操作人：" + op.getName(),
+                        op.getName(), List.of(newTester));
             }
         }
 
