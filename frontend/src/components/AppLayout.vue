@@ -191,23 +191,23 @@ const roleLabel = computed(() => roleLabelMap[authStore.userInfo?.role] || '')
 const avatarLetter = computed(() => authStore.userInfo?.name?.charAt(0)?.toUpperCase() || '?')
 
 const allMenus = [
-  { key: 'dashboard', label: '仪表盘', path: '/dashboard', icon: LayoutDashboardIcon },
-  { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon },
-  { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon },
-  { key: 'bugs', label: 'Bug管理', path: '/bugs', icon: BugIcon },
-  { key: 'messages', label: '消息中心', path: '/messages', icon: BellIcon, badge: 'unread' },
-  { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon },
-  { key: 'iterations', label: '发布迭代', path: '/iterations', icon: MilestoneIcon },
-  { key: 'revenue', label: '营收统计', path: '/revenue', icon: ChartBarIcon },
-  { key: 'performance', label: '人员绩效', path: '/performance', icon: TrendingUpIcon },
-  { key: 'users', label: '用户管理', path: '/users', icon: UsersIcon, pmOnly: true },
-  { key: 'groups', label: '小组管理', path: '/groups', icon: GroupIcon, pmOnly: true },
-  { key: 'systems', label: '系统管理', path: '/systems', icon: BookOpenIcon },
-  { key: 'dictionary', label: '基础字典', path: '/dictionary', icon: BookOpenIcon, pmOnly: true }
+  { key: 'dashboard', label: '仪表盘', path: '/dashboard', icon: LayoutDashboardIcon, roles: ['pm', 'dev_lead', 'dev', 'tester_lead', 'tester'] },
+  { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon, roles: ['pm', 'dev_lead', 'dev', 'tester_lead', 'tester'] },
+  { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon, roles: ['dev_lead', 'dev', 'tester_lead', 'tester'] },
+  { key: 'bugs', label: 'Bug管理', path: '/bugs', icon: BugIcon, roles: ['pm', 'dev_lead', 'dev', 'tester_lead', 'tester'] },
+  { key: 'messages', label: '消息中心', path: '/messages', icon: BellIcon, badge: 'unread', roles: ['pm', 'dev_lead', 'dev', 'tester_lead', 'tester'] },
+  { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon, roles: ['pm', 'dev_lead', 'dev', 'tester_lead', 'tester'] },
+  { key: 'iterations', label: '发布迭代', path: '/iterations', icon: MilestoneIcon, roles: ['pm', 'dev_lead'] },
+  { key: 'revenue', label: '营收统计', path: '/revenue', icon: ChartBarIcon, roles: ['pm'] },
+  { key: 'performance', label: '人员绩效', path: '/performance', icon: TrendingUpIcon, roles: ['pm', 'dev_lead', 'dev', 'tester_lead'] },
+  { key: 'users', label: '用户管理', path: '/users', icon: UsersIcon, roles: ['pm'] },
+  { key: 'groups', label: '小组管理', path: '/groups', icon: GroupIcon, roles: ['pm', 'dev_lead'] },
+  { key: 'systems', label: '系统管理', path: '/systems', icon: BookOpenIcon, roles: ['pm'] },
+  { key: 'dictionary', label: '基础字典', path: '/dictionary', icon: BookOpenIcon, roles: ['pm'] }
 ]
 
 const visibleMenus = computed(() =>
-  allMenus.filter(m => !m.pmOnly || authStore.isPM)
+  allMenus.filter(m => m.roles.includes(authStore.role))
 )
 
 const pageMeta = computed(() => {
