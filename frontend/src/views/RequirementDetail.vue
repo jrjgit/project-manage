@@ -134,8 +134,8 @@
       <!-- 任务看板（按人员分组） -->
       <section v-if="authStore.isPM || authStore.isDevLead" class="section-card">
         <div class="section-header">
-          <h3>任务 ({{ tasks.length }})</h3>
-          <n-button size="tiny" text @click="showCreateTask = true">新增任务</n-button>
+          <h3>开发任务进度 ({{ tasks.length }})</h3>
+          <n-button type="primary" ghost round size="small" @click="openTaskDispatch">任务派发/修改</n-button>
         </div>
         <div v-if="tasksByPerson.length > 0" class="person-board">
           <div v-for="person in tasksByPerson" :key="person.id" class="person-card">
@@ -211,7 +211,7 @@
     </div>
 
     <!-- Create Task Modal -->
-    <n-modal v-model:show="showCreateTask" preset="card" style="width:90vw;max-width:1400px;height:90vh;overflow:auto" title="新增任务" :mask-closable="false">
+    <n-modal v-model:show="showCreateTask" preset="card" style="width:90vw;max-width:1400px;height:90vh;overflow:auto" title="任务派发/修改" :mask-closable="false">
       <n-form :model="createTaskForm" label-placement="top">
         <n-form-item label="选择开发人员">
           <div class="dev-select-grid">
@@ -238,11 +238,21 @@
             </div>
           </div>
         </div>
+        <div v-if="removedItems.length" class="preview-list" style="margin-top:8px">
+          <div class="preview-title">已移除的任务（点击恢复）：</div>
+          <div v-for="(item, idx) in removedItems" :key="'rm-' + idx" class="preview-assign" style="opacity:0.6">
+            <div class="preview-header">
+              <span class="preview-name">{{ item.name }}</span>
+              <n-tag size="tiny" type="default">{{ item.skillLabel }}</n-tag>
+              <n-button text size="tiny" type="primary" @click="restoreTask(item)">恢复</n-button>
+            </div>
+          </div>
+        </div>
       </n-form>
       <template #footer>
         <n-space justify="end">
           <n-button @click="showCreateTask = false">取消</n-button>
-          <n-button type="primary" :loading="creatingTask" :disabled="!taskPreview.length" @click="handleCreateTasks">确定创建</n-button>
+          <n-button type="primary" :loading="creatingTask" :disabled="!taskPreview.length" @click="handleCreateTasks">保存并关闭</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -308,6 +318,12 @@ const createTaskForm = ref({ developer_ids: [] })
 const taskPreview = ref([])
 const skillsMap = ref({})
 
+// 每个开发人员的任务预览缓存（切换人员时保留编辑状态）
+const devTaskCache = ref({})
+
+// 跟踪单个删除的任务（用于恢复）
+const removedTaskKeys = ref(new Set())
+
 const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
 const devOptions = computed(() => users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
 const projectDevOptions = computed(() => {
@@ -325,10 +341,63 @@ const tasksByPerson = computed(() => {
   return Object.values(map)
 })
 
+const removedItems = computed(() => {
+  const keys = Array.from(removedTaskKeys.value)
+  const result = []
+  for (const uid of Object.keys(devTaskCache.value)) {
+    for (const item of devTaskCache.value[uid]) {
+      if (keys.includes(item.userId + '-' + item.skill)) {
+        result.push(item)
+      }
+    }
+  }
+  return result
+})
+
 function toggleDev(id) {
   const idx = createTaskForm.value.developer_ids.indexOf(id)
   if (idx >= 0) createTaskForm.value.developer_ids.splice(idx, 1)
   else createTaskForm.value.developer_ids.push(id)
+}
+
+function openTaskDispatch() {
+  // 清空状态，加载已有任务到编辑表单
+  createTaskForm.value = { developer_ids: [] }
+  taskPreview.value = []
+  devTaskCache.value = {}
+  removedTaskKeys.value = new Set()
+
+  // 将已有任务加载到预览中（包含 id 以便编辑更新）
+  for (const t of tasks.value) {
+    const uid = t.assignee?.id || t.assignee_id
+    if (!uid) continue
+    const u = users.value.find(x => x.id === uid)
+    if (!u || !u.skills) continue
+    const name = t.assignee?.name || u.name
+
+    for (const skill of u.skills.split(',').filter(Boolean)) {
+      const existing = taskPreview.value.find(item => item.userId === uid && item.skill === skill)
+      if (!existing) {
+        taskPreview.value.push({
+          id: t.id,
+          userId: uid,
+          name,
+          skill,
+          skillLabel: skillsMap.value[skill] || skill,
+          description: t.title || t.description || req.value.description || '',
+          performance: t.performance || '',
+          deadline: t.deadline ? new Date(t.deadline).getTime() : null,
+          notes: t.description || ''
+        })
+        if (!createTaskForm.value.developer_ids.includes(uid)) {
+          createTaskForm.value.developer_ids.push(uid)
+        }
+      }
+    }
+  }
+
+  // 没有已有任务时不做额外操作，用户自己选人
+  showCreateTask.value = true
 }
 const showIntegrationBugs = ref(false)
 const showBusinessBugs = ref(false)
@@ -574,24 +643,58 @@ async function loadTasks() {
   } catch (e) { console.error(e) }
 }
 
-function buildTaskPreview() {
-  const ids = createTaskForm.value.developer_ids || []
-  const result = []
+function buildTaskPreview(newIds, oldIds) {
+  if (!oldIds) oldIds = []
+  const addedIds = newIds.filter(id => !oldIds.includes(id))
+  const removedIds = oldIds.filter(id => !newIds.includes(id))
+
+  // 缓存被移除人员的任务（含用户编辑内容）
+  for (const uid of removedIds) {
+    devTaskCache.value[uid] = taskPreview.value.filter(item => item.userId === uid)
+  }
+
+  // 从当前预览中移除
+  taskPreview.value = taskPreview.value.filter(item => !removedIds.includes(item.userId))
+
+  // 只对新增人员生成默认任务
   const defaultDesc = req.value.description || ''
-  for (const uid of ids) {
+  for (const uid of addedIds) {
+    if (devTaskCache.value[uid]) {
+      // 从缓存恢复（保留之前的编辑）
+      const cached = devTaskCache.value[uid].filter(item => !removedTaskKeys.value.has(item.userId + '-' + item.skill))
+      if (cached.length > 0) {
+        taskPreview.value.push(...cached)
+        continue
+      }
+    }
     const u = users.value.find(x => x.id === uid)
     if (!u || !u.skills) continue
     for (const skill of u.skills.split(',').filter(Boolean)) {
-      result.push({ userId: uid, name: u.name, skill, skillLabel: skillsMap.value[skill] || skill, description: defaultDesc, performance: '', deadline: null, notes: '' })
+      const key = uid + '-' + skill
+      if (removedTaskKeys.value.has(key)) continue
+      taskPreview.value.push({ userId: uid, name: u.name, skill, skillLabel: skillsMap.value[skill] || skill, description: defaultDesc, performance: '', deadline: null, notes: '' })
     }
   }
-  taskPreview.value = result
 }
 
-watch(() => createTaskForm.value.developer_ids, buildTaskPreview, { deep: true })
+// 旧版 watch 替换为带旧值的监听
+watch(() => [...createTaskForm.value.developer_ids], (newIds, oldIds) => {
+  buildTaskPreview(newIds, oldIds)
+})
 
 function removeTaskPreview(idx) {
+  const item = taskPreview.value[idx]
+  if (item) {
+    const key = item.userId + '-' + item.skill
+    removedTaskKeys.value.add(key)
+  }
   taskPreview.value.splice(idx, 1)
+}
+
+function restoreTask(item) {
+  const key = item.userId + '-' + item.skill
+  removedTaskKeys.value.delete(key)
+  taskPreview.value.push(item)
 }
 
 async function handleCreateTasks() {
@@ -600,8 +703,8 @@ async function handleCreateTasks() {
   let success = 0
   for (const item of taskPreview.value) {
     try {
-      await createTask({
-        title: req.value.description || '任务',
+      const payload = {
+        title: item.description || req.value.description || '任务',
         description: item.notes || undefined,
         requirement_id: req.value.id,
         project_id: req.value.project_id,
@@ -610,14 +713,21 @@ async function handleCreateTasks() {
         terminal: item.skill,
         performance: item.performance || undefined,
         deadline: item.deadline ? new Date(item.deadline).toISOString() : undefined
-      })
+      }
+      if (item.id) {
+        await updateTask(item.id, payload)
+      } else {
+        await createTask(payload)
+      }
       success++
     } catch (e) { console.error(e) }
   }
-  window.$message?.success(`创建成功 ${success}/${taskPreview.value.length} 条`)
+  window.$message?.success(`保存成功 ${success}/${taskPreview.value.length} 条`)
   showCreateTask.value = false
   createTaskForm.value = { developer_ids: [] }
   taskPreview.value = []
+  devTaskCache.value = {}
+  removedTaskKeys.value = new Set()
   creatingTask.value = false
   await loadTasks()
 }
