@@ -131,44 +131,37 @@
         <div v-else class="empty-state">暂无文档</div>
       </section>
 
-      <!-- 任务看板（按人员分组） -->
+      <!-- 任务看板（平铺列表） -->
       <section v-if="authStore.isPM || authStore.isDevLead" class="section-card">
         <div class="section-header">
           <h3>开发任务进度 ({{ tasks.length }})</h3>
           <n-button type="primary" ghost round size="small" @click="openTaskDispatch">任务派发/修改</n-button>
         </div>
-        <div v-if="tasksByPerson.length > 0" class="person-board">
-          <div v-for="person in tasksByPerson" :key="person.id" class="person-card">
-            <div class="person-card-header">{{ person.name }}</div>
-            <div class="person-card-body">
-              <div v-for="t in person.tasks" :key="t.id" class="person-task-row">
-                <div class="person-task-top">
-                  <div class="person-task-title">{{ t.title }}</div>
-                  <div class="person-task-badges">
-                    <n-tag v-if="calcOverdueDays(t.deadline) > 0" type="error" size="tiny" round>逾期{{ calcOverdueDays(t.deadline) }}天</n-tag>
-                    <n-tag :type="taskStatusMeta[t.status]?.tone || 'default'" size="tiny" round>{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag>
-                  </div>
-                </div>
-                <div class="person-task-info">
-                  <n-tag size="tiny" type="info">{{ skillsMap[t.terminal] || t.terminal }}</n-tag>
-                  <span class="info-text">绩效 {{ t.performance || '-' }}</span>
-                  <span class="info-text">截止 {{ t.deadline ? formatDate2(t.deadline) : '-' }}</span>
-                </div>
-                <n-progress v-if="t.progress != null" type="line" :percentage="t.progress" :height="5" :border-radius="3"
-                  :color="t.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" />
-                <div class="person-task-actions">
-                  <template v-if="transferringTaskId === t.id">
-                    <n-select v-model:value="t.assignee_id" :options="devOptions" size="tiny" style="width:130px" filterable />
-                    <n-button size="tiny" type="primary" @click="confirmTransfer(t)">确定</n-button>
-                    <n-button size="tiny" @click="cancelTransfer">取消</n-button>
-                  </template>
-                  <template v-else>
-                    <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="warning" @click="startTransfer(t)">转让</n-button>
-                    <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteTask(t)">删除</n-button>
-                  </template>
-                </div>
-              </div>
-              <div v-if="!person.tasks.length" class="empty-state" style="padding:8px">暂无任务</div>
+        <div v-if="tasks.length > 0" class="task-list-flat">
+          <div v-for="t in tasks" :key="t.id" class="task-row-flat">
+            <div class="task-row-flat-main">
+              <span class="task-row-flat-assignee">{{ t.assignee?.name || userNameMap[t.assignee_id] || '-' }}</span>
+              <span class="task-row-flat-title">{{ t.title }}</span>
+              <n-tag size="tiny" type="info">{{ skillsMap[t.terminal] || t.terminal || '-' }}</n-tag>
+              <n-tag size="tiny" :type="taskStatusMeta[t.status]?.tone || 'default'">{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag>
+            </div>
+            <div class="task-row-flat-meta">
+              <n-progress v-if="t.progress != null" type="line" :percentage="t.progress" :height="4" :border-radius="2"
+                :color="t.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" style="width:120px" />
+              <span class="info-text">绩效 {{ t.performance || '-' }}</span>
+              <span class="info-text">截止 {{ t.deadline ? formatDate2(t.deadline) : '-' }}</span>
+              <n-tag v-if="calcOverdueDays(t.deadline) > 0" type="error" size="tiny" round>逾期{{ calcOverdueDays(t.deadline) }}天</n-tag>
+            </div>
+            <div class="task-row-flat-actions">
+              <template v-if="transferringTaskId === t.id">
+                <n-select v-model:value="t.assignee_id" :options="devOptions" size="tiny" style="width:120px" filterable />
+                <n-button size="tiny" type="primary" @click="confirmTransfer(t)">确定</n-button>
+                <n-button size="tiny" @click="cancelTransfer">取消</n-button>
+              </template>
+              <template v-else>
+                <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="warning" @click="startTransfer(t)">转让</n-button>
+                <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteTask(t)">删除</n-button>
+              </template>
             </div>
           </div>
         </div>
@@ -358,17 +351,6 @@ const userSkillMap = computed(() => {
   const map = {}
   for (const u of users.value) map[u.id] = u.skills ? u.skills.split(',').filter(Boolean) : []
   return map
-})
-
-const tasksByPerson = computed(() => {
-  const map = {}
-  for (const t of tasks.value) {
-    const uid = t.assignee?.id || t.assignee_id || t.creator?.id
-    if (!uid) continue
-    if (!map[uid]) map[uid] = { id: uid, name: t.assignee?.name || t.creator?.name || '未知', tasks: [] }
-    map[uid].tasks.push(t)
-  }
-  return Object.values(map)
 })
 
 function toggleDev(id) {
@@ -1252,95 +1234,66 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* Person Board */
-.person-board {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.person-card {
-  flex: 1;
-  min-width: 240px;
-  max-width: 320px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.person-card-header {
-  padding: 10px 14px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #0f172a;
-  background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.person-card-body {
-  padding: 10px 14px;
+/* Task Flat List */
+.task-list-flat {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.person-task-row {
-  padding: 10px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #f1f5f9;
-}
-
-.person-task-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   gap: 6px;
-  margin-bottom: 4px;
 }
-
-.person-task-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #0f172a;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.person-task-badges {
+.task-row-flat {
   display: flex;
-  gap: 4px;
-  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  transition: background 0.15s;
 }
-
-.person-task-info {
+.task-row-flat:hover {
+  background: #f1f5f9;
+}
+.task-row-flat-main {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
-  color: #64748b;
-  margin-bottom: 4px;
-  flex-wrap: wrap;
+  min-width: 0;
+  flex: 1;
 }
-
-.info-text {
+.task-row-flat-assignee {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6366f1;
+  white-space: nowrap;
+  width: 56px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.task-row-flat-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+.task-row-flat-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.task-row-flat-meta .info-text {
+  font-size: 11px;
   color: #64748b;
   white-space: nowrap;
 }
-
-.person-task-row .n-progress {
-  margin-bottom: 4px;
-}
-
-.person-task-actions {
+.task-row-flat-actions {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 2px;
+  flex-shrink: 0;
 }
 
 
