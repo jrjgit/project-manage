@@ -12,17 +12,7 @@
     </template>
 
     <div class="requirements-page">
-      <section class="hero-card">
-        <div>
-          <div class="hero-eyebrow">需求总览</div>
-          <h2 class="hero-title">需求清单</h2>
-        </div>
-        <div class="hero-meta">
-          <div class="meta-pill"><span class="meta-value">{{ allData.length }}</span><span class="meta-label">需求总数</span></div>
-          <div class="meta-pill"><span class="meta-value">{{ inProgressCount }}</span><span class="meta-label">开发中</span></div>
-          <div class="meta-pill"><span class="meta-value">{{ pendingReleaseCount }}</span><span class="meta-label">待发布</span></div>
-        </div>
-      </section>
+      <section class="section-card">
 
       <section class="section-card">
         <div class="filter-bar">
@@ -243,9 +233,6 @@ const filterSystemOptions = computed(() =>
   systems.value.map(s => ({ label: s.name, value: s.name }))
 )
 
-const inProgressCount = computed(() => allData.value.filter(r => r.status === 'in_progress').length)
-const pendingReleaseCount = computed(() => allData.value.filter(r => r.status === 'pending_release').length)
-
 const filteredData = computed(() => {
   const f = filters.value
   return allData.value.filter(r => {
@@ -413,19 +400,7 @@ onMounted(() => loadData())
 
 <style scoped>
 .requirements-page { display: flex; flex-direction: column; gap: 20px; }
-.hero-card {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;
-  padding: 28px 30px; border-radius: 24px;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #312e81 100%);
-  color: white; box-shadow: 0 18px 48px rgba(15,23,42,0.18);
-}
-.hero-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.72); margin-bottom: 12px; }
-.hero-title { margin: 0; font-size: 28px; font-weight: 700; line-height: 1.25; }
-.hero-subtitle { margin: 12px 0 0; max-width: 760px; font-size: 14px; line-height: 1.7; color: rgba(255,255,255,0.82); }
-.hero-meta { display: flex; gap: 12px; }
-.meta-pill { min-width: 92px; padding: 14px 16px; border-radius: 18px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(6px); }
-.meta-value { display: block; font-size: 24px; font-weight: 700; }
-.meta-label { display: block; margin-top: 4px; font-size: 12px; color: rgba(255,255,255,0.74); }
+
 .section-card { background: white; border-radius: 20px; border: 1px solid #e2e8f0; padding: 22px; }
 .filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .action-btn { border-radius: 10px; font-weight: 500; }
