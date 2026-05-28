@@ -320,11 +320,13 @@ public class TaskService {
         if (req.getDeadline() != null && !req.getDeadline().isBlank()) {
             String d = req.getDeadline().trim();
             if (d.contains("T")) {
-                task.setDeadline(LocalDateTime.parse(d, DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                task.setDeadline(java.time.OffsetDateTime.parse(d).toLocalDateTime());
             } else {
                 task.setDeadline(LocalDate.parse(d, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay());
             }
         }
+        if (req.getPerformance() != null) task.setPerformance(req.getPerformance());
+        if (req.getTerminal() != null) task.setTerminal(req.getTerminal());
         taskMapper.updateById(task);
 
         JwtUserDetails op = currentUser();
