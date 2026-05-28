@@ -224,7 +224,7 @@ function executeAction(action) {
 async function doChangeStatus(newStatus, comment) {
   actionLoading.value = true
   try {
-    await changeTaskStatus(props.taskId, { new_status: newStatus, comment })
+    await changeTaskStatus(props.taskId, { newStatus, comment })
     window.$message?.success('状态变更成功')
     emit('status-change', { taskId: props.taskId, newStatus, comment })
     emit('refresh')
