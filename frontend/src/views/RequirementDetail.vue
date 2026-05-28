@@ -102,7 +102,7 @@
 
       <!-- Notes -->
       <section class="section-card">
-        <div class="section-header"><h3>备注信息</h3></div>
+        <div class="section-header"><h3>项目经理备注</h3></div>
         <n-input v-model:value="localNotes" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" placeholder="添加备注..." @blur="saveNotes" />
       </section>
 
@@ -146,8 +146,8 @@
               <n-tag size="tiny" :type="taskStatusMeta[t.status]?.tone || 'default'">{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag>
             </div>
             <div class="task-row-flat-meta">
-              <n-progress v-if="t.progress != null" type="line" :percentage="t.progress" :height="4" :border-radius="2"
-                :color="t.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" style="width:120px" />
+              <n-progress v-if="t.progress != null" type="line" :percentage="t.progress" :height="8" :border-radius="4"
+                :color="t.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" style="width:140px" />
               <span class="info-text">绩效 {{ t.performance || '-' }}</span>
               <span class="info-text">截止 {{ t.deadline ? formatDate2(t.deadline) : '-' }}</span>
               <n-tag v-if="calcOverdueDays(t.deadline) > 0" type="error" size="tiny" round>逾期{{ calcOverdueDays(t.deadline) }}天</n-tag>
@@ -254,7 +254,7 @@
               <div class="preview-row-3">
                 <n-input v-model:value="item.performance" placeholder="绩效工时" size="small" />
                 <n-date-picker v-model:value="item.deadline" type="date" placeholder="计划完成时间" size="small" clearable style="width:100%" />
-                <n-input v-model:value="item.notes" type="textarea" :autosize="{ minRows: 2, maxRows: 5 }" placeholder="备注" />
+                <n-input v-model:value="item.notes" type="textarea" :autosize="{ minRows: 2, maxRows: 5 }" placeholder="技术经理备注" />
               </div>
             </div>
           </div>
