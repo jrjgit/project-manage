@@ -145,27 +145,26 @@
               <n-tag size="tiny" type="info">{{ skillsMap[t.terminal] || t.terminal || '-' }}</n-tag>
               <n-tag size="tiny" :type="taskStatusMeta[t.status]?.tone || 'default'">{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag>
             </div>
-            <div class="task-row-flat-desc">{{ t.description || t.requirement_desc || '' }}</div>
-            <div class="task-row-flat-bottom">
-              <div class="task-row-flat-meta">
-                <n-progress v-if="t.progress != null" type="line" :percentage="t.progress" :height="8" :border-radius="4"
-                  :color="t.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" style="width:140px" />
-                <span class="info-text">绩效 {{ t.performance || '-' }}</span>
-                <span class="info-text">截止 {{ t.deadline ? formatDate2(t.deadline) : '-' }}</span>
-                <n-tag v-if="calcOverdueDays(t.deadline) > 0" type="error" size="tiny" round>逾期{{ calcOverdueDays(t.deadline) }}天</n-tag>
-              </div>
-              <div class="task-row-flat-actions">
-                <template v-if="transferringTaskId === t.id">
-                  <n-select v-model:value="t.assignee_id" :options="devOptions" size="tiny" style="width:120px" filterable />
-                  <n-button size="tiny" type="primary" @click="confirmTransfer(t)">确定</n-button>
-                  <n-button size="tiny" @click="cancelTransfer">取消</n-button>
-                </template>
-                <template v-else>
-                  <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="warning" @click="startTransfer(t)">转让</n-button>
-                  <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteTask(t)">删除</n-button>
-                  <n-button text size="tiny" type="primary" @click="openProgressHistory(t)">进度</n-button>
-                </template>
-              </div>
+            <span class="task-row-flat-desc">{{ t.description || t.requirement_desc || '' }}</span>
+            <span style="flex:1;min-width:0"></span>
+            <div class="task-row-flat-meta">
+              <n-progress v-if="t.progress != null" type="line" :percentage="t.progress" :height="8" :border-radius="4"
+                :color="t.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" style="width:140px" />
+              <span class="info-text">绩效 {{ t.performance || '-' }}</span>
+              <span class="info-text">截止 {{ t.deadline ? formatDate2(t.deadline) : '-' }}</span>
+              <n-tag v-if="calcOverdueDays(t.deadline) > 0" type="error" size="tiny" round>逾期{{ calcOverdueDays(t.deadline) }}天</n-tag>
+            </div>
+            <div class="task-row-flat-actions">
+              <template v-if="transferringTaskId === t.id">
+                <n-select v-model:value="t.assignee_id" :options="devOptions" size="tiny" style="width:120px" filterable />
+                <n-button size="tiny" type="primary" @click="confirmTransfer(t)">确定</n-button>
+                <n-button size="tiny" @click="cancelTransfer">取消</n-button>
+              </template>
+              <template v-else>
+                <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="warning" @click="startTransfer(t)">转让</n-button>
+                <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteTask(t)">删除</n-button>
+                <n-button text size="tiny" type="primary" @click="openProgressHistory(t)">进度</n-button>
+              </template>
             </div>
           </div>
         </div>
@@ -694,6 +693,7 @@ async function saveAssignDevLead() {
 }
 
 async function loadTasks() {
+  tasks.value = []
   const id = route.params.id
   if (!id) return
   try {
@@ -1287,8 +1287,8 @@ onMounted(() => {
 }
 .task-row-flat {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 12px;
   padding: 10px 14px;
   background: #f8fafc;
   border: 1px solid #f1f5f9;
@@ -1329,7 +1329,8 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 400px;
+  max-width: 240px;
+  flex-shrink: 0;
 }
 .task-row-flat-meta {
   display: flex;
@@ -1347,12 +1348,6 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-}
-.task-row-flat-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
 }
 
 

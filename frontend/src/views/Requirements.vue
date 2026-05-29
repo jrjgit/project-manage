@@ -49,7 +49,7 @@
           </n-gi>
         </n-grid>
         <n-form-item label="需求描述" path="description" :rule="{ required: true, message: '请输入需求描述' }">
-          <n-input v-model:value="form.description" placeholder="输入需求描述" />
+          <n-input v-model:value="form.description" type="textarea" :autosize="{ minRows: 3, maxRows: 6 }" placeholder="输入需求描述" />
         </n-form-item>
         <n-grid :cols="2" :x-gap="16">
           <n-gi>
@@ -255,6 +255,7 @@ const columns = [
       }, row.number || `REQ-${String(row.id).padStart(4, '0')}`)
     }
   },
+  { title: '所属系统', key: 'system', width: 100, render(row) { return row.system || '-' } },
   { title: '需求描述', key: 'description', ellipsis: { tooltip: true }, minWidth: 200 },
   {
     title: '状态', key: 'status', width: 100,
