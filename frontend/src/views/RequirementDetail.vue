@@ -135,11 +135,16 @@
       <section v-if="authStore.isPM || authStore.isDevLead" class="section-card">
         <div class="section-header">
           <h3>开发任务整体进度</h3>
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:12px;color:#64748b;white-space:nowrap">{{ tasks.length }}项 · 完成{{ doneTasks }}</span>
-            <n-progress type="circle" :percentage="overallDevProgress" :width="32" :stroke-width="4"
+          <n-button type="primary" ghost round size="small" @click="openTaskDispatch">任务派发/修改</n-button>
+        </div>
+        <div class="bug-stat-grid" style="margin-bottom:16px;cursor:default">
+          <div class="bug-stat-item"><span class="bug-stat-value">{{ tasks.length }}</span><span class="bug-stat-label">任务总数</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#18a058">{{ doneTasks }}</span><span class="bug-stat-label">已完成</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#f59e0b">{{ developingTasks }}</span><span class="bug-stat-label">开发中</span></div>
+          <div class="bug-stat-item">
+            <n-progress type="circle" :percentage="overallDevProgress" :width="60" :stroke-width="5"
               :color="overallDevProgress >= 100 ? '#18a058' : '#6366f1'" />
-            <n-button type="primary" ghost round size="small" @click="openTaskDispatch">任务派发/修改</n-button>
+            <span class="bug-stat-label">整体进度</span>
           </div>
         </div>
         <div v-if="tasks.length > 0" class="task-list-flat">
@@ -512,6 +517,7 @@ const overallDevProgress = computed(() => {
   return Math.round(total / tasks.value.length)
 })
 const doneTasks = computed(() => tasks.value.filter(t => t.status === 'closed' || t.progress >= 100).length)
+const developingTasks = computed(() => tasks.value.filter(t => t.status === 'developing').length)
 
 const terminalDevProgress = computed(() => {
   if (!req.value.dev_progress?.terminals) return []
