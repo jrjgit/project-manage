@@ -13,6 +13,9 @@
       <n-form-item label="严重程度" path="severity">
         <n-select v-model:value="form.severity" :options="severityOptions" />
       </n-form-item>
+      <n-form-item label="测试类型" path="test_type">
+        <n-select v-model:value="form.test_type" :options="testTypeOptions" />
+      </n-form-item>
       <n-form-item label="指派给" path="assignee_id">
         <n-select v-model:value="form.assignee_id" :options="bugDevOptions" placeholder="选择修复人" />
       </n-form-item>
@@ -44,6 +47,7 @@ const form = ref({
   description: '',
   task_id: null,
   severity: 'medium',
+  test_type: 'integration',
   assignee_id: null
 })
 
@@ -81,9 +85,15 @@ const severityOptions = [
   { label: '紧急', value: 'critical' }
 ]
 
+const testTypeOptions = [
+  { label: '综合测试', value: 'integration' },
+  { label: '业务测试', value: 'business' },
+  { label: 'IT测试', value: 'it_test' }
+]
+
 watch(show, async (val) => {
   if (val) {
-    form.value = { title: '', description: '', task_id: null, severity: 'medium', assignee_id: null }
+    form.value = { title: '', description: '', task_id: null, severity: 'medium', test_type: 'integration', assignee_id: null }
     try {
       tasks.value = await getTasks()
       users.value = await getUsers()
