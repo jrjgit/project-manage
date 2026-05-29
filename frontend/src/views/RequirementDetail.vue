@@ -134,8 +134,18 @@
       <!-- 任务看板（平铺列表） -->
       <section v-if="authStore.isPM || authStore.isDevLead" class="section-card">
         <div class="section-header">
-          <h3>开发任务进度 ({{ tasks.length }})</h3>
+          <h3>开发任务整体进度</h3>
           <n-button type="primary" ghost round size="small" @click="openTaskDispatch">任务派发/修改</n-button>
+        </div>
+        <div class="bug-stat-grid" style="margin-bottom:16px;cursor:default">
+          <div class="bug-stat-item"><span class="bug-stat-value">{{ tasks.length }}</span><span class="bug-stat-label">任务总数</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#18a058">{{ doneTasks }}</span><span class="bug-stat-label">已完成</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#f59e0b">{{ developingTasks }}</span><span class="bug-stat-label">开发中</span></div>
+          <div class="bug-stat-item">
+            <n-progress type="circle" :percentage="overallDevProgress" :width="60" :stroke-width="5"
+              :color="overallDevProgress >= 100 ? '#18a058' : '#6366f1'" />
+            <span class="bug-stat-label">整体进度</span>
+          </div>
         </div>
         <div v-if="tasks.length > 0" class="task-list-flat">
           <div v-for="t in tasks" :key="t.id" class="task-row-flat">
@@ -195,7 +205,7 @@
 
       <!-- Integration Test Progress -->
       <section class="section-card">
-        <div class="section-header"><h3>综合测试进度</h3></div>
+        <div class="section-header"><h3>综合测试整体进度</h3></div>
         <div class="bug-stat-grid" @click="showIntegrationBugs = !showIntegrationBugs">
           <div class="bug-stat-item"><span class="bug-stat-value">{{ integrationBugStats.total }}</span><span class="bug-stat-label">Bug 总数</span></div>
           <div class="bug-stat-item"><span class="bug-stat-value" style="color:#18a058">{{ integrationBugStats.closed }}</span><span class="bug-stat-label">已关闭</span></div>
@@ -212,7 +222,7 @@
 
       <!-- Business Test Progress -->
       <section class="section-card">
-        <div class="section-header"><h3>业务测试进度</h3></div>
+        <div class="section-header"><h3>业务测试整体进度</h3></div>
         <div class="bug-stat-grid" @click="showBusinessBugs = !showBusinessBugs">
           <div class="bug-stat-item"><span class="bug-stat-value">{{ businessBugStats.total }}</span><span class="bug-stat-label">Bug 总数</span></div>
           <div class="bug-stat-item"><span class="bug-stat-value" style="color:#18a058">{{ businessBugStats.closed }}</span><span class="bug-stat-label">已关闭</span></div>
@@ -229,7 +239,7 @@
 
       <!-- IT Test Progress -->
       <section class="section-card">
-        <div class="section-header"><h3>IT测试进度</h3></div>
+        <div class="section-header"><h3>IT测试整体进度</h3></div>
         <div class="bug-stat-grid" @click="showItBugs = !showItBugs">
           <div class="bug-stat-item"><span class="bug-stat-value">{{ itBugStats.total }}</span><span class="bug-stat-label">Bug 总数</span></div>
           <div class="bug-stat-item"><span class="bug-stat-value" style="color:#18a058">{{ itBugStats.closed }}</span><span class="bug-stat-label">已关闭</span></div>
@@ -500,6 +510,14 @@ const statusOptions = Object.entries(requirementStatusMeta).map(([value, meta]) 
 const iterationOptions = computed(() => {
   return iterations.value.map((it) => ({ label: it.name, value: String(it.id) }))
 })
+
+const overallDevProgress = computed(() => {
+  if (!tasks.value.length) return 0
+  const total = tasks.value.reduce((s, t) => s + (t.progress || 0), 0)
+  return Math.round(total / tasks.value.length)
+})
+const doneTasks = computed(() => tasks.value.filter(t => t.status === 'closed' || t.progress >= 100).length)
+const developingTasks = computed(() => tasks.value.filter(t => t.status === 'developing').length)
 
 const terminalDevProgress = computed(() => {
   if (!req.value.dev_progress?.terminals) return []
