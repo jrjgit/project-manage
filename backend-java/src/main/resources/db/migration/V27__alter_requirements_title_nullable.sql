@@ -1,0 +1,1 @@
+ALTER TABLE requirements MODIFY title VARCHAR(255) NULL COMMENT '需求标题';

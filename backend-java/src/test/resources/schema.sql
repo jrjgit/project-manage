@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS requirements (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     requirement_id VARCHAR(128) NOT NULL,
     number VARCHAR(128) NOT NULL,
-    title VARCHAR(128) NOT NULL,
+    title VARCHAR(128) NULL,
     description TEXT,
     status VARCHAR(50) NOT NULL DEFAULT 'planned',
     priority VARCHAR(20) DEFAULT 'medium',
