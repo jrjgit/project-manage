@@ -36,6 +36,7 @@ public class TaskService {
     private final TaskMapper taskMapper;
     private final TaskAssigneeMapper taskAssigneeMapper;
     private final TaskStatusHistoryMapper historyMapper;
+    private final TaskProgressHistoryMapper progressHistoryMapper;
     private final UserMapper userMapper;
     private final ProjectMapper projectMapper;
     private final WorkflowService workflowService;
@@ -120,6 +121,18 @@ public class TaskService {
                         .orderByDesc(TaskStatusHistory::getChangedAt));
         for (TaskStatusHistory h : list) {
             h.setUser(userMapper.selectById(h.getChangedBy()));
+        }
+        return list;
+    }
+
+    /** 获取任务进度上报历史 */
+    public List<TaskProgressHistory> getProgressHistory(Long id) {
+        List<TaskProgressHistory> list = progressHistoryMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TaskProgressHistory>()
+                        .eq(TaskProgressHistory::getTaskId, id)
+                        .orderByDesc(TaskProgressHistory::getCreatedAt));
+        for (TaskProgressHistory h : list) {
+            if (h.getCreatedBy() != null) h.setUser(userMapper.selectById(h.getCreatedBy()));
         }
         return list;
     }
@@ -327,6 +340,18 @@ public class TaskService {
         }
         if (req.getPerformance() != null) task.setPerformance(req.getPerformance());
         if (req.getTerminal() != null) task.setTerminal(req.getTerminal());
+        if (req.getProgress() != null) {
+            Integer oldProgress = task.getProgress();
+            task.setProgress(req.getProgress());
+            if (!req.getProgress().equals(oldProgress)) {
+                TaskProgressHistory ph = new TaskProgressHistory();
+                ph.setTaskId(id);
+                ph.setProgress(req.getProgress());
+                ph.setComment(req.getDescription());
+                ph.setCreatedBy(currentUser().getUserId());
+                progressHistoryMapper.insert(ph);
+            }
+        }
         taskMapper.updateById(task);
 
         JwtUserDetails op = currentUser();

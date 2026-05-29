@@ -7,6 +7,7 @@ import com.management.task.dto.CreateTaskRequest;
 import com.management.task.dto.UpdateTaskRequest;
 import com.management.task.entity.Task;
 import com.management.task.entity.TaskAssignee;
+import com.management.task.entity.TaskProgressHistory;
 import com.management.task.entity.TaskStatusHistory;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +59,11 @@ public class TaskController {
     @GetMapping("/{id}/history")
     public Result<List<TaskStatusHistory>> history(@PathVariable Long id) {
         return Result.ok(taskService.getTaskHistory(id));
+    }
+
+    @GetMapping("/{id}/progress-history")
+    public Result<List<TaskProgressHistory>> progressHistory(@PathVariable Long id) {
+        return Result.ok(taskService.getProgressHistory(id));
     }
 
     @PostMapping("/{id}/assignees")

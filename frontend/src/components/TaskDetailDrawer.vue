@@ -52,6 +52,18 @@
           </div>
         </section>
 
+        <section v-if="canReportProgress" class="section-card">
+          <div class="section-title">上报进度</div>
+          <div style="margin-top:12px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <n-slider v-model:value="reportProgress" :min="0" :max="100" :step="1" style="flex:1" />
+              <span style="font-size:15px;font-weight:700;color:#6366f1;min-width:40px;text-align:right">{{ reportProgress }}%</span>
+            </div>
+            <n-input v-model:value="progressComment" type="textarea" :autosize="{ minRows: 1, maxRows: 3 }" placeholder="备注（可选）" style="margin-top:8px" />
+            <n-button type="primary" size="small" style="margin-top:8px" :loading="submittingProgress" @click="submitProgress">提交进度</n-button>
+          </div>
+        </section>
+
         <section class="detail-grid">
           <div class="section-card">
             <div class="section-title">任务摘要</div>
@@ -113,7 +125,7 @@ import { getTask, getTaskHistory, changeTaskStatus, updateTask } from '@/api/tas
 import { getRequirement, downloadRequirementDocument } from '@/api/requirements'
 import { getUsers } from '@/api/users'
 import { priorityMeta, taskStatusMeta } from '@/constants/statusMeta'
-import { NDrawer, NDrawerContent, NTag, NButton, NTimeline, NTimelineItem, NSelect } from 'naive-ui'
+import { NDrawer, NDrawerContent, NTag, NButton, NTimeline, NTimelineItem, NSelect, NSlider } from 'naive-ui'
 
 const show = defineModel('show', { type: Boolean, default: false })
 const props = defineProps({ taskId: Number })
@@ -127,6 +139,9 @@ const selectedTester = ref(null)
 const selectedDevLead = ref(null)
 const actionLoading = ref(false)
 const reqDoc = ref(null)
+const reportProgress = ref(0)
+const progressComment = ref('')
+const submittingProgress = ref(false)
 
 const statusMeta = computed(() => taskStatusMeta[task.value?.status] || { label: task.value?.status || '-', tone: 'default' })
 const priorityMetaItem = computed(() => priorityMeta[task.value?.priority] || { label: task.value?.priority || '-', tone: 'default' })
@@ -161,6 +176,14 @@ const availableActions = computed(() => {
   return actions
 })
 const actionGroups = computed(() => availableActions.value.length ? [{ title: '状态推进', actions: availableActions.value }] : [])
+
+const canReportProgress = computed(() => {
+  const status = task.value?.status
+  const role = authStore.userInfo?.role
+  const myId = authStore.userInfo?.id
+  const isMyTask = task.value?.assignee_id === myId
+  return status === 'developing' && (['dev', 'dev_lead'].includes(role) && isMyTask || role === 'pm')
+})
 
 watch([() => props.taskId, show], async ([id, visible]) => {
   if (id && visible) { await loadDetail(); await loadHistory(); await loadUsers() }
@@ -224,7 +247,7 @@ function executeAction(action) {
 async function doChangeStatus(newStatus, comment) {
   actionLoading.value = true
   try {
-    await changeTaskStatus(props.taskId, { newStatus, comment })
+    await changeTaskStatus(props.taskId, { new_status: newStatus, comment })
     window.$message?.success('状态变更成功')
     emit('status-change', { taskId: props.taskId, newStatus, comment })
     emit('refresh')
@@ -232,6 +255,18 @@ async function doChangeStatus(newStatus, comment) {
     await loadHistory()
   } catch (e) { console.error(e) }
   actionLoading.value = false
+}
+
+async function submitProgress() {
+  if (reportProgress.value < 0 || reportProgress.value > 100) { window.$message?.warning('进度范围为0-100'); return }
+  submittingProgress.value = true
+  try {
+    await updateTask(props.taskId, { progress: reportProgress.value, description: progressComment.value || undefined })
+    window.$message?.success('进度已上报')
+    if (task.value) task.value.progress = reportProgress.value
+    emit('refresh')
+  } catch (e) { console.error(e) }
+  submittingProgress.value = false
 }
 
 function formatHistory(history) {

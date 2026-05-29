@@ -161,12 +161,35 @@
               <template v-else>
                 <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="warning" @click="startTransfer(t)">转让</n-button>
                 <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteTask(t)">删除</n-button>
+                <n-button text size="tiny" type="primary" @click="openProgressHistory(t)">进度</n-button>
               </template>
             </div>
           </div>
         </div>
         <div v-else class="empty-state">暂无任务</div>
       </section>
+
+      <!-- Progress History Modal -->
+      <n-modal v-model:show="showProgressHistory" preset="card" style="width:500px" title="进度历史" :mask-closable="false">
+        <div v-if="progressHistoryTask" style="margin-bottom:12px;font-size:13px;color:#64748b">
+          任务：{{ progressHistoryTask.title }}（{{ progressHistoryTask.assignee?.name || userNameMap[progressHistoryTask.assignee_id] || '-' }}）
+        </div>
+        <div v-if="progressRecords.length === 0" class="empty-state">暂无进度上报记录</div>
+        <n-timeline v-else>
+          <n-timeline-item v-for="rec in progressRecords" :key="rec.id" type="info">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:15px;font-weight:700;color:#6366f1">{{ rec.progress }}%</span>
+              <span v-if="rec.comment" style="font-size:13px;color:#334155">{{ rec.comment }}</span>
+            </div>
+            <div style="font-size:12px;color:#94a3b8;margin-top:4px">{{ rec.user?.name || '未知' }} · {{ formatTime(rec.created_at) }}</div>
+          </n-timeline-item>
+        </n-timeline>
+        <template #footer>
+          <n-space justify="end">
+            <n-button @click="showProgressHistory = false">关闭</n-button>
+          </n-space>
+        </template>
+      </n-modal>
 
       <!-- Integration Test Progress -->
       <section class="section-card">
@@ -292,7 +315,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getUsers } from '@/api/users'
-import { getTasks, createTask, updateTask, deleteTask } from '@/api/tasks'
+import { getTasks, createTask, updateTask, deleteTask, getTaskProgressHistory } from '@/api/tasks'
 import {
   getRequirement,
   updateRequirement,
@@ -308,7 +331,7 @@ import { getDictionaries } from '@/api/dictionaries'
 import { requirementStatusMeta } from '@/constants/requirementMeta'
 import { priorityMeta, taskStatusMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
-import { NButton, NModal, NInput, NSelect, NSpace, NTag, NProgress, NUpload, NForm, NFormItem, NDatePicker, NTransfer } from 'naive-ui'
+import { NButton, NModal, NInput, NSelect, NSpace, NTag, NProgress, NUpload, NForm, NFormItem, NDatePicker, NTransfer, NTimeline, NTimelineItem } from 'naive-ui'
 
 const route = useRoute()
 const router = useRouter()
@@ -821,6 +844,25 @@ async function handleCreateTasks() {
   pendingDeleteTaskIds.value = []
   creatingTask.value = false
   await loadTasks()
+}
+
+const showProgressHistory = ref(false)
+const progressHistoryTask = ref(null)
+const progressRecords = ref([])
+
+async function openProgressHistory(t) {
+  progressHistoryTask.value = t
+  progressRecords.value = []
+  showProgressHistory.value = true
+  try {
+    progressRecords.value = await getTaskProgressHistory(t.id) || []
+  } catch (e) { console.error(e) }
+}
+
+function formatTime(value) {
+  if (!value) return ''
+  const d = new Date(value)
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
 
 function startTransfer(t) {

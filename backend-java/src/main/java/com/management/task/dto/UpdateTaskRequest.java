@@ -17,4 +17,5 @@ public class UpdateTaskRequest {
     private Long requirementId;
     private Long featureId;
     private String terminal;
+    private Integer progress;
 }
