@@ -42,6 +42,7 @@ public class RequirementDetailDTO {
     private DevProgress devProgress;
     private List<Bug> integrationTestBugs;
     private List<Bug> businessTestBugs;
+    private List<Bug> itTestBugs;
 
     @Data
     public static class DevProgress {

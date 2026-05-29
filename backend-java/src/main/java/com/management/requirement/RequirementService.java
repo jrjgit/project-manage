@@ -203,6 +203,10 @@ public class RequirementService {
                 new LambdaQueryWrapper<Bug>()
                         .eq(Bug::getRequirementId, id)
                         .eq(Bug::getTestType, "business")));
+        dto.setItTestBugs(bugMapper.selectList(
+                new LambdaQueryWrapper<Bug>()
+                        .eq(Bug::getRequirementId, id)
+                        .eq(Bug::getTestType, "it_test")));
 
         return dto;
     }
@@ -321,6 +325,12 @@ public class RequirementService {
         long businessClosed = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
                 .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "business").eq(Bug::getStatus, "closed"));
         r.setBusinessTestProgress(businessTotal > 0 ? (int) (businessClosed * 100 / businessTotal) : 0);
+
+        long itTotal = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
+                .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "it_test"));
+        long itClosed = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
+                .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "it_test").eq(Bug::getStatus, "closed"));
+        r.setItTestProgress(itTotal > 0 ? (int) (itClosed * 100 / itTotal) : 0);
     }
 
     private RequirementDetailDTO toDetailDTO(Requirement r) {

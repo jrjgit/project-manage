@@ -226,6 +226,23 @@
           </div>
         </div>
       </section>
+
+      <!-- IT Test Progress -->
+      <section class="section-card">
+        <div class="section-header"><h3>IT测试进度</h3></div>
+        <div class="bug-stat-grid" @click="showItBugs = !showItBugs">
+          <div class="bug-stat-item"><span class="bug-stat-value">{{ itBugStats.total }}</span><span class="bug-stat-label">Bug 总数</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#18a058">{{ itBugStats.closed }}</span><span class="bug-stat-label">已关闭</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#f59e0b">{{ itBugStats.fixing }}</span><span class="bug-stat-label">修复中</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#d03050">{{ itBugStats.pending }}</span><span class="bug-stat-label">待验证</span></div>
+        </div>
+        <div v-if="showItBugs && itBugs.length" class="bug-list">
+          <div v-for="bug in itBugs" :key="bug.id" class="bug-item">
+            <span class="bug-name">{{ bug.title }}</span>
+            <n-tag :type="bug.status === 'closed' ? 'success' : 'warning'" size="tiny" round>{{ bug.status }}</n-tag>
+          </div>
+        </div>
+      </section>
     </div>
 
     <!-- Create Task Modal -->
@@ -459,6 +476,7 @@ async function openTaskDispatch() {
 }
 const showIntegrationBugs = ref(false)
 const showBusinessBugs = ref(false)
+const showItBugs = ref(false)
 const showIterationSelector = ref(false)
 const selectedIterationId = ref(null)
 const releasing = ref(false)
@@ -514,6 +532,18 @@ const businessBugStats = computed(() => {
 })
 
 const businessBugs = computed(() => req.value.business_test_bugs || [])
+
+const itBugStats = computed(() => {
+  const bugs = req.value.it_test_bugs || []
+  return {
+    total: bugs.length,
+    closed: bugs.filter((b) => b.status === 'closed').length,
+    fixing: bugs.filter((b) => b.status === 'fixing' || b.status === 'assigned').length,
+    pending: bugs.filter((b) => b.status === 'pending_verify').length
+  }
+})
+
+const itBugs = computed(() => req.value.it_test_bugs || [])
 
 function startEdit(field) {
   if (!authStore.isPM) return

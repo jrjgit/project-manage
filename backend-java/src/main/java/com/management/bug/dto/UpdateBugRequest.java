@@ -11,4 +11,5 @@ public class UpdateBugRequest {
     private Long assigneeId;
     private String fixComment;
     private String reopenReason;
+    private String testType;
 }

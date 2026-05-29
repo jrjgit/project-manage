@@ -92,6 +92,7 @@ public class BugService {
         bug.setTaskId(req.getTaskId());
         bug.setCreatorId(userId);
         bug.setAssigneeId(req.getAssigneeId());
+        bug.setTestType(req.getTestType() != null ? req.getTestType() : "integration");
         bugMapper.insert(bug);
 
         fillAssociations(bug);
@@ -137,6 +138,7 @@ public class BugService {
         }
         if (req.getFixComment() != null) bug.setFixComment(req.getFixComment());
         if (req.getReopenReason() != null) bug.setReopenReason(req.getReopenReason());
+        if (req.getTestType() != null) bug.setTestType(req.getTestType());
         bugMapper.updateById(bug);
 
         // assignee_id 变化时通知新指派人

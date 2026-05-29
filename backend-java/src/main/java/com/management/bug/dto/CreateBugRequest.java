@@ -11,4 +11,5 @@ public class CreateBugRequest {
     private String severity;
     @NotNull private Long taskId;
     @NotNull private Long assigneeId;
+    private String testType;
 }

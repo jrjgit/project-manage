@@ -57,4 +57,6 @@ public class Requirement {
     private Integer integrationTestProgress;
     @TableField(exist = false)
     private Integer businessTestProgress;
+    @TableField(exist = false)
+    private Integer itTestProgress;
 }
