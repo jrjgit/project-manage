@@ -63,6 +63,7 @@ public class DataInitializer implements ApplicationRunner {
             rule("task", "pm",          "testing",     "closed"),
             rule("task", "pm",          "testing",     "developing"),
             rule("task", "dev_lead",    "pending",     "developing"),
+            rule("task", "dev_lead",    "developing",  "testing"),
             rule("task", "dev",         "pending",     "developing"),
             rule("task", "dev",         "developing",  "testing"),
             rule("task", "tester_lead", "pending",     "testing"),
