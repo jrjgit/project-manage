@@ -59,4 +59,6 @@ public class Requirement {
     private Integer businessTestProgress;
     @TableField(exist = false)
     private Integer itTestProgress;
+    @TableField(exist = false)
+    private Integer testProgress;
 }

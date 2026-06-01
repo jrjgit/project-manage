@@ -310,9 +310,22 @@ public class RequirementService {
     private void fillProgress(Requirement r) {
         List<Task> tasks = taskMapper.selectList(
                 new LambdaQueryWrapper<Task>().eq(Task::getRequirementId, r.getId()));
-        int avgProgress = (int) Math.round(tasks.stream()
-                .mapToInt(t -> t.getProgress() != null ? t.getProgress() : 0).average().orElse(0));
-        r.setDevProgress(avgProgress);
+        if (tasks.isEmpty()) {
+            r.setDevProgress(null);
+        } else {
+            double weightedSum = 0;
+            double totalPerformance = 0;
+            for (Task t : tasks) {
+                double perf = 1;
+                if (t.getPerformance() != null) {
+                    try { perf = Double.parseDouble(t.getPerformance()); } catch (NumberFormatException e) { perf = 1; }
+                }
+                double prog = t.getProgress() != null ? t.getProgress() : 0;
+                weightedSum += perf * prog;
+                totalPerformance += perf;
+            }
+            r.setDevProgress(totalPerformance > 0 ? (int) Math.round(weightedSum / totalPerformance) : 0);
+        }
 
         long integrationTotal = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
                 .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "integration"));
@@ -331,6 +344,10 @@ public class RequirementService {
         long itClosed = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
                 .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "it_test").eq(Bug::getStatus, "closed"));
         r.setItTestProgress(itTotal > 0 ? (int) (itClosed * 100 / itTotal) : 0);
+
+        long totalBugs = integrationTotal + businessTotal + itTotal;
+        long totalClosed = integrationClosed + businessClosed + itClosed;
+        r.setTestProgress(totalBugs > 0 ? (int) (totalClosed * 100 / totalBugs) : null);
     }
 
     private RequirementDetailDTO toDetailDTO(Requirement r) {
