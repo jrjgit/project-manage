@@ -69,7 +69,8 @@
 import { ref, computed, h, onMounted } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getIterations, createIteration, updateIteration, deleteIteration } from '@/api/iterations'
-import { getRequirements } from '@/api/requirements'
+import { getTasks } from '@/api/tasks'
+import { taskStatusMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
 import { NButton, NDataTable, NModal, NForm, NFormItem, NInput, NDatePicker, NSpace, NTag } from 'naive-ui'
 
@@ -84,7 +85,7 @@ const showDeleteConfirm = ref(false)
 const deleting = ref(false)
 const deletingId = ref(null)
 const form = ref({ name: '', releaseTime: null, notes: '', release_notes: '' })
-const expandedRequirements = ref({})
+const expandedTasks = ref({})
 
 function formatDate(ts) {
   if (!ts) return '-'
@@ -162,34 +163,35 @@ async function loadIterations() {
   }
 }
 
-async function loadRequirementsForIteration(iterationId) {
-  if (expandedRequirements.value[iterationId]) return
+async function loadTasksForIteration(iterationId) {
+  if (expandedTasks.value[iterationId]) return
   try {
-    const data = await getRequirements({ iteration_id: iterationId })
-    expandedRequirements.value[iterationId] = data
+    const data = await getTasks({ iteration_id: iterationId })
+    expandedTasks.value[iterationId] = data || []
   } catch (e) {
-    expandedRequirements.value[iterationId] = []
+    expandedTasks.value[iterationId] = []
   }
 }
 
 function expandedRowRender(row) {
-  const reqs = expandedRequirements.value[row.id]
-  if (!reqs) {
-    loadRequirementsForIteration(row.id)
+  const tasks = expandedTasks.value[row.id]
+  if (!tasks) {
+    loadTasksForIteration(row.id)
     return h('div', { style: { padding: '12px', color: '#94a3b8', fontSize: '13px' } }, '加载中...')
   }
-  if (reqs.length === 0) {
-    return h('div', { style: { padding: '12px', color: '#94a3b8', fontSize: '13px' } }, '暂无关联需求')
+  if (tasks.length === 0) {
+    return h('div', { style: { padding: '12px', color: '#94a3b8', fontSize: '13px' } }, '暂无关联任务')
   }
   return h('div', { style: { padding: '8px 12px' } }, [
-    h('div', { style: { fontWeight: 600, fontSize: '13px', color: '#64748b', marginBottom: '8px' } }, '关联需求'),
-    ...reqs.map(req =>
+    h('div', { style: { fontWeight: 600, fontSize: '13px', color: '#64748b', marginBottom: '8px' } }, '关联任务'),
+    ...tasks.map(task =>
       h('div', {
         style: { display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #f1f5f9', fontSize: '13px' }
       }, [
-        h('span', { style: { color: '#6366f1', fontWeight: 600, minWidth: '80px' } }, `REQ-${String(req.id).padStart(4, '0')}`),
-        h('span', { style: { flex: 1 } }, req.title),
-        h(NTag, { size: 'tiny', round: true, type: req.status === 'released' ? 'success' : 'info' }, { default: () => req.status })
+        h('span', { style: { color: '#6366f1', fontWeight: 600, minWidth: '60px' } }, `#${task.id}`),
+        h('span', { style: { flex: 1 } }, task.title),
+        h('span', { style: { color: '#64748b', minWidth: '80px' } }, task.assignee?.name || '-'),
+        h(NTag, { size: 'tiny', round: true, type: (taskStatusMeta[task.status]?.tone || 'default') }, { default: () => taskStatusMeta[task.status]?.label || task.status })
       ])
     )
   ])

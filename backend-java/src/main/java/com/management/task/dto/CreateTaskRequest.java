@@ -24,6 +24,7 @@ public class CreateTaskRequest {
     private Long requirementId;
     private Long featureId;
     private String terminal;
+    private String iterationId;
 
     @Data
     public static class TaskAssigneeItem {

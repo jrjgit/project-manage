@@ -49,7 +49,7 @@ public class TaskService {
     }
 
     /** 按角色过滤查询任务列表 */
-    public List<Task> listTasks(String projectId, String status, String priority, String requirementId) {
+    public List<Task> listTasks(String projectId, String status, String priority, String requirementId, String iterationId) {
         JwtUserDetails u = currentUser();
         LambdaQueryWrapper<Task> q = new LambdaQueryWrapper<>();
 
@@ -85,6 +85,7 @@ public class TaskService {
         if (status != null && !status.isBlank()) q.eq(Task::getStatus, status);
         if (priority != null && !priority.isBlank()) q.eq(Task::getPriority, priority);
         if (requirementId != null && !requirementId.isBlank()) q.eq(Task::getRequirementId, requirementId);
+        if (iterationId != null && !iterationId.isBlank()) q.eq(Task::getIterationId, iterationId);
         applyProjectScopeFilter(u, q);
 
         q.orderByDesc(Task::getUpdatedAt);
@@ -230,6 +231,7 @@ public class TaskService {
         if (req.getTesterId() != null) task.setTesterId(req.getTesterId());
         if (req.getRequirementId() != null) task.setRequirementId(req.getRequirementId());
         if (req.getTerminal() != null) task.setTerminal(req.getTerminal());
+        if (req.getIterationId() != null) task.setIterationId(req.getIterationId());
         taskMapper.insert(task);
 
         // 处理多指派人
@@ -351,6 +353,10 @@ public class TaskService {
                 ph.setCreatedBy(currentUser().getUserId());
                 progressHistoryMapper.insert(ph);
             }
+        }
+        if (req.getIterationId() != null) {
+            if (req.getIterationId().isBlank()) task.setIterationId(null);
+            else task.setIterationId(req.getIterationId());
         }
         taskMapper.updateById(task);
 

@@ -28,8 +28,9 @@ public class TaskController {
     public Result<List<Task>> list(@RequestParam(required = false) String projectId,
                                     @RequestParam(required = false) String status,
                                     @RequestParam(required = false) String priority,
-                                    @RequestParam(name = "requirement_id", required = false) String requirementId) {
-        return Result.ok(taskService.listTasks(projectId, status, priority, requirementId));
+                                    @RequestParam(name = "requirement_id", required = false) String requirementId,
+                                    @RequestParam(name = "iteration_id", required = false) String iterationId) {
+        return Result.ok(taskService.listTasks(projectId, status, priority, requirementId, iterationId));
     }
 
     @PostMapping

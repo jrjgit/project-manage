@@ -27,9 +27,6 @@
           </div>
         </div>
         <div class="header-actions">
-          <n-button v-if="authStore.isPM && !req.iteration_id" size="small" type="primary" ghost @click="showIterationSelector = true">纳入发布清单</n-button>
-          <n-button v-if="authStore.isPM && req.iteration_id" size="small" type="error" ghost @click="handleRemoveFromRelease">从发布库移除</n-button>
-        </div>
       </section>
 
       <!-- Description (read-only) -->
@@ -72,15 +69,6 @@
                 @keyup.enter="saveField('priority'); editingField = null" autofocus @click.stop />
             </template>
             <span v-else class="info-value edit-hint">{{ priorityMeta[req.priority]?.label || req.priority || '点击选择' }}</span>
-          </div>
-          <div class="info-cell editable-cell" @click="startEdit('iteration_id')">
-            <span class="info-label">发布迭代</span>
-            <template v-if="editingField === 'iteration_id'">
-              <n-select v-model:value="req.iteration_id" :options="iterationOptions" size="small" clearable
-                @blur="editingField = null"
-                @update:value="onIterationChange" autofocus @click.stop />
-            </template>
-            <span v-else class="info-value edit-hint">{{ req.iteration_name || (req.iteration_id ? `迭代 #${req.iteration_id}` : '未纳入') }}</span>
           </div>
           <div class="info-cell editable-cell" @click="startEdit('planned_completion_time')">
             <span class="info-label">计划完成时间</span>
@@ -151,7 +139,7 @@
             <span class="col-title" :title="t.title">{{ t.title }}</span>
             <span class="col-status"><n-tag size="tiny" :type="taskStatusMeta[t.status]?.tone || 'default'">{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag></span>
             <span class="col-overdue"><span v-if="calcOverdueDays(t.deadline) > 0" style="color:#d03050">{{ calcOverdueDays(t.deadline) }}天</span><span v-else style="color:#94a3b8">-</span></span>
-            <span class="col-progress"><n-progress v-if="t.progress != null" type="line" :percentage="t.progress" :height="6" :border-radius="3" :color="t.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" style="width:100px" /></span>
+            <span class="col-progress"><span v-if="t.progress != null" :style="{fontSize:'14px',fontWeight:'700',color: t.progress >= 100 ? '#18a058' : '#6366f1'}">{{ t.progress }}%</span><span v-else style="color:#94a3b8">-</span></span>
             <span class="col-actions">
               <template v-if="transferringTaskId === t.id">
                 <n-select v-model:value="t.assignee_id" :options="devOptions" size="tiny" style="width:110px" filterable />
@@ -162,6 +150,8 @@
                 <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="warning" @click="startTransfer(t)">转派</n-button>
                 <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteTask(t)">删除</n-button>
                 <n-button text size="tiny" type="primary" @click="openProgressHistory(t)">进度明细</n-button>
+                <n-button v-if="authStore.isPM && !t.iteration_id" text size="tiny" type="primary" @click="openTaskRelease(t)">发布</n-button>
+                <n-button v-if="authStore.isPM && t.iteration_id" text size="tiny" type="error" @click="removeTaskRelease(t)">取消发布</n-button>
               </template>
             </span>
           </div>
@@ -187,6 +177,17 @@
         <template #footer>
           <n-space justify="end">
             <n-button @click="showProgressHistory = false">关闭</n-button>
+          </n-space>
+        </template>
+      </n-modal>
+
+      <!-- Task Release Modal -->
+      <n-modal v-model:show="showTaskRelease" preset="card" style="width:400px" title="选择发布迭代">
+        <n-select v-model:value="selectedIterationId" :options="iterationOptions" placeholder="选择迭代" filterable />
+        <template #footer>
+          <n-space justify="end">
+            <n-button @click="showTaskRelease = false">取消</n-button>
+            <n-button type="primary" :loading="releasing" @click="confirmTaskRelease">确定</n-button>
           </n-space>
         </template>
       </n-modal>
@@ -308,22 +309,6 @@
         </n-space>
       </template>
     </n-modal>
-
-    <!-- Iteration Selector Modal -->
-    <n-modal v-model:show="showIterationSelector" preset="card" style="width: 400px" title="选择发布迭代">
-      <n-select
-        v-model:value="selectedIterationId"
-        :options="iterationOptions"
-        placeholder="选择迭代"
-        filterable
-      />
-      <template #footer>
-        <n-space justify="end">
-          <n-button @click="showIterationSelector = false">取消</n-button>
-          <n-button type="primary" :loading="releasing" @click="handleAddToRelease">确定</n-button>
-        </n-space>
-      </template>
-    </n-modal>
   </AppLayout>
 </template>
 
@@ -336,8 +321,6 @@ import { getTasks, createTask, updateTask, deleteTask, getTaskProgressHistory } 
 import {
   getRequirement,
   updateRequirement,
-  addToRelease,
-  removeFromRelease,
   uploadRequirementDocument,
   downloadRequirementDocument,
   deleteRequirementDocument,
@@ -475,7 +458,8 @@ async function openTaskDispatch() {
 const showIntegrationBugs = ref(false)
 const showBusinessBugs = ref(false)
 const showItBugs = ref(false)
-const showIterationSelector = ref(false)
+const showTaskRelease = ref(false)
+const releasingTask = ref(null)
 const selectedIterationId = ref(null)
 const releasing = ref(false)
 const documentLoading = ref(false)
@@ -661,39 +645,6 @@ async function handleDeleteDocument() {
 
 function toggleTerminalTasks(terminal) {
   expandedTerminal.value = expandedTerminal.value === terminal ? null : terminal
-}
-
-async function onIterationChange(val) {
-  req.value.iteration_id = val
-  editingField.value = null
-  await saveField('iteration_id')
-}
-
-async function handleAddToRelease() {
-  if (!selectedIterationId.value) {
-    window.$message?.warning('请选择迭代')
-    return
-  }
-  releasing.value = true
-  try {
-    await addToRelease(req.value.id, selectedIterationId.value)
-    req.value.iteration_id = selectedIterationId.value
-    window.$message?.success('已纳入发布清单')
-    showIterationSelector.value = false
-  } catch (e) {
-    window.$message?.error('操作失败')
-  }
-  releasing.value = false
-}
-
-async function handleRemoveFromRelease() {
-  try {
-    await removeFromRelease(req.value.id)
-    req.value.iteration_id = null
-    window.$message?.success('已从发布库移除')
-  } catch (e) {
-    window.$message?.error('操作失败')
-  }
 }
 
 async function loadUsers() {
@@ -930,6 +881,34 @@ async function handleDeleteTask(t) {
       catch (e) { window.$message?.error('删除失败') }
     }
   })
+}
+
+function openTaskRelease(t) {
+  releasingTask.value = t
+  selectedIterationId.value = t.iteration_id || null
+  showTaskRelease.value = true
+}
+
+async function confirmTaskRelease() {
+  if (!selectedIterationId.value) { window.$message?.warning('请选择迭代'); return }
+  const t = releasingTask.value
+  if (!t) return
+  releasing.value = true
+  try {
+    await updateTask(t.id, { iteration_id: selectedIterationId.value })
+    t.iteration_id = selectedIterationId.value
+    window.$message?.success('任务已纳入发布清单')
+    showTaskRelease.value = false
+  } catch (e) { window.$message?.error('操作失败') }
+  releasing.value = false
+}
+
+async function removeTaskRelease(t) {
+  try {
+    await updateTask(t.id, { iteration_id: '' })
+    t.iteration_id = null
+    window.$message?.success('已取消发布')
+  } catch (e) { window.$message?.error('操作失败') }
 }
 
 async function loadReq() {

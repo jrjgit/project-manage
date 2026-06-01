@@ -18,4 +18,5 @@ public class UpdateTaskRequest {
     private Long featureId;
     private String terminal;
     private Integer progress;
+    private String iterationId;
 }
