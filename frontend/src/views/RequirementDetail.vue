@@ -137,35 +137,33 @@
           <h3>开发任务整体进度 <span style="font-size:14px;font-weight:700;color:#6366f1;margin-left:6px">{{ overallDevProgress }}%</span></h3>
           <n-button type="primary" ghost round size="small" @click="openTaskDispatch">任务派发/修改</n-button>
         </div>
-        <div v-if="tasks.length > 0" class="task-list-flat">
-          <div v-for="t in tasks" :key="t.id" class="task-row-flat">
-            <div class="task-row-flat-main">
-              <span class="task-row-flat-assignee">{{ t.assignee?.name || userNameMap[t.assignee_id] || '-' }}</span>
-              <span class="task-row-flat-title">{{ t.title }}</span>
-              <n-tag size="tiny" type="info">{{ skillsMap[t.terminal] || t.terminal || '-' }}</n-tag>
-              <n-tag size="tiny" :type="taskStatusMeta[t.status]?.tone || 'default'">{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag>
-            </div>
-            <span class="task-row-flat-desc">{{ t.description || t.requirement_desc || '' }}</span>
-            <span style="flex:1;min-width:0"></span>
-            <div class="task-row-flat-meta">
-              <n-progress v-if="t.progress != null" type="line" :percentage="t.progress" :height="8" :border-radius="4"
-                :color="t.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" style="width:140px" />
-              <span class="info-text">绩效 {{ t.performance || '-' }}</span>
-              <span class="info-text">截止 {{ t.deadline ? formatDate2(t.deadline) : '-' }}</span>
-              <n-tag v-if="calcOverdueDays(t.deadline) > 0" type="error" size="tiny" round>逾期{{ calcOverdueDays(t.deadline) }}天</n-tag>
-            </div>
-            <div class="task-row-flat-actions">
+        <div v-if="tasks.length > 0">
+          <div class="task-table-header">
+            <span class="col-terminal">终端</span>
+            <span class="col-title">任务描述</span>
+            <span class="col-status">任务状态</span>
+            <span class="col-overdue">逾期天数</span>
+            <span class="col-progress">当前进度</span>
+            <span class="col-actions">操作</span>
+          </div>
+          <div v-for="t in tasks" :key="t.id" class="task-table-row">
+            <span class="col-terminal">{{ skillsMap[t.terminal] || t.terminal || '-' }}</span>
+            <span class="col-title" :title="t.title">{{ t.title }}</span>
+            <span class="col-status"><n-tag size="tiny" :type="taskStatusMeta[t.status]?.tone || 'default'">{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag></span>
+            <span class="col-overdue"><span v-if="calcOverdueDays(t.deadline) > 0" style="color:#d03050">{{ calcOverdueDays(t.deadline) }}天</span><span v-else style="color:#94a3b8">-</span></span>
+            <span class="col-progress"><n-progress v-if="t.progress != null" type="line" :percentage="t.progress" :height="6" :border-radius="3" :color="t.progress >= 100 ? '#18a058' : '#6366f1'" indicator-placement="inside" style="width:100px" /></span>
+            <span class="col-actions">
               <template v-if="transferringTaskId === t.id">
-                <n-select v-model:value="t.assignee_id" :options="devOptions" size="tiny" style="width:120px" filterable />
+                <n-select v-model:value="t.assignee_id" :options="devOptions" size="tiny" style="width:110px" filterable />
                 <n-button size="tiny" type="primary" @click="confirmTransfer(t)">确定</n-button>
                 <n-button size="tiny" @click="cancelTransfer">取消</n-button>
               </template>
               <template v-else>
-                <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="warning" @click="startTransfer(t)">转让</n-button>
+                <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="warning" @click="startTransfer(t)">转派</n-button>
                 <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteTask(t)">删除</n-button>
-                <n-button text size="tiny" type="primary" @click="openProgressHistory(t)">进度</n-button>
+                <n-button text size="tiny" type="primary" @click="openProgressHistory(t)">进度明细</n-button>
               </template>
-            </div>
+            </span>
           </div>
         </div>
         <div v-else class="empty-state">暂无任务</div>
@@ -1315,75 +1313,52 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* Task Flat List */
-.task-list-flat {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* Task Table */
+.task-table-header {
+  display: grid;
+  grid-template-columns: 90px 1fr 90px 80px 120px 1fr;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 4px;
 }
-.task-row-flat {
-  display: flex;
+.task-table-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 90px 80px 120px 1fr;
+  gap: 8px;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  background: #f8fafc;
-  border: 1px solid #f1f5f9;
-  border-radius: 10px;
-  transition: background 0.15s;
+  padding: 10px 12px;
+  border-radius: 8px;
+  transition: background 0.12s;
 }
-.task-row-flat:hover {
+.task-table-row:hover {
   background: #f1f5f9;
 }
-.task-row-flat-main {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  flex: 1;
-}
-.task-row-flat-assignee {
+.task-table-row .col-terminal {
   font-size: 13px;
   font-weight: 600;
   color: #6366f1;
-  white-space: nowrap;
-  width: 56px;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.task-row-flat-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: #0f172a;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 180px;
-}
-.task-row-flat-desc {
+.task-table-row .col-title {
   font-size: 12px;
-  color: #64748b;
+  color: #334155;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 240px;
-  flex-shrink: 0;
 }
-.task-row-flat-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+.task-table-row .col-overdue {
+  font-size: 12px;
+  font-weight: 500;
 }
-.task-row-flat-meta .info-text {
-  font-size: 11px;
-  color: #64748b;
-  white-space: nowrap;
-}
-.task-row-flat-actions {
+.task-table-row .col-actions {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
 }
 
 
