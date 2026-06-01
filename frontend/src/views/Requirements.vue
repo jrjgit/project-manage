@@ -257,6 +257,19 @@ const columns = [
   },
   { title: '所属系统', key: 'system', width: 100, render(row) { return row.system || '-' } },
   {
+    title: '需求描述', key: 'description', minWidth: 200, ellipsis: true,
+    render(row) {
+      return h('span', { style: 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block', title: row.description || '' }, row.description)
+    }
+  },
+  {
+    title: '状态', key: 'status', width: 100,
+    render(row) {
+      const meta = requirementStatusMeta[row.status] || { label: row.status, tone: 'default' }
+      return h(NTag, { type: meta.tone, size: 'small', round: true }, { default: () => meta.label })
+    }
+  },
+  {
     title: '开发进度', key: 'dev_progress', width: 90,
     render(row) {
       if (row.dev_progress == null) return h('span', { style: 'color:#94a3b8' }, '待分配')
@@ -270,19 +283,6 @@ const columns = [
       if (row.test_progress == null) return h('span', { style: 'color:#94a3b8' }, '未开始')
       const color = row.test_progress >= 100 ? '#18a058' : '#6366f1'
       return h('span', { style: `font-weight:700;color:${color}` }, row.test_progress + '%')
-    }
-  },
-  {
-    title: '需求描述', key: 'description', minWidth: 200, ellipsis: true,
-    render(row) {
-      return h('span', { style: 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block', title: row.description || '' }, row.description)
-    }
-  },
-  {
-    title: '状态', key: 'status', width: 100,
-    render(row) {
-      const meta = requirementStatusMeta[row.status] || { label: row.status, tone: 'default' }
-      return h(NTag, { type: meta.tone, size: 'small', round: true }, { default: () => meta.label })
     }
   },
   {
