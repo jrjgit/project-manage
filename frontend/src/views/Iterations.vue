@@ -26,7 +26,6 @@
           :single-line="false"
           striped
           :row-key="row => row.id"
-          :expanded-row-render="expandedRowRender"
         />
       </section>
     </div>
@@ -198,6 +197,13 @@ function expandedRowRender(row) {
 }
 
 const columns = computed(() => [
+  {
+    type: 'expand',
+    width: 40,
+    renderExpand: (row) => {
+      return expandedRowRender(row)
+    }
+  },
   {
     title: '迭代名称',
     key: 'name',
