@@ -354,15 +354,17 @@ public class TaskService {
                 progressHistoryMapper.insert(ph);
             }
         }
+        taskMapper.updateById(task);
+
         if (req.getIterationId() != null) {
             if (req.getIterationId().isBlank()) {
                 taskMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Task>()
                         .eq(Task::getId, id).set(Task::getIterationId, null));
             } else {
                 task.setIterationId(req.getIterationId());
+                taskMapper.updateById(task);
             }
         }
-        taskMapper.updateById(task);
 
         JwtUserDetails op = currentUser();
         String title = task.getTitle();
