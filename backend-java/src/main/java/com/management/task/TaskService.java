@@ -355,8 +355,12 @@ public class TaskService {
             }
         }
         if (req.getIterationId() != null) {
-            if (req.getIterationId().isBlank()) task.setIterationId(null);
-            else task.setIterationId(req.getIterationId());
+            if (req.getIterationId().isBlank()) {
+                taskMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Task>()
+                        .eq(Task::getId, id).set(Task::getIterationId, null));
+            } else {
+                task.setIterationId(req.getIterationId());
+            }
         }
         taskMapper.updateById(task);
 
