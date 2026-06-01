@@ -13,7 +13,6 @@ public class CreateTaskRequest {
     private String priority;
     @NotNull
     private Long projectId;
-    @NotNull
     private Long devLeadId;
     private Long assigneeId;
     private List<Long> assigneeIds;
