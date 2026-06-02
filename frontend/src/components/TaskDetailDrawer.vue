@@ -1,5 +1,5 @@
 <template>
-  <n-drawer v-model:show="show" :width="520" placement="right">
+  <n-drawer v-model:show="show" :width="760" placement="right">
     <n-drawer-content v-if="task" closable>
       <template #header>
         <div class="drawer-header">
@@ -81,11 +81,11 @@
           </div>
           <div style="display:flex;flex-direction:column;gap:16px">
             <div class="section-card">
-              <div class="section-title">说明</div>
+              <div class="section-title">项目经理备注</div>
               <div class="description-block">{{ task.requirement_desc || task.description || '暂无描述' }}</div>
             </div>
             <div class="section-card">
-            <div class="section-title">备注</div>
+            <div class="section-title">技术经理备注</div>
             <div class="description-block" style="white-space:pre-wrap">{{ task.description || '暂无备注' }}</div>
           </div>
           </div>
@@ -315,5 +315,5 @@ function formatDate(value) {
 .timeline-meta { margin-top: 4px; font-size: 12px; color: #94a3b8; }
 .doc-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px; background: #f8fafc; border-radius: 8px; }
 .doc-name { flex: 1; font-size: 13px; color: #0f172a; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .detail-grid { grid-template-columns: 1fr; } }
 </style>
