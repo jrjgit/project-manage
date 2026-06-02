@@ -33,16 +33,15 @@
         <div
           v-for="msg in messages"
           :key="msg.id"
-          :class="['msg-item', { unread: !msg.isRead }]"
-          @click="handleMarkRead(msg)"
+          :class="['msg-item', { unread: !msg.is_read }]"
         >
-          <div class="msg-indicator" v-if="!msg.isRead"></div>
+          <div class="msg-indicator" v-if="!msg.is_read"></div>
           <div class="msg-body">
             <div class="msg-title">{{ msg.title }}</div>
             <div class="msg-content">{{ msg.content }}</div>
             <div class="msg-meta">
               <span :class="['msg-type', msg.type]">{{ typeLabel(msg.type) }}</span>
-              <span class="msg-time">{{ formatTime(msg.createdAt) }}</span>
+              <span class="msg-time">{{ formatTime(msg.created_at) }}</span>
             </div>
           </div>
         </div>
@@ -147,9 +146,9 @@ function navigateToDetail(msg) {
 }
 
 async function handleMarkRead(msg) {
-  if (!msg.isRead) {
+  if (!msg.is_read) {
     await markRead(msg.id)
-    msg.isRead = true
+    msg.is_read = true
     messageStore.refreshUnreadCount()
   }
   navigateToDetail(msg)
@@ -158,7 +157,7 @@ async function handleMarkRead(msg) {
 async function handleMarkAllRead() {
   await markAllRead()
   for (const msg of messages.value) {
-    msg.isRead = true
+    msg.is_read = true
   }
   messageStore.refreshUnreadCount()
 }

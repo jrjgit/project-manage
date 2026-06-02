@@ -76,7 +76,7 @@
               <div class="dropdown-body">
                 <div v-for="msg in unreadList" :key="msg.id" class="dropdown-item" @click.stop="handleDropdownItemClick(msg)">
                   <div class="dropdown-item-title">{{ msg.title }}</div>
-                  <div class="dropdown-item-time">{{ formatTime(msg.createdAt) }}</div>
+                  <div class="dropdown-item-time">{{ formatTime(msg.created_at) }}</div>
                 </div>
                 <div v-if="unreadList.length === 0" class="dropdown-empty">暂无未读消息</div>
               </div>
