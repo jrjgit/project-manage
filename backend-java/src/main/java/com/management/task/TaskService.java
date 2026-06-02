@@ -53,27 +53,32 @@ public class TaskService {
         JwtUserDetails u = currentUser();
         LambdaQueryWrapper<Task> q = new LambdaQueryWrapper<>();
 
-        switch (u.getRole()) {
-            case "pm":
-                break;
-            case "dev_lead":
-                q.inSql(Task::getId,
-                        "SELECT task_id FROM task_assignees WHERE user_id = " + u.getUserId());
-                break;
-            case "dev":
-                q.inSql(Task::getId,
-                        "SELECT task_id FROM task_assignees WHERE user_id = " + u.getUserId());
-                break;
-            case "tester_lead":
-                q.and(w -> w.eq(Task::getTesterLeadId, u.getUserId())
-                        .or().in(Task::getStatus, List.of("pending_test", "testing", "passed", "rejected")));
-                break;
-            case "tester":
-                q.and(w -> w.eq(Task::getTesterId, u.getUserId())
-                        .or().eq(Task::getCreatorId, u.getUserId()));
-                break;
-            default:
-                q.apply("1=0");
+        // 按需求或迭代查询时跳过角色过滤（查看维度是需求/迭代而非"我的任务"）
+        boolean scoped = (requirementId != null && !requirementId.isBlank())
+                      || (iterationId != null && !iterationId.isBlank());
+        if (!scoped) {
+            switch (u.getRole()) {
+                case "pm":
+                    break;
+                case "dev_lead":
+                    q.inSql(Task::getId,
+                            "SELECT task_id FROM task_assignees WHERE user_id = " + u.getUserId());
+                    break;
+                case "dev":
+                    q.inSql(Task::getId,
+                            "SELECT task_id FROM task_assignees WHERE user_id = " + u.getUserId());
+                    break;
+                case "tester_lead":
+                    q.and(w -> w.eq(Task::getTesterLeadId, u.getUserId())
+                            .or().in(Task::getStatus, List.of("pending_test", "testing", "passed", "rejected")));
+                    break;
+                case "tester":
+                    q.and(w -> w.eq(Task::getTesterId, u.getUserId())
+                            .or().eq(Task::getCreatorId, u.getUserId()));
+                    break;
+                default:
+                    q.apply("1=0");
+            }
         }
 
         if (projectId != null && !projectId.isBlank()) q.eq(Task::getProjectId, projectId);
