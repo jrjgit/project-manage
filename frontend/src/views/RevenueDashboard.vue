@@ -30,7 +30,7 @@
             </div>
             <span class="stat-label">累计接收</span>
           </div>
-          <div class="stat-value">{{ stats.total_created || 0 }}</div>
+          <div class="stat-value">{{ formatMoney(stats.total_created) }}</div>
         </div>
         <div class="stat-card" style="--accent: #f59e0b;">
           <div class="stat-card-header">
@@ -42,7 +42,7 @@
             </div>
             <span class="stat-label">未开始</span>
           </div>
-          <div class="stat-value">{{ stats.pending_count || 0 }}</div>
+          <div class="stat-value">{{ formatMoney(stats.pending_count) }}</div>
         </div>
         <div class="stat-card" style="--accent: #10b981;">
           <div class="stat-card-header">
@@ -53,7 +53,7 @@
             </div>
             <span class="stat-label">已完成</span>
           </div>
-          <div class="stat-value">{{ stats.done_count || 0 }}</div>
+          <div class="stat-value">{{ formatMoney(stats.done_count) }}</div>
         </div>
         <div class="stat-card" style="--accent: #3b82f6;">
           <div class="stat-card-header">
@@ -64,7 +64,7 @@
             </div>
             <span class="stat-label">测试中</span>
           </div>
-          <div class="stat-value">{{ stats.testing_count || 0 }}</div>
+          <div class="stat-value">{{ formatMoney(stats.testing_count) }}</div>
         </div>
       </section>
 
@@ -125,15 +125,20 @@ async function loadData() {
     }
     monthlyCreated.value = (res.monthly_created || []).map((item) => ({
       label: `${item.month}月`,
-      value: item.count
+      value: item.amount || 0
     }))
     monthlyDone.value = (res.monthly_done || []).map((item) => ({
       label: `${item.month}月`,
-      value: item.count
+      value: item.amount || 0
     }))
   } catch (e) {
     window.$message?.error('加载营收统计失败')
   }
+}
+
+function formatMoney(v) {
+  if (v == null || v === 0) return '0'
+  return '¥' + Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
 onMounted(loadData)
