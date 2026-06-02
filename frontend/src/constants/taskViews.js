@@ -5,7 +5,6 @@ export const taskPrimaryViews = {
     { key: 'testing', label: '测试中', params: { status: 'testing' } }
   ],
   dev_lead: [
-    { key: 'group', label: '本组任务', params: { mine: 'group' } },
     { key: 'todo', label: '待受理', params: { mine: 'todo' } },
     { key: 'all', label: '全部任务', params: {} }
   ],
