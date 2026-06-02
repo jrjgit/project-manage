@@ -19,7 +19,7 @@ public class StatisticsService {
     private final TaskMapper taskMapper;
     private final UserMapper userMapper;
 
-    /** 年度营收统计 — 使用需求的 total_amount（总金额） */
+    /** 年度营收统计 — 使用需求的 total_price（总金额） */
     public Map<String, Object> revenueStats(int year) {
         List<Requirement> all = requirementMapper.selectList(
                 new LambdaQueryWrapper<Requirement>()
@@ -35,7 +35,7 @@ public class StatisticsService {
         double[] monthlyDoneAmount = new double[12];
 
         for (Requirement r : all) {
-            double amt = parseDoubleSafe(r.getTotalAmount());
+            double amt = parseDoubleSafe(r.getTotalPrice());
             totalAmount += amt;
 
             int m = r.getCreatedAt().getMonthValue() - 1;
