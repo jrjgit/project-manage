@@ -287,7 +287,11 @@ public class RequirementService {
     private void applyProjectScopeFilter(LambdaQueryWrapper<Requirement> q) {
         JwtUserDetails u = currentUser();
         String role = u.getRole();
-        if ("pm".equals(role) || "dev_lead".equals(role) || "tester_lead".equals(role)) return;
+        if ("pm".equals(role) || "tester_lead".equals(role)) return;
+        if ("dev_lead".equals(role)) {
+            q.eq(Requirement::getDevLeadId, u.getUserId());
+            return;
+        }
         List<Long> projectIds = getVisibleProjectIds(u.getUserId());
         if (projectIds.isEmpty()) {
             q.apply("1=0");
