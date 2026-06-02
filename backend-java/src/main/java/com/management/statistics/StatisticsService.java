@@ -70,17 +70,15 @@ public class StatisticsService {
 
     /** 人员绩效统计 */
     public Map<String, Object> performanceStats(int year, int month) {
-        List<User> users = userMapper.selectList(null);
+        List<User> users = userMapper.selectList(
+                new LambdaQueryWrapper<User>()
+                        .in(User::getRole, "dev", "dev_lead"));
         List<Map<String, Object>> stats = new ArrayList<>();
-        java.time.LocalDateTime monthStart = java.time.LocalDateTime.of(year, month, 1, 0, 0);
-        java.time.LocalDateTime monthEnd = monthStart.plusMonths(1);
 
         for (User u : users) {
             List<Task> tasks = taskMapper.selectList(
                     new LambdaQueryWrapper<Task>()
-                            .eq(Task::getAssigneeId, u.getId())
-                            .ge(Task::getCreatedAt, monthStart)
-                            .lt(Task::getCreatedAt, monthEnd));
+                            .eq(Task::getAssigneeId, u.getId()));
             long inProgress = tasks.stream()
                     .filter(t -> "developing".equals(t.getStatus()) || "testing".equals(t.getStatus())).count();
             long overdue = tasks.stream()
@@ -95,6 +93,8 @@ public class StatisticsService {
                     .filter(t -> t.getPerformance() != null && !t.getPerformance().isBlank())
                     .mapToDouble(t -> { try { return Double.parseDouble(t.getPerformance()); } catch (Exception e) { return 0; } })
                     .sum();
+
+            if (tasks.isEmpty()) continue;
 
             Map<String, Object> userStat = new LinkedHashMap<>();
             userStat.put("user_id", u.getId());
