@@ -30,13 +30,14 @@ import { computed } from 'vue'
 import TaskCard from './TaskCard.vue'
 import { taskStatusMeta } from '@/constants/statusMeta'
 
-const props = defineProps({ tasks: Array })
+const props = defineProps({ 
+  tasks: Array,
+  columnKeys: { type: Array, default: () => ['pending', 'developing', 'testing'] }
+})
 const emit = defineEmits(['status-change', 'task-click'])
 
-const columnKeys = ['pending', 'developing', 'testing']
-
 const columns = computed(() =>
-  columnKeys.map((key) => ({
+  props.columnKeys.map((key) => ({
     key,
     meta: taskStatusMeta[key],
     tasks: (props.tasks || []).filter((task) => task.status === key)
