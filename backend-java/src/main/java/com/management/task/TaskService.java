@@ -57,9 +57,8 @@ public class TaskService {
             case "pm":
                 break;
             case "dev_lead":
-                q.and(w -> w.eq(Task::getDevLeadId, u.getUserId())
-                        .or().inSql(Task::getId,
-                                "SELECT task_id FROM task_assignees WHERE user_id = " + u.getUserId()));
+                q.inSql(Task::getId,
+                        "SELECT task_id FROM task_assignees WHERE user_id = " + u.getUserId());
                 break;
             case "dev":
                 q.inSql(Task::getId,
