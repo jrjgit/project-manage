@@ -1,76 +1,79 @@
 <template>
-  <div class="messages-page">
-    <div class="messages-header">
-      <div class="filter-bar">
-        <div class="filter-tabs">
-          <button
-            v-for="t in typeFilters"
-            :key="t.value"
-            :class="['filter-btn', { active: typeFilter === t.value }]"
-            @click="typeFilter = t.value; loadMessages()"
-          >{{ t.label }}</button>
+  <AppLayout>
+    <div class="messages-page">
+      <div class="messages-header">
+        <div class="filter-bar">
+          <div class="filter-tabs">
+            <button
+              v-for="t in typeFilters"
+              :key="t.value"
+              :class="['filter-btn', { active: typeFilter === t.value }]"
+              @click="typeFilter = t.value; loadMessages()"
+            >{{ t.label }}</button>
+          </div>
+          <div class="filter-tabs">
+            <button
+              v-for="s in statusFilters"
+              :key="s.value"
+              :class="['filter-btn', { active: statusFilter === s.value }]"
+              @click="statusFilter = s.value; loadMessages()"
+            >{{ s.label }}</button>
+          </div>
+          <button class="mark-all-btn" @click="handleMarkAllRead" v-if="hasUnread">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+              <polyline points="9 11 12 14 22 4"/>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+            全部已读
+          </button>
         </div>
-        <div class="filter-tabs">
-          <button
-            v-for="s in statusFilters"
-            :key="s.value"
-            :class="['filter-btn', { active: statusFilter === s.value }]"
-            @click="statusFilter = s.value; loadMessages()"
-          >{{ s.label }}</button>
-        </div>
-        <button class="mark-all-btn" @click="handleMarkAllRead" v-if="hasUnread">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
-            <polyline points="9 11 12 14 22 4"/>
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-          </svg>
-          全部已读
-        </button>
       </div>
-    </div>
 
-    <div class="messages-list" v-if="messages.length > 0">
-      <div
-        v-for="msg in messages"
-        :key="msg.id"
-        :class="['msg-item', { unread: !msg.isRead }]"
-        @click="handleMarkRead(msg)"
-      >
-        <div class="msg-indicator" v-if="!msg.isRead"></div>
-        <div class="msg-body">
-          <div class="msg-title">{{ msg.title }}</div>
-          <div class="msg-content">{{ msg.content }}</div>
-          <div class="msg-meta">
-            <span :class="['msg-type', msg.type]">{{ typeLabel(msg.type) }}</span>
-            <span class="msg-time">{{ formatTime(msg.createdAt) }}</span>
+      <div class="messages-list" v-if="messages.length > 0">
+        <div
+          v-for="msg in messages"
+          :key="msg.id"
+          :class="['msg-item', { unread: !msg.isRead }]"
+          @click="handleMarkRead(msg)"
+        >
+          <div class="msg-indicator" v-if="!msg.isRead"></div>
+          <div class="msg-body">
+            <div class="msg-title">{{ msg.title }}</div>
+            <div class="msg-content">{{ msg.content }}</div>
+            <div class="msg-meta">
+              <span :class="['msg-type', msg.type]">{{ typeLabel(msg.type) }}</span>
+              <span class="msg-time">{{ formatTime(msg.createdAt) }}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="empty-state" v-else-if="!loading">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon">
-        <path d="M22 17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h5l2-2h6l2 2h5a2 2 0 0 1 2 2v8z"/>
-        <line x1="12" y1="11" x2="12" y2="17"/>
-        <line x1="9" y1="14" x2="15" y2="14"/>
-      </svg>
-      <p>暂无消息</p>
-    </div>
+      <div class="empty-state" v-else-if="!loading">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon">
+          <path d="M22 17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h5l2-2h6l2 2h5a2 2 0 0 1 2 2v8z"/>
+          <line x1="12" y1="11" x2="12" y2="17"/>
+          <line x1="9" y1="14" x2="15" y2="14"/>
+        </svg>
+        <p>暂无消息</p>
+      </div>
 
-    <div class="pagination-bar" v-if="total > size">
-      <n-pagination
-        :page="page"
-        :page-count="pageCount"
-        :page-slot="5"
-        @update:page="handlePageChange"
-      />
+      <div class="pagination-bar" v-if="total > size">
+        <n-pagination
+          :page="page"
+          :page-count="pageCount"
+          :page-slot="5"
+          @update:page="handlePageChange"
+        />
+      </div>
     </div>
-  </div>
+  </AppLayout>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { NPagination } from 'naive-ui'
+import AppLayout from '@/components/AppLayout.vue'
 import { fetchMessages, markRead, markAllRead } from '@/api/message'
 import { useMessageStore } from '@/store/useMessageStore'
 
