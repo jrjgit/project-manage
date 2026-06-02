@@ -159,13 +159,14 @@ public class TaskService {
                 .collect(Collectors.toList());
     }
 
-    /** 填充关联对象 */
     /** 删除任务 */
     @Transactional
     public void deleteTask(Long id) {
         Task task = taskMapper.selectById(id);
         if (task == null) throw new BusinessException(404, "任务不存在");
         taskAssigneeMapper.delete(new LambdaQueryWrapper<TaskAssignee>().eq(TaskAssignee::getTaskId, id));
+        historyMapper.delete(new LambdaQueryWrapper<TaskStatusHistory>().eq(TaskStatusHistory::getTaskId, id));
+        progressHistoryMapper.delete(new LambdaQueryWrapper<TaskProgressHistory>().eq(TaskProgressHistory::getTaskId, id));
         taskMapper.deleteById(id);
     }
 
