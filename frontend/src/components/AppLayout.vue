@@ -192,6 +192,7 @@ const avatarLetter = computed(() => authStore.userInfo?.name?.charAt(0)?.toUpper
 
 const allMenus = [
   { key: 'dashboard', label: '仪表盘', path: '/dashboard', icon: LayoutDashboardIcon, roles: ['pm', 'dev_lead', 'dev', 'tester_lead', 'tester'] },
+  { key: 'developer', label: '开发者工作台', path: '/developer', icon: CodeIcon, roles: ['dev_lead', 'dev'] },
   { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon, roles: ['pm', 'dev_lead', 'dev', 'tester_lead', 'tester'] },
   { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon, roles: ['dev_lead', 'dev', 'tester_lead', 'tester'] },
   { key: 'bugs', label: 'Bug管理', path: '/bugs', icon: BugIcon, roles: ['pm', 'dev_lead', 'dev', 'tester_lead', 'tester'] },
@@ -215,6 +216,10 @@ const pageMeta = computed(() => {
     dashboard: {
       title: '执行工作台',
       subtitle: '先处理最重要的事项，再回看整体进度。'
+    },
+    developer: {
+      title: '开发者工作台',
+      subtitle: '一站式任务看板，兼顾任务与 Bug 处理。'
     },
     projects: {
       title: '项目管理',
@@ -371,6 +376,13 @@ function BookOpenIcon(props) {
   return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', ...props }, [
     h('path', { d: 'M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z' }),
     h('path', { d: 'M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z' })
+  ])
+}
+
+function CodeIcon(props) {
+  return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', ...props }, [
+    h('polyline', { points: '16 18 22 12 16 6' }),
+    h('polyline', { points: '8 6 2 12 8 18' })
   ])
 }
 </script>

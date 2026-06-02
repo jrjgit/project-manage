@@ -200,6 +200,57 @@ public class DashboardService {
         return result;
     }
 
+    /** 开发者工作台 — 看板聚合接口 */
+    public Map<String, Object> developerDashboard() {
+        JwtUserDetails u = currentUser();
+        Long userId = u.getUserId();
+
+        List<Task> allTasks = taskMapper.selectList(
+                new LambdaQueryWrapper<Task>().inSql(Task::getId,
+                        "SELECT task_id FROM task_assignees WHERE user_id = " + userId));
+        for (Task t : allTasks) fillTaskUser(t);
+
+        List<Task> pendingTasks = allTasks.stream().filter(t -> "pending".equals(t.getStatus())).collect(Collectors.toList());
+        List<Task> developingTasks = allTasks.stream().filter(t -> "developing".equals(t.getStatus())).collect(Collectors.toList());
+        List<Task> testingTasks = allTasks.stream().filter(t -> "testing".equals(t.getStatus())).collect(Collectors.toList());
+
+        long total = allTasks.size();
+        long developing = developingTasks.size();
+        long done = allTasks.stream().filter(t -> "closed".equals(t.getStatus())).count();
+        long overdue = allTasks.stream().filter(t -> !"closed".equals(t.getStatus())
+                && t.getDeadline() != null && t.getDeadline().isBefore(LocalDateTime.now())).count();
+
+        List<Bug> bugs = bugMapper.selectList(
+                new LambdaQueryWrapper<Bug>()
+                        .eq(Bug::getAssigneeId, userId)
+                        .in(Bug::getStatus, List.of("assigned", "fixing", "reopened"))
+                        .orderByDesc(Bug::getUpdatedAt));
+        for (Bug b : bugs) {
+            if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
+        }
+
+        List<Map<String, Object>> board = List.of(
+                Map.of("status", "pending", "label", "待受理", "tasks", pendingTasks.stream().map(this::taskToMap).collect(Collectors.toList())),
+                Map.of("status", "developing", "label", "开发中", "tasks", developingTasks.stream().map(this::taskToMap).collect(Collectors.toList())),
+                Map.of("status", "testing", "label", "综合测试中", "tasks", testingTasks.stream().map(this::taskToMap).collect(Collectors.toList()))
+        );
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("stats", Map.of("total", total, "developing", developing, "done", done, "overdue", overdue, "pendingBugs", (long) bugs.size()));
+        result.put("board", board);
+        result.put("bugs", bugs.stream().map(b -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", b.getId());
+            m.put("title", b.getTitle());
+            m.put("severity", b.getSeverity());
+            m.put("status", b.getStatus());
+            m.put("taskId", b.getTaskId());
+            m.put("taskTitle", b.getTask() != null ? b.getTask().getTitle() : null);
+            return m;
+        }).collect(Collectors.toList()));
+        return result;
+    }
+
     private Map<String, Object> taskToMap(Task t) {
         fillTaskUser(t);
         Map<String, Object> m = new LinkedHashMap<>();
