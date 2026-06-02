@@ -108,18 +108,6 @@
       </section>
 
       <section class="section-card chart-section">
-        <div class="section-header gradient-header" style="background: linear-gradient(135deg, #fef2f2, #ffffff);">
-          <div>
-            <div class="section-kicker" style="color: #ef4444;">风险预警</div>
-            <h3>已延期任务</h3>
-          </div>
-        </div>
-        <div class="chart-wrap">
-          <BarChart :data="overdueData" color="#ef4444" />
-        </div>
-      </section>
-
-      <section class="section-card chart-section">
         <div class="section-header gradient-header" style="background: linear-gradient(135deg, #ecfdf5, #ffffff);">
           <div>
             <div class="section-kicker" style="color: #10b981;">产出排行</div>
@@ -180,10 +168,6 @@ const stats = computed(() => {
 
 const inProgressData = computed(() =>
   performanceData.value.map(d => ({ label: d.userName, value: d.inProgress || 0 }))
-)
-
-const overdueData = computed(() =>
-  performanceData.value.map(d => ({ label: d.userName, value: d.overdue || 0 }))
 )
 
 const doneData = computed(() =>
