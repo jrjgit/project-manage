@@ -473,6 +473,18 @@ public class TaskService {
         history.setComment(req.getComment());
         historyMapper.insert(history);
 
+        // 开发完成（developing -> testing）时自动将进度设为100%
+        if ("developing".equals(oldStatus) && "testing".equals(newStatus)) {
+            task.setProgress(100);
+            taskMapper.updateById(task);
+            TaskProgressHistory ph = new TaskProgressHistory();
+            ph.setTaskId(taskId);
+            ph.setProgress(100);
+            ph.setComment("系统自动将进度设为100%（开发完成）");
+            ph.setCreatedBy(operatorId);
+            progressHistoryMapper.insert(ph);
+        }
+
         log.info("Task {} status changed: {} -> {} by user {} ({})",
                 taskId, oldStatus, newStatus, operatorId, role);
 
