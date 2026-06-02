@@ -43,6 +43,7 @@ public class Requirement {
     @TableField(exist = false)
     private User devLead;
     private String iterationId;
+    private String businessStatus;
     private String documentPath;
     private String documentName;
     private Long documentSize;

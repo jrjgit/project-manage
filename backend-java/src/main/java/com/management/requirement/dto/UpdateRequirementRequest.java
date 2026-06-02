@@ -23,4 +23,5 @@ public class UpdateRequirementRequest {
     private String iterationId;
     private String projectType;
     private String plannedCompletionTime;
+    private String businessStatus;
 }

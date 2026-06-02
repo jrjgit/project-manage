@@ -88,6 +88,7 @@ public class RequirementService {
         if (req.getPlannedCompletionTime() != null)
             r.setPlannedCompletionTime(java.time.OffsetDateTime.parse(req.getPlannedCompletionTime()).toLocalDateTime());
         r.setIterationId(req.getIterationId());
+        if (req.getBusinessStatus() != null) r.setBusinessStatus(req.getBusinessStatus());
         r.setRequirementId("TEMP");
         r.setNumber("TEMP");
         requirementMapper.insert(r);
@@ -236,6 +237,7 @@ public class RequirementService {
         if (req.getTestTotal() != null) r.setTestTotal(req.getTestTotal());
         if (req.getTestPrice() != null) r.setTestPrice(req.getTestPrice());
         if (req.getIterationId() != null) r.setIterationId(req.getIterationId());
+        if (req.getBusinessStatus() != null) r.setBusinessStatus(req.getBusinessStatus());
         if (req.getNumber() != null) r.setNumber(req.getNumber());
         if (req.getProjectType() != null) r.setProjectType(req.getProjectType());
         if (req.getStatus() != null) r.setStatus(req.getStatus());

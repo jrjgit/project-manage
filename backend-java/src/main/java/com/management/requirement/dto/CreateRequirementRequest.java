@@ -22,4 +22,5 @@ public class CreateRequirementRequest {
     private String iterationId;
     private String number;
     private String plannedCompletionTime;
+    private String businessStatus;
 }

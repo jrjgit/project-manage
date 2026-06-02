@@ -65,6 +65,11 @@
         </n-grid>
         <n-grid :cols="2" :x-gap="16">
           <n-gi>
+            <n-form-item label="商务状态">
+              <n-select v-model:value="form.business_status" :options="businessStatusOptions" placeholder="选择商务状态" clearable />
+            </n-form-item>
+          </n-gi>
+          <n-gi>
             <n-form-item label="项目类型">
               <n-input :value="projectTypeLabel" disabled />
             </n-form-item>
@@ -196,7 +201,7 @@ function emptyForm() {
   return {
     number: '', description: '', status: 'planned', priority: 'medium',
     project_id: null, project_type: 'ops', system: null, person_id: null, person_name: '',
-    iteration_id: null, dev_total: '', dev_price: '', test_total: '', test_price: '',
+    iteration_id: null, business_status: null, dev_total: '', dev_price: '', test_total: '', test_price: '',
     total_amount: '', total_price: '', planned_completion_time: null
   }
 }
@@ -230,6 +235,12 @@ const projectTypeOptions = [
 const filterSystemOptions = computed(() =>
   systems.value.map(s => ({ label: s.name, value: s.name }))
 )
+const businessStatusOptions = [
+  { label: '待发标', value: 'pending_bid' },
+  { label: '待报价', value: 'pending_offer' },
+  { label: '待投标', value: 'bidding' },
+  { label: '已中标', value: 'won' }
+]
 
 const filteredData = computed(() => {
   const f = filters.value
@@ -256,6 +267,14 @@ const columns = [
     }
   },
   { title: '所属系统', key: 'system', width: 100, render(row) { return row.system || '-' } },
+  {
+    title: '商务状态', key: 'business_status', width: 100,
+    render(row) {
+      const map = { pending_bid: '待发标', pending_offer: '待报价', bidding: '待投标', won: '已中标' }
+      const label = map[row.business_status]
+      return label ? h('span', { style: 'color:#6366f1;font-weight:600' }, label) : h('span', { style: 'color:#94a3b8' }, '-')
+    }
+  },
   {
     title: '需求描述', key: 'description', minWidth: 200, ellipsis: true,
     render(row) {
@@ -345,6 +364,7 @@ function openEdit(row) {
     person_id: row.person_id,
     person_name: row.person_name || '',
     iteration_id: row.iteration_id,
+    business_status: row.business_status || null,
     dev_total: row.dev_total || '',
     dev_price: row.dev_price || '',
     test_total: row.test_total || '',

@@ -133,6 +133,7 @@ CREATE TABLE IF NOT EXISTS requirements (
     document_name VARCHAR(255),
     document_size BIGINT,
     dev_lead_id BIGINT,
+    business_status VARCHAR(50),
     iteration_id VARCHAR(128),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
