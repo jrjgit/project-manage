@@ -33,7 +33,7 @@ import { taskStatusMeta } from '@/constants/statusMeta'
 const props = defineProps({ tasks: Array })
 const emit = defineEmits(['status-change', 'task-click'])
 
-const columnKeys = ['pending', 'developing', 'testing', 'closed']
+const columnKeys = ['pending', 'developing', 'testing']
 
 const columns = computed(() =>
   columnKeys.map((key) => ({

@@ -105,7 +105,6 @@ const priorityOptions = Object.entries(priorityMeta).map(([value, meta]) => ({ l
 
 const filteredTasks = computed(() => {
   return tasks.value.filter((task) => {
-    if (viewMode.value === 'board' && task.status === 'closed') return false
     if (!matchesView(task, activeView.value?.params || {})) return false
     if (filterProject.value && task.project_id !== filterProject.value) return false
     if (filterStatus.value && task.status !== filterStatus.value) return false
