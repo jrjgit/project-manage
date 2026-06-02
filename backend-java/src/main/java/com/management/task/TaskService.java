@@ -57,13 +57,9 @@ public class TaskService {
             case "pm":
                 break;
             case "dev_lead":
-                if (u.getGroupId() != null) {
-                    q.and(w -> w.eq(Task::getDevLeadId, u.getUserId())
-                            .or().inSql(Task::getAssigneeId,
-                                    "SELECT id FROM users WHERE group_id = " + u.getGroupId()));
-                } else {
-                    q.eq(Task::getDevLeadId, u.getUserId());
-                }
+                q.and(w -> w.eq(Task::getDevLeadId, u.getUserId())
+                        .or().inSql(Task::getId,
+                                "SELECT task_id FROM task_assignees WHERE user_id = " + u.getUserId()));
                 break;
             case "dev":
                 q.inSql(Task::getId,
