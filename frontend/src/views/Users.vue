@@ -188,9 +188,9 @@ async function handleRoleChange(id, role) {
     await updateUserRole(id, { role })
     window.$message.success('角色更新成功')
     loadUsers()
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
-
+ 
 async function handleDelete(id) {
   try {
     await deleteUser(id)
@@ -200,11 +200,11 @@ async function handleDelete(id) {
 }
 
 async function loadUsers() {
-  try { users.value = await getUsers() } catch (e) {}
+  try { users.value = await getUsers() } catch (e) { console.error(e) }
 }
-
+ 
 async function loadSkills() {
-  try { skills.value = await getDictionaries('skill') } catch (e) {}
+  try { skills.value = await getDictionaries('skill') } catch (e) { console.error(e) }
 }
 
 onMounted(() => { loadUsers(); loadSkills() })

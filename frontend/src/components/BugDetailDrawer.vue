@@ -224,7 +224,7 @@ async function confirmReopen() {
     await doChangeStatus('reopened', reopenReason.value)
     try {
       await updateBug(props.bugId, { reopen_reason: reopenReason.value })
-    } catch (error) {}
+    } catch (error) { console.error(error) }
   } finally {
     actionLoading.value = false
     showReopenModal.value = false
@@ -239,7 +239,7 @@ async function confirmFix() {
     await doChangeStatus('fixed', fixComment.value)
     try {
       await updateBug(props.bugId, { fix_comment: fixComment.value })
-    } catch (error) {}
+    } catch (error) { console.error(error) }
   } finally {
     actionLoading.value = false
     showFixModal.value = false

@@ -133,7 +133,7 @@ async function handleSave() {
     showModal.value = false
     await loadIterations()
   } catch (e) {
-    window.$message.error(isEditing.value ? '更新失败' : '创建失败')
+    console.error(e)
   } finally {
     saving.value = false
   }
@@ -148,7 +148,7 @@ async function handleDelete() {
     deletingId.value = null
     await loadIterations()
   } catch (e) {
-    window.$message.error('删除失败')
+    console.error(e)
   } finally {
     deleting.value = false
   }
@@ -158,7 +158,7 @@ async function loadIterations() {
   try {
     iterations.value = await getIterations()
   } catch (e) {
-    window.$message.error('加载迭代列表失败')
+    console.error(e)
   }
 }
 

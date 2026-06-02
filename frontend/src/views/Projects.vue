@@ -139,7 +139,7 @@ async function submit() {
     }
     showModal.value = false
     await loadData()
-  } catch (e) { window.$message?.error('操作失败') }
+  } catch (e) { console.error(e) }
   submitting.value = false
 }
 
@@ -149,7 +149,7 @@ async function handleDelete(row) {
     positiveText: '确定', negativeText: '取消',
     onPositiveClick: async () => {
       try { await deleteProject(row.id); window.$message?.success('已删除'); await loadData() }
-      catch (e) { window.$message?.error('删除失败') }
+      catch (e) { console.error(e) }
     }
   })
 }
@@ -158,7 +158,7 @@ async function loadData() {
   try {
     const [proj, sys, usr] = await Promise.all([getProjects(), getSystems(), getUsers()])
     projects.value = proj; systems.value = sys; users.value = usr
-  } catch (e) { window.$message?.error('加载失败') }
+  } catch (e) { console.error(e) }
 }
 
 onMounted(() => loadData())

@@ -22,13 +22,12 @@ request.interceptors.request.use(
 request.interceptors.response.use(
   (response) => {
     const body = response.data
-    // Result<T> wrapper: { data: ... } → unwrap
     if (body && body.data !== undefined) return body.data
     return body
   },
   (error) => {
     const msg = error.response?.data?.error || error.message || '请求失败'
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
       const authStore = useAuthStore()
       authStore.logout()
       window.location.href = '/login'

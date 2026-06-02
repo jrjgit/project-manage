@@ -26,7 +26,6 @@
             <n-tag v-if="req.project?.name" size="small" round>{{ req.project.name }}</n-tag>
           </div>
         </div>
-        <div class="header-actions">
       </section>
 
       <!-- Description (read-only) -->
@@ -543,7 +542,7 @@ async function saveField(field) {
     await updateRequirement(req.value.id, { [field]: req.value[field] })
     window.$message?.success('更新成功')
   } catch (e) {
-    window.$message?.error('更新失败')
+    console.error(e)
   }
 }
 
@@ -553,7 +552,7 @@ async function saveDescription() {
     await updateRequirement(req.value.id, { description: localDescription.value })
     req.value.description = localDescription.value
   } catch (e) {
-    window.$message?.error('保存描述失败')
+    console.error(e)
   }
 }
 
@@ -561,7 +560,7 @@ async function savePlannedTime() {
   try {
     await updateRequirement(req.value.id, { planned_completion_time: localPlannedTime.value ? new Date(localPlannedTime.value).toISOString() : null })
     req.value.planned_completion_time = localPlannedTime.value ? new Date(localPlannedTime.value).toISOString() : null
-  } catch (e) { window.$message?.error('保存失败') }
+  } catch (e) { console.error(e) }
 }
 
 async function saveNotes() {
@@ -570,7 +569,7 @@ async function saveNotes() {
     await updateRequirement(req.value.id, { notes: localNotes.value })
     req.value.notes = localNotes.value
   } catch (e) {
-    window.$message?.error('保存备注失败')
+    console.error(e)
   }
 }
 
@@ -608,7 +607,7 @@ async function handleCustomUpload({ file, onFinish, onError }) {
     await loadReq()
     onFinish()
   } catch (e) {
-    window.$message?.error('上传失败')
+    console.error(e)
     onError()
   }
   documentLoading.value = false
@@ -627,7 +626,7 @@ async function handleDownloadDocument() {
     document.body.removeChild(a)
     window.URL.revokeObjectURL(url)
   } catch (e) {
-    window.$message?.error('下载失败')
+    console.error(e)
   }
 }
 
@@ -639,7 +638,7 @@ async function handleDeleteDocument() {
     req.value.document_path = null
     req.value.document_size = null
   } catch (e) {
-    window.$message?.error('删除失败')
+    console.error(e)
   }
 }
 
@@ -648,22 +647,21 @@ function toggleTerminalTasks(terminal) {
 }
 
 async function loadUsers() {
-  try { users.value = await getUsers() } catch (e) {}
-}
-async function loadSkills() {
-  try {
-    const data = await getDictionaries('skill')
-    const map = {}
-    for (const s of data) map[s.dict_key] = s.dict_value
-    skillsMap.value = map
-  } catch (e) {}
+  try { users.value = await getUsers() } catch (e) { console.error(e) }
+  async function loadSkills() {
+    try {
+      const data = await getDictionaries('skill')
+      const map = {}
+      for (const s of data) map[s.dict_key] = s.dict_value
+      skillsMap.value = map
+    } catch (e) { console.error(e) }
 }
 
 async function loadIterations() {
   try {
     const data = await getIterations()
     iterations.value = data || []
-  } catch (e) {}
+  } catch (e) { console.error(e) }
 }
 
 async function saveAssignDevLead() {
@@ -673,7 +671,7 @@ async function saveAssignDevLead() {
     window.$message?.success('开发组长已指派')
     await loadReq()
   } catch (e) {
-    window.$message?.error('指派失败')
+    console.error(e)
   }
 }
 
@@ -868,7 +866,7 @@ async function confirmTransfer(t) {
     window.$message?.success('开发人员已转让')
     transferringTaskId.value = null
     await loadTasks()
-  } catch (e) { window.$message?.error('转让失败') }
+  } catch (e) { console.error(e) }
 }
 
 async function handleDeleteTask(t) {
@@ -878,7 +876,7 @@ async function handleDeleteTask(t) {
     positiveText: '确定', negativeText: '取消',
     onPositiveClick: async () => {
       try { await deleteTask(t.id); window.$message?.success('已删除'); await loadTasks() }
-      catch (e) { window.$message?.error('删除失败') }
+      catch (e) { console.error(e) }
     }
   })
 }
@@ -899,7 +897,7 @@ async function confirmTaskRelease() {
     t.iteration_id = selectedIterationId.value
     window.$message?.success('任务已纳入发布清单')
     showTaskRelease.value = false
-  } catch (e) { window.$message?.error('操作失败') }
+  } catch (e) { console.error(e) }
   releasing.value = false
 }
 
@@ -908,7 +906,7 @@ async function removeTaskRelease(t) {
     await updateTask(t.id, { iteration_id: '' })
     t.iteration_id = null
     window.$message?.success('已取消发布')
-  } catch (e) { window.$message?.error('操作失败') }
+  } catch (e) { console.error(e) }
 }
 
 async function loadReq() {
@@ -922,7 +920,7 @@ async function loadReq() {
     localPlannedTime.value = data.planned_completion_time ? new Date(data.planned_completion_time).getTime() : null
     await loadTasks()
   } catch (e) {
-    window.$message?.error('加载需求详情失败')
+    console.error(e)
   }
 }
 

@@ -185,7 +185,7 @@ async function handleSave() {
     showModal.value = false
     await loadData()
   } catch (e) {
-    window.$message.error(isEditing.value ? '更新失败' : '创建失败')
+    console.error(e)
   } finally {
     saving.value = false
   }
@@ -200,7 +200,7 @@ async function handleDelete() {
     deletingId.value = null
     await loadData()
   } catch (e) {
-    window.$message.error('删除失败')
+    console.error(e)
   } finally {
     deleting.value = false
   }
@@ -217,7 +217,7 @@ async function loadData() {
       sortOrder: item.sort_order
     }))
   } catch (e) {
-    window.$message?.error('加载字典数据失败')
+    console.error(e)
   }
 }
 

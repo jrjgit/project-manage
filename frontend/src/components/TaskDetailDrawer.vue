@@ -189,7 +189,7 @@ watch([() => props.taskId, show], async ([id, visible]) => {
   if (id && visible) { await loadDetail(); await loadHistory(); await loadUsers() }
 })
 
-async function loadUsers() { try { users.value = await getUsers() } catch {} }
+async function loadUsers() { try { users.value = await getUsers() } catch (e) { console.error(e) } }
 async function loadDetail() {
   try {
     const res = await getTask(props.taskId)
@@ -199,9 +199,9 @@ async function loadDetail() {
       if (reqData.document_name) reqDoc.value = reqData
       else reqDoc.value = null
     }
-  } catch {}
+  } catch (e) { console.error(e) }
 }
-async function loadHistory() { try { histories.value = await getTaskHistory(props.taskId) } catch {} }
+async function loadHistory() { try { histories.value = await getTaskHistory(props.taskId) } catch (e) { console.error(e) } }
 
 async function downloadDoc() {
   if (!reqDoc.value?.id) return
@@ -213,7 +213,7 @@ async function downloadDoc() {
     a.href = url; a.download = reqDoc.value.document_name || 'document'
     document.body.appendChild(a); a.click(); document.body.removeChild(a)
     window.URL.revokeObjectURL(url)
-  } catch (e) { window.$message?.error('下载失败') }
+  } catch (e) { console.error(e) }
 }
 
 async function saveDevLead() {

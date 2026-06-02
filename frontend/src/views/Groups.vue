@@ -148,7 +148,7 @@ async function handleCreate() {
     createForm.value = { name: '', dev_lead_id: null, lead_role: 'dev' }
     await loadGroups()
   } catch (e) {
-    window.$message.error('创建失败')
+    console.error(e)
   } finally {
     creating.value = false
   }
@@ -164,7 +164,7 @@ async function confirmDelete(g) {
       selectedMembers.value = []
     }
     await loadGroups()
-  } catch (e) { window.$message.error('删除失败') }
+  } catch (e) { console.error(e) }
 }
 
 async function handleAddMember() {
@@ -174,7 +174,7 @@ async function handleAddMember() {
     window.$message.success('成员已加入')
     newMemberId.value = null
     await selectGroup(selectedGroup.value)
-  } catch (e) { window.$message.error('添加失败') }
+  } catch (e) { console.error(e) }
 }
 
 async function handleRemoveMember(userId) {
@@ -183,7 +183,7 @@ async function handleRemoveMember(userId) {
     await removeMember(selectedGroup.value.id, userId)
     window.$message.success('成员已移除')
     await selectGroup(selectedGroup.value)
-  } catch (e) { window.$message.error('移除失败') }
+  } catch (e) { console.error(e) }
 }
 
 onMounted(() => {
