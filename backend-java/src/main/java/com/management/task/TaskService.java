@@ -227,6 +227,7 @@ public class TaskService {
         if (req.getRequirementId() != null) task.setRequirementId(req.getRequirementId());
         if (req.getTerminal() != null) task.setTerminal(req.getTerminal());
         if (req.getIterationId() != null) task.setIterationId(req.getIterationId());
+        if (req.getTestPerformance() != null) task.setTestPerformance(req.getTestPerformance());
         taskMapper.insert(task);
 
         // 处理多指派人
@@ -336,6 +337,7 @@ public class TaskService {
             }
         }
         if (req.getPerformance() != null) task.setPerformance(req.getPerformance());
+        if (req.getTestPerformance() != null) task.setTestPerformance(req.getTestPerformance());
         if (req.getTerminal() != null) task.setTerminal(req.getTerminal());
         if (req.getProgress() != null) {
             Integer oldProgress = task.getProgress();

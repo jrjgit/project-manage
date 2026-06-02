@@ -52,6 +52,7 @@ public class Task {
     private String terminal;
     private Integer progress;
     private String performance;
+    private String testPerformance;
     private String iterationId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

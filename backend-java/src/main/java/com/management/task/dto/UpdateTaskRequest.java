@@ -19,4 +19,5 @@ public class UpdateTaskRequest {
     private String terminal;
     private Integer progress;
     private String iterationId;
+    private String testPerformance;
 }

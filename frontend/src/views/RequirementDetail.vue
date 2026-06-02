@@ -126,6 +126,7 @@
         </div>
         <div v-if="tasks.length > 0">
           <div class="task-table-header">
+            <span class="col-person">人员</span>
             <span class="col-terminal">终端</span>
             <span class="col-title">任务描述</span>
             <span class="col-status">任务状态</span>
@@ -134,6 +135,7 @@
             <span class="col-actions">操作</span>
           </div>
           <div v-for="t in tasks" :key="t.id" class="task-table-row">
+            <span class="col-person">{{ t.assignee?.name || userNameMap[t.assignee_id] || '-' }}</span>
             <span class="col-terminal">{{ skillsMap[t.terminal] || t.terminal || '-' }}</span>
             <span class="col-title" :title="t.title">{{ t.title }}</span>
             <span class="col-status"><n-tag size="tiny" :type="taskStatusMeta[t.status]?.tone || 'default'">{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag></span>
@@ -290,10 +292,26 @@
               <n-button size="tiny" type="error" ghost @click="removeTaskItem(item)">删除</n-button>
             </div>
             <div class="preview-fields">
-              <n-input v-model:value="item.description" type="textarea" :autosize="{ minRows: 1, maxRows: 3 }" placeholder="任务描述" />
+              <div class="preview-field-row">
+                <span class="preview-field-label">任务描述</span>
+                <n-input v-model:value="item.description" type="textarea" :autosize="{ minRows: 1, maxRows: 3 }" placeholder="任务描述" />
+              </div>
               <div class="preview-row-3">
-                <n-input v-model:value="item.performance" placeholder="绩效工时" size="small" />
-                <n-date-picker v-model:value="item.deadline" type="date" placeholder="计划完成时间" size="small" clearable style="width:100%" />
+                <div class="preview-field-row">
+                  <span class="preview-field-label">绩效工时</span>
+                  <n-input v-model:value="item.performance" placeholder="绩效工时" size="small" />
+                </div>
+                <div class="preview-field-row">
+                  <span class="preview-field-label">测试绩效</span>
+                  <n-input v-model:value="item.test_performance" placeholder="测试绩效" size="small" />
+                </div>
+                <div class="preview-field-row">
+                  <span class="preview-field-label">计划完成时间</span>
+                  <n-date-picker v-model:value="item.deadline" type="date" placeholder="计划完成时间" size="small" clearable style="width:100%" />
+                </div>
+              </div>
+              <div class="preview-field-row">
+                <span class="preview-field-label">技术经理备注</span>
                 <n-input v-model:value="item.notes" type="textarea" :autosize="{ minRows: 2, maxRows: 5 }" placeholder="技术经理备注" />
               </div>
             </div>
@@ -438,6 +456,7 @@ async function openTaskDispatch() {
       skillLabel: skillsMap.value[skill] || skill,
       description: t.title || t.description || req.value.description || '',
       performance: t.performance || '',
+      test_performance: t.test_performance || '',
       deadline: t.deadline ? new Date(t.deadline).getTime() : null,
       notes: t.description || ''
     })
@@ -648,13 +667,15 @@ function toggleTerminalTasks(terminal) {
 
 async function loadUsers() {
   try { users.value = await getUsers() } catch (e) { console.error(e) }
-  async function loadSkills() {
-    try {
-      const data = await getDictionaries('skill')
-      const map = {}
-      for (const s of data) map[s.dict_key] = s.dict_value
-      skillsMap.value = map
-    } catch (e) { console.error(e) }
+}
+
+async function loadSkills() {
+  try {
+    const data = await getDictionaries('skill')
+    const map = {}
+    for (const s of data) map[s.dict_key] = s.dict_value
+    skillsMap.value = map
+  } catch (e) { console.error(e) }
 }
 
 async function loadIterations() {
@@ -722,6 +743,7 @@ function rebuildTaskPreview() {
           skillLabel: skillsMap.value[skill] || skill,
           description: req.value.description || '',
           performance: '',
+          test_performance: '',
           deadline: null,
           notes: ''
         })
@@ -771,6 +793,7 @@ function appendTask(uid, skill) {
     skillLabel: skillsMap.value[skill] || skill,
     description: req.value.description || '',
     performance: '',
+    test_performance: '',
     deadline: null,
     notes: ''
   }
@@ -811,6 +834,7 @@ async function handleCreateTasks() {
         assignee_id: item.userId,
         terminal: item.skill,
         performance: item.performance || undefined,
+        test_performance: item.test_performance || undefined,
         deadline: item.deadline ? new Date(item.deadline).toISOString() : undefined
       }
       if (item.id) {
@@ -1245,9 +1269,24 @@ onMounted(() => {
 
 .preview-row-3 {
   display: grid;
-  grid-template-columns: 80px 140px 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
   align-items: start;
+}
+.preview-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.preview-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+.preview-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .empty-state {
@@ -1293,7 +1332,7 @@ onMounted(() => {
 /* Task Table */
 .task-table-header {
   display: grid;
-  grid-template-columns: 90px 1fr 90px 80px 120px 1fr;
+  grid-template-columns: 60px 80px 1fr 90px 80px 100px 1fr;
   gap: 8px;
   padding: 8px 12px;
   font-size: 11px;
@@ -1306,7 +1345,7 @@ onMounted(() => {
 }
 .task-table-row {
   display: grid;
-  grid-template-columns: 90px 1fr 90px 80px 120px 1fr;
+  grid-template-columns: 60px 80px 1fr 90px 80px 100px 1fr;
   gap: 8px;
   align-items: center;
   padding: 10px 12px;
@@ -1315,6 +1354,14 @@ onMounted(() => {
 }
 .task-table-row:hover {
   background: #f1f5f9;
+}
+.task-table-row .col-person {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6366f1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .task-table-row .col-terminal {
   font-size: 13px;

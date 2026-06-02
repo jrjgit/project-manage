@@ -1,0 +1,1 @@
+ALTER TABLE tasks ADD COLUMN test_performance VARCHAR(255) DEFAULT NULL COMMENT '测试绩效';
