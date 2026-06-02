@@ -5,8 +5,8 @@
       <section class="toolbar section-card">
         <div class="toolbar-row">
           <div class="toolbar-left">
-            <h2 class="toolbar-title">{{ activeView?.label || '全部任务' }}</h2>
-            <span class="toolbar-count">{{ filteredTasks.length }} / {{ tasks.length }}</span>
+            <h2 class="toolbar-title">我的任务</h2>
+            <span class="toolbar-count">{{ tasks.length }}</span>
           </div>
           <div class="toolbar-right">
             <n-radio-group v-model:value="viewMode" size="small">
@@ -16,18 +16,6 @@
           </div>
         </div>
         <div class="toolbar-row secondary">
-          <div class="view-chips">
-            <button
-              v-for="view in availableViews"
-              :key="view.key"
-              type="button"
-              :class="['view-chip', { active: activeView?.key === view.key }]"
-              @click="applyView(view)"
-            >
-              <span>{{ view.label }}</span>
-              <span class="view-chip-count">{{ countForView(view) }}</span>
-            </button>
-          </div>
           <div class="filter-controls">
             <n-select v-model:value="filterProject" :options="projectOptions" placeholder="项目" clearable style="width: 140px;" size="small" />
             <n-select v-model:value="filterStatus" :options="statusOptions" placeholder="状态" clearable style="width: 130px;" size="small" />
@@ -71,18 +59,14 @@
 <script setup>
 import { computed, h, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/store/useAuthStore'
 import { getTasks, changeTaskStatus } from '@/api/tasks'
 import { getProjects } from '@/api/projects'
 import TaskBoard from '@/components/TaskBoard.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import AppLayout from '@/components/AppLayout.vue'
-import { taskPrimaryViews } from '@/constants/taskViews'
 import { priorityMeta, taskStatusMeta } from '@/constants/statusMeta'
-import { buildViewQuery, compactParams, pickActiveView } from '@/utils/viewState'
 import { NButton, NSelect, NRadioGroup, NRadioButton, NDataTable, NTag } from 'naive-ui'
 
-const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -96,16 +80,12 @@ const filterProject = ref(null)
 const filterStatus = ref(null)
 const filterPriority = ref(null)
 
-const availableViews = computed(() => taskPrimaryViews[authStore.role] || taskPrimaryViews.dev || [])
-const activeView = computed(() => pickActiveView(availableViews.value, route.query) || availableViews.value[0] || null)
-
 const projectOptions = computed(() => projects.value.map((project) => ({ label: project.name, value: project.id })))
 const statusOptions = Object.entries(taskStatusMeta).map(([value, meta]) => ({ label: meta.label, value }))
 const priorityOptions = Object.entries(priorityMeta).map(([value, meta]) => ({ label: meta.label, value }))
 
 const filteredTasks = computed(() => {
   return tasks.value.filter((task) => {
-    if (!matchesView(task, activeView.value?.params || {})) return false
     if (filterProject.value && task.project_id !== filterProject.value) return false
     if (filterStatus.value && task.status !== filterStatus.value) return false
     if (filterPriority.value && task.priority !== filterPriority.value) return false
@@ -143,30 +123,6 @@ const columns = [
     }
   }
 ]
-
-function matchesView(task, params = {}) {
-  if (params.status && task.status !== params.status) return false
-  if (params.focus === 'risk') return ['developing', 'testing'].includes(task.status) && task.deadline != null && new Date(task.deadline) < new Date()
-  if (params.mine === 'group') return task.dev_lead_id === authStore.userInfo?.id
-  if (params.mine === 'todo') {
-    if (authStore.isDevLead) return task.dev_lead_id === authStore.userInfo?.id && task.status === 'pending'
-    if (authStore.isDev) return task.assignee_id === authStore.userInfo?.id && ['pending', 'developing'].includes(task.status)
-    if (authStore.isTester) return task.tester_id === authStore.userInfo?.id && ['testing'].includes(task.status)
-  }
-  if (params.mine === 'all') {
-    if (authStore.isDev) return task.assignee_id === authStore.userInfo?.id
-    if (authStore.isTester) return task.tester_id === authStore.userInfo?.id
-  }
-  return true
-}
-
-function countForView(view) {
-  return tasks.value.filter((task) => matchesView(task, view.params || {})).length
-}
-
-function applyView(view) {
-  router.replace({ path: '/tasks', query: compactParams({ ...buildViewQuery(view), mode: viewMode.value }) })
-}
 
 function formatDateShort(d) {
   if (!d) return ''
@@ -224,7 +180,7 @@ watch(
 )
 
 watch(viewMode, (mode) => {
-  router.replace({ path: '/tasks', query: compactParams({ ...route.query, mode }) })
+  router.replace({ path: '/tasks', query: { ...route.query, mode } })
 })
 
 onMounted(() => {
@@ -293,12 +249,6 @@ onMounted(() => {
   gap: 10px;
 }
 
-.view-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
 .filter-controls {
   display: flex;
   align-items: center;
@@ -310,34 +260,6 @@ onMounted(() => {
   border-radius: 8px;
   font-weight: 600;
 }
-
-.view-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  border-radius: 999px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #334155;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: all 0.18s ease;
-}
-
-.view-chip.active {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-  color: #4338ca;
-}
-
-.view-chip-count {
-  min-width: 22px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: white;
-  color: #64748b;
   font-size: 12px;
 }
 
