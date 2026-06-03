@@ -26,7 +26,7 @@ public class BugController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('TESTER','TESTER_LEAD')")
+    @PreAuthorize("hasRole('TESTER')")
     @ResponseStatus(HttpStatus.CREATED)
     public Result<Bug> create(@Valid @RequestBody CreateBugRequest req) {
         return Result.ok(bugService.createBug(req));

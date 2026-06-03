@@ -31,6 +31,7 @@
       <TaskBoard
         v-if="viewMode === 'board'"
         :tasks="filteredTasks"
+        :column-keys="authStore.isTester ? ['testing'] : ['pending', 'developing', 'testing']"
         @status-change="onStatusChange"
         @task-click="openDetail"
       />
@@ -59,6 +60,7 @@
 <script setup>
 import { computed, h, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/store/useAuthStore'
 import { getTasks, changeTaskStatus } from '@/api/tasks'
 import { getProjects } from '@/api/projects'
 import TaskBoard from '@/components/TaskBoard.vue'
@@ -67,6 +69,7 @@ import AppLayout from '@/components/AppLayout.vue'
 import { priorityMeta, taskStatusMeta } from '@/constants/statusMeta'
 import { NButton, NSelect, NRadioGroup, NRadioButton, NDataTable, NTag } from 'naive-ui'
 
+const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -259,8 +262,6 @@ onMounted(() => {
 .create-btn {
   border-radius: 8px;
   font-weight: 600;
-}
-  font-size: 12px;
 }
 
 .list-container {

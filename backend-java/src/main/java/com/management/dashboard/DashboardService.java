@@ -43,7 +43,7 @@ public class DashboardService {
             case "pm" -> pmDashboard(u);
             case "dev_lead" -> devLeadDashboard(u);
             case "dev" -> devDashboard(u);
-            case "tester", "tester_lead" -> testerDashboard(u);
+            case "tester" -> testerDashboard(u);
             default -> Map.of("message", "unknown role");
         };
     }

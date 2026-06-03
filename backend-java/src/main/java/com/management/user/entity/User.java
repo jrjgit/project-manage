@@ -18,7 +18,6 @@ public class User {
     @JsonIgnore
     private String password;
     private String role;
-    private Long groupId;
     private String wechatId;
     private String dingtalkId;
     private String feishuId;

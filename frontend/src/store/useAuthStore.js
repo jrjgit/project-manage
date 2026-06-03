@@ -12,7 +12,6 @@ export const useAuthStore = defineStore('auth', () => {
   const isPM = computed(() => role.value === 'pm')
   const isDevLead = computed(() => role.value === 'dev_lead')
   const isDev = computed(() => role.value === 'dev')
-  const isTesterLead = computed(() => role.value === 'tester_lead')
   const isTester = computed(() => role.value === 'tester')
 
   const setAuth = (t, u) => {
@@ -51,7 +50,6 @@ export const useAuthStore = defineStore('auth', () => {
     isPM,
     isDevLead,
     isDev,
-    isTesterLead,
     isTester,
     setAuth,
     clearAuth,

@@ -21,7 +21,7 @@ public class JwtUtils {
                 Base64.getEncoder().encodeToString(secret.getBytes())));
     }
 
-    public String generateToken(Long userId, String name, String role, Long groupId) {
+    public String generateToken(Long userId, String name, String role) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
@@ -29,7 +29,6 @@ public class JwtUtils {
                 .claim("user_id", userId)
                 .claim("name", name)
                 .claim("role", role)
-                .claim("group_id", groupId)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(key)

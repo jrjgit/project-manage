@@ -121,7 +121,7 @@
       </template>
 
       <!-- Tester Dashboard -->
-      <template v-if="authStore.isTester || authStore.isTesterLead">
+      <template v-if="authStore.isTester">
         <section class="section-card">
           <div class="section-header"><h3>待综合测试的任务</h3></div>
           <div v-if="testingTasks.length" class="compact-list">
@@ -181,8 +181,7 @@ const roleHint = computed(() => {
     pm: '关注需求整体进展、任务分配与发布计划。',
     dev_lead: '关注团队任务负载、开发进度与风险。',
     dev: '关注我的开发任务，按时完成交付。',
-    tester: '关注待测试任务与 Bug 验证。',
-    tester_lead: '关注测试进度与团队 Bug 情况。'
+    tester: '关注待测试任务与 Bug 验证。'
   }
   return map[authStore.userInfo?.role] || ''
 })
@@ -217,7 +216,7 @@ const statItems = computed(() => {
     { label: '已完成', value: s.done || 0, color: '#10b981' },
     { label: '逾期', value: s.overdue || 0, color: '#ef4444' },
   ]
-  if (authStore.isTester || authStore.isTesterLead) return [
+  if (authStore.isTester) return [
     { label: '待测试', value: s.pendingTest || 0, color: '#3b82f6' },
     { label: '测试中', value: s.testing || 0, color: '#f59e0b' },
     { label: '待验证Bug', value: s.bugPendingVerify || 0, color: '#ef4444' },

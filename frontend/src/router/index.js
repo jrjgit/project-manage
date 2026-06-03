@@ -58,13 +58,7 @@ const routes = [
     path: '/users',
     name: 'Users',
     component: () => import('@/views/Users.vue'),
-    meta: { requiresAuth: true, requiresPM: true }
-  },
-  {
-    path: '/groups',
-    name: 'Groups',
-    component: () => import('@/views/Groups.vue'),
-    meta: { requiresAuth: true, requiresPM: true }
+    meta: { requiresAuth: true }
   },
   {
     path: '/requirements',
@@ -112,7 +106,7 @@ const routes = [
     path: '/dictionary',
     name: 'Dictionary',
     component: () => import('@/views/Dictionary.vue'),
-    meta: { requiresAuth: true, requiresPM: true }
+    meta: { requiresAuth: true }
   }
 ]
 
@@ -131,11 +125,6 @@ router.beforeEach((to, from, next) => {
 
   if (to.meta.requiresAuth && !authStore.token) {
     next('/login')
-    return
-  }
-
-  if (to.meta.requiresPM && authStore.userInfo?.role !== 'pm') {
-    next('/dashboard')
     return
   }
 

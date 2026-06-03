@@ -45,7 +45,6 @@ public class BugService {
 
         switch (u.getRole()) {
             case "pm":
-            case "tester_lead":
                 break;
             case "dev_lead":
                 if (u.getGroupId() != null) {

@@ -44,7 +44,7 @@ public class AuthService {
             throw new BusinessException(401, "账号或密码错误");
         }
         String token = jwtUtils.generateToken(user.getId(), user.getName(),
-                user.getRole(), user.getGroupId());
+                user.getRole());
         log.info("User logged in: name={}, account={}, id={}", user.getName(), user.getAccount(), user.getId());
         return new LoginResponse(token, user);
     }

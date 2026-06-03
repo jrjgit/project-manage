@@ -88,14 +88,13 @@ const rules = {
   role: { required: true, message: '请选择角色', trigger: 'change' }
 }
 
-const roleMap = { pm: '项目经理', dev_lead: '开发组长', dev: '开发', tester_lead: '测试组长', tester: '测试' }
-const roleTagTypeMap = { pm: 'error', dev_lead: 'warning', dev: 'success', tester_lead: 'info', tester: 'default' }
+const roleMap = { pm: '项目经理', dev_lead: '开发组长', dev: '开发', tester: '测试' }
+const roleTagTypeMap = { pm: 'error', dev_lead: 'warning', dev: 'success', tester: 'default' }
 
 const roleOptions = [
   { label: '项目经理', value: 'pm' },
   { label: '开发组长', value: 'dev_lead' },
   { label: '开发', value: 'dev' },
-  { label: '测试组长', value: 'tester_lead' },
   { label: '测试', value: 'tester' }
 ]
 

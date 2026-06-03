@@ -14,14 +14,8 @@ export const bugPrimaryViews = {
     { key: 'reopened', label: '重新打开', params: { status: 'reopened' } },
     { key: 'all', label: '全部 Bug', params: {} }
   ],
-  tester_lead: [
-    { key: 'verify', label: '待验证', params: { mine: 'verify' } },
-    { key: 'all', label: '全部 Bug', params: {} },
-    { key: 'critical', label: '高风险', params: { severity: 'critical' } }
-  ],
   tester: [
-    { key: 'verify', label: '待我验证', params: { mine: 'verify' } },
-    { key: 'created', label: '我创建的', params: { mine: 'created' } },
+    { key: 'verify', label: '待验证', params: { status: 'pending_verify' } },
     { key: 'all', label: '全部 Bug', params: {} }
   ]
 }

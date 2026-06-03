@@ -68,13 +68,8 @@ public class TaskService {
                     q.inSql(Task::getId,
                             "SELECT task_id FROM task_assignees WHERE user_id = " + u.getUserId());
                     break;
-                case "tester_lead":
-                    q.and(w -> w.eq(Task::getTesterLeadId, u.getUserId())
-                            .or().in(Task::getStatus, List.of("pending_test", "testing", "passed", "rejected")));
-                    break;
                 case "tester":
-                    q.and(w -> w.eq(Task::getTesterId, u.getUserId())
-                            .or().eq(Task::getCreatorId, u.getUserId()));
+                    if (!scoped) q.eq(Task::getStatus, "testing");
                     break;
                 default:
                     q.apply("1=0");
@@ -140,7 +135,7 @@ public class TaskService {
 
     private void applyProjectScopeFilter(JwtUserDetails u, LambdaQueryWrapper<Task> q) {
         String role = u.getRole();
-        if ("pm".equals(role) || "dev_lead".equals(role) || "tester_lead".equals(role)) return;
+        if ("pm".equals(role) || "dev_lead".equals(role)) return;
         List<Long> projectIds = getVisibleProjectIds(u.getUserId());
         if (projectIds.isEmpty()) {
             q.and(w -> w.isNull(Task::getProjectId));

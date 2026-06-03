@@ -18,7 +18,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('PM','DEV_LEAD','DEV','TESTER','TESTER_LEAD')")
+    @PreAuthorize("hasAnyRole('PM','DEV_LEAD','DEV','TESTER')")
     public Result<List<User>> listUsers() {
         return Result.ok(userService.listUsers());
     }
@@ -33,7 +33,7 @@ public class UserController {
     @PreAuthorize("hasRole('PM')")
     public Result<Map<String, String>> updateRole(@PathVariable Long id,
                                                    @RequestBody UpdateRoleRequest req) {
-        userService.updateRole(id, req.getRole(), req.getGroupId());
+        userService.updateRole(id, req.getRole());
         return Result.ok(Map.of("message", "user updated"));
     }
 
@@ -54,7 +54,6 @@ public class UserController {
     static class UpdateRoleRequest {
         @NotBlank
         private String role;
-        private Long groupId;
     }
 
     @Data

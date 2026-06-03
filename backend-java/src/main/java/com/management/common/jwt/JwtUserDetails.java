@@ -15,7 +15,6 @@ public class JwtUserDetails implements UserDetails {
     private Long userId;
     private String name;
     private String role;
-    private Long groupId;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

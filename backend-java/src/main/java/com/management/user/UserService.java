@@ -35,12 +35,7 @@ public class UserService {
     }
 
     public List<User> listUsers() {
-        JwtUserDetails user = currentUser();
-        LambdaQueryWrapper<User> q = new LambdaQueryWrapper<>();
-        if ("tester".equals(user.getRole()) || "tester_lead".equals(user.getRole())) {
-            q.eq(User::getRole, "dev");
-        }
-        return userMapper.selectList(q);
+        return userMapper.selectList(new LambdaQueryWrapper<User>().orderByAsc(User::getId));
     }
 
     public User getUser(Long id) {
@@ -49,11 +44,10 @@ public class UserService {
         return user;
     }
 
-    public void updateRole(Long id, String role, Long groupId) {
+    public void updateRole(Long id, String role) {
         User user = userMapper.selectById(id);
         if (user == null) throw new BusinessException(404, "user not found");
         user.setRole(role);
-        if (groupId != null) user.setGroupId(groupId);
         userMapper.updateById(user);
     }
 
