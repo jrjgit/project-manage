@@ -193,18 +193,10 @@ public class BugService {
         List<User> targets = resolveBugNotifyTargets(bug, oldStatus, req.getNewStatus());
         notificationService.emitBugEvent(bug, oldStatus, req.getNewStatus(), operatorName, targets, req.getComment());
 
-        // 关键：fixed -> pending_verify 自动跳转
+        // 关键：fixed -> pending_verify 自动跳转（不单独记录历史，由 fixing→fixed 的备注体现）
         if ("fixed".equals(req.getNewStatus())) {
             bug.setStatus("pending_verify");
             bugMapper.updateById(bug);
-
-            BugStatusHistory autoHistory = new BugStatusHistory();
-            autoHistory.setBugId(bugId);
-            autoHistory.setFromStatus("fixed");
-            autoHistory.setToStatus("pending_verify");
-            autoHistory.setChangedBy(operatorId);
-            autoHistory.setComment("系统自动将 Bug 置为待验证");
-            historyMapper.insert(autoHistory);
 
             List<User> verifyTargets = resolveBugNotifyTargets(bug, "fixed", "pending_verify");
             notificationService.emitBugEvent(bug, "fixed", "pending_verify",
