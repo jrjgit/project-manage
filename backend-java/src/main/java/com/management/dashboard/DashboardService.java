@@ -251,6 +251,43 @@ public class DashboardService {
         return result;
     }
 
+    /** 测试工作台 — 看板聚合接口 */
+    public Map<String, Object> testerDashboardV2() {
+        JwtUserDetails u = currentUser();
+        Long userId = u.getUserId();
+
+        List<Task> allTestingTasks = taskMapper.selectList(
+                new LambdaQueryWrapper<Task>().eq(Task::getStatus, "testing"));
+        for (Task t : allTestingTasks) fillTaskUser(t);
+
+        List<Bug> pendingVerifyBugs = bugMapper.selectList(
+                new LambdaQueryWrapper<Bug>().eq(Bug::getStatus, "pending_verify")
+                        .orderByDesc(Bug::getUpdatedAt));
+        for (Bug b : pendingVerifyBugs) {
+            if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
+        }
+
+        long totalTesting = allTestingTasks.size();
+        long pickedByMe = allTestingTasks.stream().filter(t -> userId.equals(t.getTesterId())).count();
+        long pendingVerify = pendingVerifyBugs.size();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("stats", Map.of("totalTesting", totalTesting, "pickedByMe", pickedByMe, "pendingVerify", pendingVerify));
+        result.put("tasks", allTestingTasks.stream().map(this::taskToMap).collect(Collectors.toList()));
+        result.put("pendingVerifyBugs", pendingVerifyBugs.stream().map(b -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", b.getId());
+            m.put("title", b.getTitle());
+            m.put("severity", b.getSeverity());
+            if (b.getTaskId() != null) {
+                Task t = taskMapper.selectById(b.getTaskId());
+                m.put("taskTitle", t != null ? t.getTitle() : null);
+            }
+            return m;
+        }).collect(Collectors.toList()));
+        return result;
+    }
+
     private Map<String, Object> taskToMap(Task t) {
         fillTaskUser(t);
         Map<String, Object> m = new LinkedHashMap<>();

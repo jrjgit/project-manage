@@ -191,16 +191,17 @@ const roleLabel = computed(() => roleLabelMap[authStore.userInfo?.role] || '')
 const avatarLetter = computed(() => authStore.userInfo?.name?.charAt(0)?.toUpperCase() || '?')
 
 const allMenus = [
-  { key: 'dashboard', label: '仪表盘', path: '/dashboard', icon: LayoutDashboardIcon, roles: ['pm', 'tester'] },
+  { key: 'dashboard', label: '仪表盘', path: '/dashboard', icon: LayoutDashboardIcon, roles: ['pm'] },
   { key: 'developer', label: '开发者工作台', path: '/developer', icon: CodeIcon, roles: ['dev_lead', 'dev'] },
-  { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon, roles: ['pm', 'tester'] },
-  { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon, roles: ['tester'] },
-  { key: 'bugs', label: 'Bug管理', path: '/bugs', icon: BugIcon, roles: ['pm', 'tester'] },
+  { key: 'tester', label: '测试工作台', path: '/tester', icon: BugIcon, roles: ['tester'] },
+  { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon, roles: ['pm'] },
+  { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon, roles: [] },
+  { key: 'bugs', label: 'Bug管理', path: '/bugs', icon: BugIcon, roles: ['pm'] },
   { key: 'messages', label: '消息中心', path: '/messages', icon: BellIcon, badge: 'unread', roles: ['pm', 'dev_lead', 'dev', 'tester'] },
-  { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon, roles: ['pm', 'dev_lead', 'tester'] },
-  { key: 'iterations', label: '发布迭代', path: '/iterations', icon: MilestoneIcon, roles: ['pm', 'dev_lead', 'dev'] },
+  { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon, roles: ['pm', 'dev_lead'] },
+  { key: 'iterations', label: '发布迭代', path: '/iterations', icon: MilestoneIcon, roles: ['pm', 'dev_lead', 'dev', 'tester'] },
   { key: 'revenue', label: '营收统计', path: '/revenue', icon: ChartBarIcon, roles: ['pm'] },
-  { key: 'performance', label: '人员绩效', path: '/performance', icon: TrendingUpIcon, roles: ['pm', 'tester'] },
+  { key: 'performance', label: '人员绩效', path: '/performance', icon: TrendingUpIcon, roles: ['pm'] },
   { key: 'users', label: '用户管理', path: '/users', icon: UsersIcon, roles: ['pm'] },
   { key: 'systems', label: '系统管理', path: '/systems', icon: BookOpenIcon, roles: ['pm'] },
   { key: 'dictionary', label: '基础字典', path: '/dictionary', icon: BookOpenIcon, roles: ['pm'] }
@@ -219,6 +220,10 @@ const pageMeta = computed(() => {
     developer: {
       title: '开发者工作台',
       subtitle: '一站式任务看板，兼顾任务与 Bug 处理。'
+    },
+    tester: {
+      title: '测试工作台',
+      subtitle: '待测试任务与待验证 Bug 一目了然。'
     },
     projects: {
       title: '项目管理',

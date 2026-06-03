@@ -23,4 +23,10 @@ public class DashboardController {
     public Result<Map<String, Object>> developerDashboard() {
         return Result.ok(dashboardService.developerDashboard());
     }
+
+    @GetMapping("/tester")
+    @PreAuthorize("hasRole('TESTER')")
+    public Result<Map<String, Object>> testerDashboard() {
+        return Result.ok(dashboardService.testerDashboardV2());
+    }
 }
