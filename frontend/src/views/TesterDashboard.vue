@@ -88,10 +88,10 @@ const pendingVerifyBugs = computed(() => dashData.value.pendingVerifyBugs || [])
 const myId = computed(() => authStore.userInfo?.id)
 
 const availableTasks = computed(() =>
-  tasks.value.filter(t => !t.testerId || t.testerId !== myId.value)
+  tasks.value.filter(t => !t.tester_id || t.tester_id !== myId.value)
 )
 const myTasks = computed(() =>
-  tasks.value.filter(t => t.testerId === myId.value)
+  tasks.value.filter(t => t.tester_id === myId.value)
 )
 
 async function loadData() {
