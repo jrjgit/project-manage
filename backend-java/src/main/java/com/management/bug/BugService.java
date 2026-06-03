@@ -95,6 +95,11 @@ public class BugService {
         bug.setCreatorId(userId);
         bug.setAssigneeId(req.getAssigneeId());
         bug.setTestType(req.getTestType() != null ? req.getTestType() : "integration");
+        // 从关联任务获取需求ID
+        if (req.getTaskId() != null) {
+            Task t = taskMapper.selectById(req.getTaskId());
+            if (t != null) bug.setRequirementId(t.getRequirementId());
+        }
         bugMapper.insert(bug);
 
         fillAssociations(bug);
@@ -132,6 +137,8 @@ public class BugService {
             if (taskMapper.selectById(req.getTaskId()) == null)
                 throw new BusinessException(400, "关联任务不存在");
             bug.setTaskId(req.getTaskId());
+            Task t = taskMapper.selectById(req.getTaskId());
+            if (t != null) bug.setRequirementId(t.getRequirementId());
         }
         if (req.getAssigneeId() != null) {
             if (userMapper.selectById(req.getAssigneeId()) == null)
