@@ -191,16 +191,16 @@ const roleLabel = computed(() => roleLabelMap[authStore.userInfo?.role] || '')
 const avatarLetter = computed(() => authStore.userInfo?.name?.charAt(0)?.toUpperCase() || '?')
 
 const allMenus = [
-  { key: 'dashboard', label: '仪表盘', path: '/dashboard', icon: LayoutDashboardIcon, roles: ['pm', 'dev_lead', 'dev', 'tester', 'tester'] },
+  { key: 'dashboard', label: '仪表盘', path: '/dashboard', icon: LayoutDashboardIcon, roles: ['pm', 'tester'] },
   { key: 'developer', label: '开发者工作台', path: '/developer', icon: CodeIcon, roles: ['dev_lead', 'dev'] },
-  { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon, roles: ['pm', 'dev_lead', 'dev', 'tester', 'tester'] },
-  { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon, roles: ['dev_lead', 'dev', 'tester', 'tester'] },
-  { key: 'bugs', label: 'Bug管理', path: '/bugs', icon: BugIcon, roles: ['pm', 'dev_lead', 'dev', 'tester', 'tester'] },
-  { key: 'messages', label: '消息中心', path: '/messages', icon: BellIcon, badge: 'unread', roles: ['pm', 'dev_lead', 'dev', 'tester', 'tester'] },
-  { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon, roles: ['pm', 'dev_lead', 'dev', 'tester', 'tester'] },
+  { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon, roles: ['pm', 'tester'] },
+  { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon, roles: ['tester'] },
+  { key: 'bugs', label: 'Bug管理', path: '/bugs', icon: BugIcon, roles: ['pm', 'tester'] },
+  { key: 'messages', label: '消息中心', path: '/messages', icon: BellIcon, badge: 'unread', roles: ['pm', 'dev_lead', 'dev', 'tester'] },
+  { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon, roles: ['pm', 'dev_lead', 'tester'] },
   { key: 'iterations', label: '发布迭代', path: '/iterations', icon: MilestoneIcon, roles: ['pm', 'dev_lead'] },
   { key: 'revenue', label: '营收统计', path: '/revenue', icon: ChartBarIcon, roles: ['pm'] },
-  { key: 'performance', label: '人员绩效', path: '/performance', icon: TrendingUpIcon, roles: ['pm', 'dev_lead', 'dev', 'tester'] },
+  { key: 'performance', label: '人员绩效', path: '/performance', icon: TrendingUpIcon, roles: ['pm', 'tester'] },
   { key: 'users', label: '用户管理', path: '/users', icon: UsersIcon, roles: ['pm'] },
   { key: 'systems', label: '系统管理', path: '/systems', icon: BookOpenIcon, roles: ['pm'] },
   { key: 'dictionary', label: '基础字典', path: '/dictionary', icon: BookOpenIcon, roles: ['pm'] }
