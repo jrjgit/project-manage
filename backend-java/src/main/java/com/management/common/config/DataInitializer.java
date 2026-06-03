@@ -81,6 +81,8 @@ public class DataInitializer implements ApplicationRunner {
             rule("bug", "dev_lead",    "reopened",      "fixing"),
             rule("bug", "dev_lead",    "reopened",      "closed"),
             rule("bug", "dev",         "fixing",        "fixed"),
+            // dev 重新打开后可重新开始修复
+            rule("bug", "dev",         "reopened",      "fixing"),
             // cross-role bug rules
             rule("bug", "tester",      "reopened",      "assigned"),
             rule("bug", "tester_lead", "reopened",      "assigned"),
