@@ -198,7 +198,7 @@ const allMenus = [
   { key: 'bugs', label: 'Bug管理', path: '/bugs', icon: BugIcon, roles: ['pm', 'tester'] },
   { key: 'messages', label: '消息中心', path: '/messages', icon: BellIcon, badge: 'unread', roles: ['pm', 'dev_lead', 'dev', 'tester'] },
   { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon, roles: ['pm', 'dev_lead', 'tester'] },
-  { key: 'iterations', label: '发布迭代', path: '/iterations', icon: MilestoneIcon, roles: ['pm', 'dev_lead'] },
+  { key: 'iterations', label: '发布迭代', path: '/iterations', icon: MilestoneIcon, roles: ['pm', 'dev_lead', 'dev'] },
   { key: 'revenue', label: '营收统计', path: '/revenue', icon: ChartBarIcon, roles: ['pm'] },
   { key: 'performance', label: '人员绩效', path: '/performance', icon: TrendingUpIcon, roles: ['pm', 'tester'] },
   { key: 'users', label: '用户管理', path: '/users', icon: UsersIcon, roles: ['pm'] },
