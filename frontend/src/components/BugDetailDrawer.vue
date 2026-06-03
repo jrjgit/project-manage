@@ -157,7 +157,7 @@ const availableActions = computed(() => {
   if (role.value === 'dev' && status === 'fixing') {
     actions.push({ label: '标记已修复', status: 'fixed', type: 'primary' })
   }
-  if (role.value === 'tester' && status === 'pending_verify') {
+  if (['tester', 'tester_lead'].includes(role.value) && status === 'pending_verify') {
     actions.push({ label: '验证通过', status: 'closed', type: 'primary' })
     actions.push({ label: '重新打开', status: 'reopened', type: 'error' })
   }

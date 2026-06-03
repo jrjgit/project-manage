@@ -59,7 +59,9 @@ public class BugService {
                 q.eq(Bug::getAssigneeId, u.getUserId());
                 break;
             case "tester":
-                q.eq(Bug::getCreatorId, u.getUserId());
+                q.and(w -> w.eq(Bug::getCreatorId, u.getUserId())
+                        .or().eq(Bug::getStatus, "pending_verify")
+                        .or().eq(Bug::getStatus, "reopened"));
                 break;
             default:
                 q.apply("1=0");
