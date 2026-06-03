@@ -29,7 +29,6 @@ public class AuthService {
         user.setAccount(req.getAccount());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setRole(req.getRole());
-        user.setGroupId(req.getGroupId());
         user.setWechatId(req.getWechatId());
         user.setEmail(req.getEmail());
         userMapper.insert(user);

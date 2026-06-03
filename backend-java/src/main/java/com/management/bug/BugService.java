@@ -47,12 +47,7 @@ public class BugService {
             case "pm":
                 break;
             case "dev_lead":
-                if (u.getGroupId() != null) {
-                    q.inSql(Bug::getAssigneeId,
-                            "SELECT id FROM users WHERE group_id = " + u.getGroupId());
-                } else {
-                    q.eq(Bug::getAssigneeId, u.getUserId());
-                }
+                q.eq(Bug::getAssigneeId, u.getUserId());
                 break;
             case "dev":
                 q.eq(Bug::getAssigneeId, u.getUserId());

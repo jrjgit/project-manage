@@ -14,7 +14,6 @@ public class RegisterRequest {
     private String password;
     @NotBlank
     private String role;
-    private Long groupId;
     private String wechatId;
     private String email;
 }
