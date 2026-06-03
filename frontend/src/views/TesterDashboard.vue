@@ -11,31 +11,51 @@
           </div>
         </div>
         <div class="hero-stats">
-          <div class="stat-pill"><span class="stat-num">{{ stats.totalTesting }}</span><span class="stat-label">待测试</span></div>
+          <div class="stat-pill"><span class="stat-num" style="color:#2563eb">{{ stats.totalTesting }}</span><span class="stat-label">待测试</span></div>
           <div class="stat-pill"><span class="stat-num" style="color:#6366f1">{{ stats.pickedByMe }}</span><span class="stat-label">我已接取</span></div>
           <div class="stat-pill"><span class="stat-num" style="color:#d03050">{{ stats.pendingVerify }}</span><span class="stat-label">待验证 Bug</span></div>
         </div>
       </section>
 
       <div class="main-split">
-        <section class="section-card task-section">
-          <div class="section-header"><h3>待测试任务</h3></div>
-          <TaskBoard :tasks="tasks" :column-keys="['testing']" @status-change="onStatusChange" @task-click="onTaskClick" />
-        </section>
+        <div class="left-panel">
+          <section class="section-card">
+            <div class="section-header"><h3>待接取任务（{{ availableTasks.length }}）</h3></div>
+            <div v-if="availableTasks.length === 0" class="empty-state">暂无待接取任务</div>
+            <div v-for="t in availableTasks" :key="t.id" class="task-item" @click="onTaskClick(t.id)">
+              <div class="task-item-top">
+                <span class="task-item-title">{{ t.title }}</span>
+                <span class="task-item-assignee">{{ t.assignee }}</span>
+              </div>
+            </div>
+          </section>
 
-        <section class="section-card bug-section">
-          <div class="section-header"><h3>待验证 BUG</h3></div>
-          <div v-if="pendingVerifyBugs.length === 0" class="empty-state">暂无待验证 Bug</div>
-          <div v-for="bug in pendingVerifyBugs" :key="bug.id" class="bug-item" @click="onBugClick(bug)">
-            <div class="bug-item-top">
-              <span class="bug-title">{{ bug.title }}</span>
-              <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
+          <section class="section-card" v-if="myTasks.length > 0">
+            <div class="section-header"><h3>我已接取（{{ myTasks.length }}）</h3></div>
+            <div v-for="t in myTasks" :key="t.id" class="task-item picked" @click="onTaskClick(t.id)">
+              <div class="task-item-top">
+                <span class="task-item-title">{{ t.title }}</span>
+                <span class="task-item-assignee">{{ t.assignee }}</span>
+              </div>
             </div>
-            <div class="bug-item-meta">
-              <span v-if="bug.taskTitle" class="bug-task">关联: {{ bug.taskTitle }}</span>
+          </section>
+        </div>
+
+        <div class="right-panel">
+          <section class="section-card">
+            <div class="section-header"><h3>待验证 BUG（{{ pendingVerifyBugs.length }}）</h3></div>
+            <div v-if="pendingVerifyBugs.length === 0" class="empty-state">暂无待验证 Bug</div>
+            <div v-for="bug in pendingVerifyBugs" :key="bug.id" class="bug-item" @click="onBugClick(bug)">
+              <div class="bug-item-top">
+                <span class="bug-title">{{ bug.title }}</span>
+                <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
+              </div>
+              <div v-if="bug.taskTitle" class="bug-item-meta">
+                <span class="bug-task">关联: {{ bug.taskTitle }}</span>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
     </div>
 
@@ -48,8 +68,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getTesterDashboard } from '@/api/statistics'
-import { taskStatusMeta, bugStatusMeta, severityMeta } from '@/constants/statusMeta'
-import TaskBoard from '@/components/TaskBoard.vue'
+import { severityMeta } from '@/constants/statusMeta'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import BugDetailDrawer from '@/components/BugDetailDrawer.vue'
 import AppLayout from '@/components/AppLayout.vue'
@@ -66,17 +85,17 @@ const selectedBugId = ref(null)
 const stats = computed(() => dashData.value.stats || { totalTesting: 0, pickedByMe: 0, pendingVerify: 0 })
 const tasks = computed(() => dashData.value.tasks || [])
 const pendingVerifyBugs = computed(() => dashData.value.pendingVerifyBugs || [])
+const myId = computed(() => authStore.userInfo?.id)
+
+const availableTasks = computed(() =>
+  tasks.value.filter(t => !t.testerId || t.testerId !== myId.value)
+)
+const myTasks = computed(() =>
+  tasks.value.filter(t => t.testerId === myId.value)
+)
 
 async function loadData() {
   try { dashData.value = await getTesterDashboard() } catch (e) { console.error(e) }
-}
-
-async function onStatusChange({ taskId, newStatus }) {
-  const { changeTaskStatus } = await import('@/api/tasks')
-  try {
-    await changeTaskStatus(taskId, { new_status: newStatus, comment: '' })
-    await loadData()
-  } catch (e) { console.error(e) }
 }
 
 function onTaskClick(taskId) {
@@ -115,14 +134,23 @@ onMounted(loadData)
   min-width: 80px; padding: 10px 14px; border-radius: 14px;
   background: white; border: 1px solid #e2e8f0; text-align: center;
 }
-.stat-num { display: block; font-size: 20px; font-weight: 700; color: #0f172a; }
+.stat-num { display: block; font-size: 20px; font-weight: 700; }
 .stat-label { font-size: 11px; color: #64748b; margin-top: 2px; }
 .main-split { display: flex; gap: 16px; align-items: flex-start; }
-.task-section { flex: 1; min-width: 0; }
-.bug-section { flex: 1; min-width: 0; }
+.left-panel { flex: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.right-panel { flex: 1; min-width: 0; }
 .section-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 16px; }
 .section-header { margin-bottom: 12px; }
 .section-header h3 { margin: 0; font-size: 15px; font-weight: 700; color: #0f172a; }
+.task-item {
+  padding: 10px 12px; border: 1px solid #f1f5f9; border-radius: 10px;
+  cursor: pointer; transition: background 0.12s; margin-bottom: 6px;
+}
+.task-item:hover { background: #f1f5f9; }
+.task-item.picked { border-color: #c7d2fe; background: #eef2ff; }
+.task-item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.task-item-title { font-size: 13px; font-weight: 500; color: #0f172a; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-item-assignee { font-size: 11px; color: #94a3b8; white-space: nowrap; }
 .bug-item {
   padding: 10px 12px; border: 1px solid #f1f5f9; border-radius: 10px;
   cursor: pointer; transition: background 0.12s; margin-bottom: 6px;
@@ -130,7 +158,7 @@ onMounted(loadData)
 .bug-item:hover { background: #f1f5f9; }
 .bug-item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .bug-title { font-size: 13px; font-weight: 500; color: #0f172a; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bug-item-meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.bug-item-meta { margin-top: 6px; }
 .bug-task { font-size: 11px; color: #94a3b8; }
 .empty-state { text-align: center; padding: 24px; color: #94a3b8; font-size: 13px; }
 </style>

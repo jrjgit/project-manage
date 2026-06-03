@@ -297,6 +297,7 @@ public class DashboardService {
         m.put("assignee", t.getAssignee() != null ? t.getAssignee().getName() : "-");
         m.put("deadline", t.getDeadline() != null ? t.getDeadline().toString() : null);
         m.put("progress", t.getProgress());
+        m.put("testerId", t.getTesterId());
         if (t.getDeadline() != null) {
             m.put("overdueDays", !"closed".equals(t.getStatus()) && t.getDeadline().isBefore(LocalDateTime.now())
                     ? LocalDateTime.now().toLocalDate().toEpochDay() - t.getDeadline().toLocalDate().toEpochDay() : 0);
