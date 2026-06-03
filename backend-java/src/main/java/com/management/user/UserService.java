@@ -3,8 +3,6 @@ package com.management.user;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
-import com.management.group.entity.Group;
-import com.management.group.mapper.GroupMapper;
 import com.management.project.entity.Project;
 import com.management.project.mapper.ProjectMapper;
 import com.management.requirement.entity.Requirement;
@@ -27,7 +25,6 @@ public class UserService {
     private final ProjectMapper projectMapper;
     private final TaskMapper taskMapper;
     private final RequirementMapper requirementMapper;
-    private final GroupMapper groupMapper;
 
     public JwtUserDetails currentUser() {
         return (JwtUserDetails) SecurityContextHolder.getContext()
@@ -81,10 +78,6 @@ public class UserService {
         if (c6 > 0) refs.add(c6 + " 个需求(作为业务负责人)");
         long c7 = requirementMapper.selectCount(new LambdaQueryWrapper<Requirement>().eq(Requirement::getDevLeadId, id));
         if (c7 > 0) refs.add(c7 + " 个需求(作为开发组长)");
-        long c11 = groupMapper.selectCount(new LambdaQueryWrapper<Group>().eq(Group::getPmId, id));
-        if (c11 > 0) refs.add(c11 + " 个小组(作为项目经理)");
-        long c12 = groupMapper.selectCount(new LambdaQueryWrapper<Group>().eq(Group::getDevLeadId, id));
-        if (c12 > 0) refs.add(c12 + " 个小组(作为开发组长)");
 
         if (!refs.isEmpty()) {
             throw new BusinessException(400,

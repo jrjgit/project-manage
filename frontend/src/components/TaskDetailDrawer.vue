@@ -20,7 +20,7 @@
           </div>
         </section>
 
-        <section v-if="actionGroups.length || canAssignDev || canEditDevLead || canEditTester" class="section-card">
+        <section v-if="actionGroups.length || canEditDevLead || canEditTester" class="section-card">
           <div class="section-title">可执行操作</div>
 
           <div v-if="canEditDevLead" class="action-block">
