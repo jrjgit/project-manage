@@ -173,7 +173,7 @@ public class TaskService {
         if (t.getCreatorId() != null) t.setCreator(userMapper.selectById(t.getCreatorId()));
         if (t.getAssigneeId() != null) t.setAssignee(userMapper.selectById(t.getAssigneeId()));
         if (t.getDevLeadId() != null) t.setDevLead(userMapper.selectById(t.getDevLeadId()));
-        if (t.getTesterLeadId() != null) t.setTesterLead(userMapper.selectById(t.getTesterLeadId()));
+
         if (t.getTesterId() != null) t.setTester(userMapper.selectById(t.getTesterId()));
         if (t.getRequirementId() != null) {
             Requirement req = requirementMapper.selectById(t.getRequirementId());
@@ -293,7 +293,6 @@ public class TaskService {
 
         Long oldDevLeadId = task.getDevLeadId();
         Long oldAssigneeId = task.getAssigneeId();
-        Long oldTesterLeadId = task.getTesterLeadId();
         Long oldTesterId = task.getTesterId();
 
         if (req.getTitle() != null && !req.getTitle().isBlank()) task.setTitle(req.getTitle());
@@ -313,11 +312,6 @@ public class TaskService {
             if (userMapper.selectById(req.getAssigneeId()) == null)
                 throw new BusinessException(400, "指派人不存在");
             task.setAssigneeId(req.getAssigneeId());
-        }
-        if (req.getTesterLeadId() != null) {
-            if (userMapper.selectById(req.getTesterLeadId()) == null)
-                throw new BusinessException(400, "测试组长不存在");
-            task.setTesterLeadId(req.getTesterLeadId());
         }
         if (req.getTesterId() != null) {
             if (userMapper.selectById(req.getTesterId()) == null)
@@ -384,16 +378,6 @@ public class TaskService {
                 notificationService.emitGenericEvent(
                         "任务【" + title + "】您被指派为开发人员，操作人：" + op.getName(),
                         op.getName(), List.of(newAssignee));
-            }
-        }
-
-        // tester_lead_id 变化时通知新测试组长
-        if (req.getTesterLeadId() != null && (oldTesterLeadId == null || !req.getTesterLeadId().equals(oldTesterLeadId))) {
-            User newTesterLead = userMapper.selectById(req.getTesterLeadId());
-            if (newTesterLead != null) {
-                notificationService.emitGenericEvent(
-                        "任务【" + title + "】您被指派为测试组长，操作人：" + op.getName(),
-                        op.getName(), List.of(newTesterLead));
             }
         }
 
@@ -502,13 +486,6 @@ public class TaskService {
             autoHistory.setComment("系统自动将任务加入测试池");
             historyMapper.insert(autoHistory);
 
-            if (task.getTesterLeadId() != null) {
-                User testerLead = userMapper.selectById(task.getTesterLeadId());
-                if (testerLead != null) {
-                    notificationService.emitTaskEvent(task, "developed", "pending_test",
-                            null, List.of(testerLead), "任务已加入测试池");
-                }
-            }
         }
 
         // rejected 时保存原因到任务
@@ -539,10 +516,8 @@ public class TaskService {
                 if (task.getAssigneeId() != null) addUser(targets, task.getAssigneeId());
                 break;
             case "developing->developed":
-                if (task.getTesterLeadId() != null) addUser(targets, task.getTesterLeadId());
                 break;
             case "pending_test->testing":
-                if (task.getTesterLeadId() != null) addUser(targets, task.getTesterLeadId());
                 if (task.getTesterId() != null) addUser(targets, task.getTesterId());
                 break;
             case "testing->passed":
@@ -557,7 +532,6 @@ public class TaskService {
                 break;
             case "rejected->developing":
                 if (task.getTesterId() != null) addUser(targets, task.getTesterId());
-                if (task.getTesterLeadId() != null) addUser(targets, task.getTesterLeadId());
                 break;
         }
         return targets;

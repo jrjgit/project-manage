@@ -53,13 +53,10 @@ public class NotificationService {
     );
 
     private static final Map<String, String> BUG_STATUS_LABELS = Map.of(
-            "new", "新建",
-            "assigned", "已分配",
-            "fixing", "修复中",
-            "fixed", "已修复",
-            "pending_verify", "待验证",
-            "closed", "已关闭",
-            "reopened", "重新打开"
+            "unfixed",   "未修复",
+            "fixed",     "已修复",
+            "not_a_bug", "开发确认非Bug",
+            "closed",    "已关闭"
     );
 
     private static final Map<String, String> REQUIREMENT_STATUS_LABELS = Map.of(

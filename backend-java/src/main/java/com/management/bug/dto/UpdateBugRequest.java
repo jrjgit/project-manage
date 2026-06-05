@@ -9,7 +9,6 @@ public class UpdateBugRequest {
     private String severity;
     private Long taskId;
     private Long assigneeId;
-    private String fixComment;
-    private String reopenReason;
+    private String remark;
     private String testType;
 }

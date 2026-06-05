@@ -10,7 +10,6 @@ public class UpdateTaskRequest {
     private Long projectId;
     private Long devLeadId;
     private Long assigneeId;
-    private Long testerLeadId;
     private Long testerId;
     private String deadline;
     private String performance;

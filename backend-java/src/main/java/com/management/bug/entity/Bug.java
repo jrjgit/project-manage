@@ -28,8 +28,10 @@ public class Bug {
     private Long assigneeId;
     @TableField(exist = false)
     private User assignee;
-    private String fixComment;
-    private String reopenReason;
+    private String remark;
+    private String imagePath;
+    private String imageName;
+    private Long imageSize;
     private Long requirementId;
     private Long developerId;
     private String testType;

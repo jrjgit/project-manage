@@ -3,7 +3,7 @@
     <n-drawer-content v-if="bug" closable>
       <template #header>
         <div class="drawer-header">
-          <div class="drawer-kicker">Bug #{{ bug.id }}</div>
+          <div class="drawer-kicker">BUG-{{ bug.id }}</div>
           <div class="drawer-title">{{ bug.title }}</div>
           <div class="drawer-subtitle">{{ summaryText }}</div>
         </div>
@@ -52,13 +52,27 @@
           <div class="section-card">
             <div class="section-title">说明</div>
             <div class="description-block">{{ bug.description || '暂无描述' }}</div>
-            <div v-if="bug.fix_comment" class="reason-block success">
-              <div class="reason-title">最近修复说明</div>
-              <div>{{ bug.fix_comment }}</div>
+          </div>
+
+          <div class="section-card">
+            <div class="section-title">备注</div>
+            <div class="description-block">{{ bug.remark || '暂无备注' }}</div>
+          </div>
+
+          <div class="section-card">
+            <div class="section-title">截图</div>
+            <div v-if="imageUrl" class="image-section">
+              <n-image :src="imageUrl" width="100%" style="border-radius:8px;max-height:280px;object-fit:contain" />
+              <div class="image-actions">
+                <n-button size="tiny" @click="downloadImage">下载</n-button>
+                <n-button v-if="isCreatorOrPM" size="tiny" type="error" @click="handleDeleteImage">删除</n-button>
+              </div>
             </div>
-            <div v-if="bug.reopen_reason" class="reason-block error">
-              <div class="reason-title">最近重新打开原因</div>
-              <div>{{ bug.reopen_reason }}</div>
+            <div v-else>
+              <n-upload v-if="isCreatorOrPM" :show-file-list="false" :custom-request="handleImageUpload" accept="image/*">
+                <n-button :loading="imageUploading" size="small">上传截图</n-button>
+              </n-upload>
+              <span v-else style="font-size:13px;color:#94a3b8">暂无截图</span>
             </div>
           </div>
         </section>
@@ -69,7 +83,7 @@
             <n-timeline-item
               v-for="history in histories"
               :key="history.id"
-              :type="history.to_status === 'reopened' ? 'error' : 'default'"
+              :type="history.to_status === 'unfixed' ? 'warning' : 'default'"
             >
               <div class="timeline-title">{{ formatHistory(history) }}</div>
               <div class="timeline-meta">{{ history.user?.name || '系统' }} · {{ formatTime(history.changed_at) }}</div>
@@ -80,19 +94,11 @@
     </n-drawer-content>
   </n-drawer>
 
-  <n-modal v-model:show="showReopenModal" title="填写重新打开原因" preset="dialog">
-    <n-input v-model:value="reopenReason" type="textarea" placeholder="请输入重新打开原因" />
+  <n-modal v-model:show="showCommentModal" title="操作备注" preset="dialog">
+    <n-input v-model:value="pendingComment" type="textarea" placeholder="请输入操作备注（可选）" />
     <template #action>
-      <n-button @click="showReopenModal = false">取消</n-button>
-      <n-button type="error" @click="confirmReopen">确认重新打开</n-button>
-    </template>
-  </n-modal>
-
-  <n-modal v-model:show="showFixModal" title="填写修复说明" preset="dialog">
-    <n-input v-model:value="fixComment" type="textarea" placeholder="请输入修复说明" />
-    <template #action>
-      <n-button @click="showFixModal = false">取消</n-button>
-      <n-button type="primary" @click="confirmFix">确认已修复</n-button>
+      <n-button @click="showCommentModal = false">取消</n-button>
+      <n-button :type="pendingAction?.type || 'primary'" :loading="actionLoading" @click="confirmAction">确认</n-button>
     </template>
   </n-modal>
 </template>
@@ -100,7 +106,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
-import { getBug, getBugHistory, changeBugStatus, updateBug } from '@/api/bugs'
+import { getBug, getBugHistory, changeBugStatus, uploadBugImage, downloadBugImage, deleteBugImage } from '@/api/bugs'
 import { bugStatusMeta, severityMeta } from '@/constants/statusMeta'
 import {
   NDrawer,
@@ -110,7 +116,9 @@ import {
   NTimeline,
   NTimelineItem,
   NModal,
-  NInput
+  NInput,
+  NImage,
+  NUpload
 } from 'naive-ui'
 
 const show = defineModel('show', { type: Boolean, default: false })
@@ -120,14 +128,21 @@ const emit = defineEmits(['refresh'])
 const authStore = useAuthStore()
 const bug = ref(null)
 const histories = ref([])
-const showReopenModal = ref(false)
-const showFixModal = ref(false)
-const reopenReason = ref('')
-const fixComment = ref('')
 const actionLoading = ref(false)
+const showCommentModal = ref(false)
+const pendingComment = ref('')
+const pendingAction = ref(null)
+const imageUrl = ref('')
+const imageUploading = ref(false)
 
 const statusMeta = computed(() => bugStatusMeta[bug.value?.status] || { label: bug.value?.status || '-', tone: 'default' })
 const severityMetaItem = computed(() => severityMeta[bug.value?.severity] || { label: bug.value?.severity || '-', tone: 'default' })
+
+const isCreatorOrPM = computed(() => {
+  const role = authStore.userInfo?.role
+  const myId = authStore.userInfo?.id
+  return role === 'pm' || bug.value?.creator_id === myId
+})
 
 const summaryText = computed(() => {
   const parts = [bug.value?.task?.title, statusMeta.value.label]
@@ -136,38 +151,27 @@ const summaryText = computed(() => {
 })
 
 const nextActionMap = {
-  new: '等待分配给开发处理。',
-  assigned: '开发负责人需要开始修复。',
-  fixing: '开发负责人完成修复后，提交到待验证。',
-  fixed: '系统会自动推进到待验证。',
-  pending_verify: '测试人员验证结果，并决定关闭或重新打开。',
-  reopened: '需要重新指派给开发继续处理。',
+  unfixed: '开发负责人需要修复或确认为非 Bug。',
+  fixed: '测试人员验证结果，确认关闭或打回未修复。',
+  not_a_bug: '测试人员确认是否接受开发判定，接受则关闭。',
   closed: 'Bug 已完成闭环。'
 }
 const nextActionText = computed(() => nextActionMap[bug.value?.status] || '查看当前状态并继续推进。')
 
-const role = computed(() => authStore.userInfo?.role)
 const availableActions = computed(() => {
   const status = bug.value?.status
+  const role = authStore.userInfo?.role
+  const myId = authStore.userInfo?.id
+  const isMyBug = bug.value?.assignee_id === myId
   const actions = []
-
-  if (role.value === 'dev' && status === 'assigned') {
-    actions.push({ label: '开始修复', status: 'fixing', type: 'primary' })
-  }
-  if (role.value === 'dev' && status === 'fixing') {
+  if (['dev', 'dev_lead'].includes(role) && isMyBug && status === 'unfixed') {
     actions.push({ label: '标记已修复', status: 'fixed', type: 'primary' })
+    actions.push({ label: '确认为非Bug', status: 'not_a_bug', type: 'info' })
   }
-  if (role.value === 'dev' && (status === 'assigned' || status === 'reopened')) {
-    actions.push({ label: '开始修复', status: 'fixing', type: 'primary' })
+  if (role === 'tester' && ['fixed', 'not_a_bug'].includes(status)) {
+    actions.push({ label: '验证通过', status: 'closed', type: 'success' })
+    actions.push({ label: '打回未修复', status: 'unfixed', type: 'error' })
   }
-  if (['tester'].includes(role.value) && status === 'pending_verify') {
-    actions.push({ label: '验证通过', status: 'closed', type: 'primary' })
-    actions.push({ label: '重新打开', status: 'reopened', type: 'error' })
-  }
-  if (['pm', 'tester'].includes(role.value) && status === 'reopened') {
-    actions.push({ label: '重新指派', status: 'assigned', type: 'default' })
-  }
-
   return actions
 })
 
@@ -190,6 +194,7 @@ watch(
 async function loadDetail() {
   try {
     bug.value = await getBug(props.bugId)
+    await loadImage()
   } catch (error) {
     console.error(error)
   }
@@ -205,49 +210,59 @@ async function loadHistory() {
 
 function executeAction(action) {
   if (actionLoading.value) return
-  if (action.status === 'reopened') {
-    showReopenModal.value = true
-    return
-  }
-  if (action.status === 'fixed') {
-    showFixModal.value = true
-    return
-  }
-  doChangeStatus(action.status, '')
+  pendingAction.value = action
+  pendingComment.value = ''
+  showCommentModal.value = true
 }
 
-async function confirmReopen() {
-  if (actionLoading.value) return
-  if (!reopenReason.value.trim()) {
-    window.$message.warning('请输入原因')
-    return
-  }
-  actionLoading.value = true
-  try {
-    await doChangeStatus('reopened', reopenReason.value)
-    try {
-      await updateBug(props.bugId, { reopen_reason: reopenReason.value })
-    } catch (error) { console.error(error) }
-  } finally {
-    actionLoading.value = false
-    showReopenModal.value = false
-    reopenReason.value = ''
-  }
-}
-
-async function confirmFix() {
+async function confirmAction() {
   if (actionLoading.value) return
   actionLoading.value = true
   try {
-    await doChangeStatus('fixed', fixComment.value)
-    try {
-      await updateBug(props.bugId, { fix_comment: fixComment.value })
-    } catch (error) { console.error(error) }
+    await doChangeStatus(pendingAction.value.status, pendingComment.value)
+    showCommentModal.value = false
   } finally {
     actionLoading.value = false
-    showFixModal.value = false
-    fixComment.value = ''
   }
+}
+
+async function handleImageUpload({ file }) {
+  imageUploading.value = true
+  try {
+    await uploadBugImage(props.bugId, file.file)
+    window.$message.success('截图上传成功')
+    await loadImage()
+  } catch (e) {
+    console.error(e)
+  } finally {
+    imageUploading.value = false
+  }
+}
+
+async function loadImage() {
+  try {
+    const blob = await downloadBugImage(props.bugId)
+    imageUrl.value = URL.createObjectURL(blob)
+  } catch (e) {
+    imageUrl.value = ''
+  }
+}
+
+async function handleDeleteImage() {
+  try {
+    await deleteBugImage(props.bugId)
+    imageUrl.value = ''
+    window.$message.success('截图已删除')
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+function downloadImage() {
+  const a = document.createElement('a')
+  a.href = imageUrl.value
+  a.download = `BUG-${props.bugId}.png`
+  a.click()
 }
 
 async function doChangeStatus(newStatus, comment) {

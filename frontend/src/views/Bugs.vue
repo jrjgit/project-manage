@@ -115,12 +115,8 @@ const severityOptions = Object.entries(severityMeta).map(([value, meta]) => ({ l
 
 const viewDescriptionMap = {
   all: '展示你当前可见的全部 Bug，适合做整体回看。',
-  critical: '优先查看高严重度问题。',
-  reopened: '集中处理重新打开的问题，减少往返。',
-  group: '查看当前开发组相关的缺陷集合。',
-  fix: '直接打开分配给你的修复工作。',
+  mine: '直接打开分配给你的修复工作。',
   verify: '聚焦待验证 Bug，优先完成闭环。',
-  created: '回看你创建的问题当前进度。'
 }
 
 const viewDescription = computed(() => viewDescriptionMap[activeView.value?.key] || '按角色主视角筛出最常用的 Bug 队列。')
@@ -138,10 +134,9 @@ const filteredBugs = computed(() => {
 function matchesView(bug, params = {}) {
   if (params.status && bug.status !== params.status) return false
   if (params.severity && bug.severity !== params.severity) return false
-  if (params.mine === 'fix') return bug.assignee_id === authStore.userInfo?.id && ['assigned', 'fixing', 'reopened'].includes(bug.status)
-  if (params.mine === 'verify') return bug.status === 'pending_verify'
+  if (params.mine === 'fix') return bug.assignee_id === authStore.userInfo?.id && bug.status === 'unfixed'
+  if (params.mine === 'verify') return ['fixed', 'not_a_bug'].includes(bug.status)
   if (params.mine === 'created') return bug.creator_id === authStore.userInfo?.id
-  if (params.mine === 'group') return true
   return true
 }
 

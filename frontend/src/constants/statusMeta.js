@@ -6,13 +6,10 @@ export const taskStatusMeta = {
 }
 
 export const bugStatusMeta = {
-  new: { label: '新建', tone: 'default', color: '#94a3b8' },
-  assigned: { label: '待修复', tone: 'info', color: '#3b82f6' },
-  fixing: { label: '修复中', tone: 'warning', color: '#f59e0b' },
-  fixed: { label: '已修复', tone: 'success', color: '#10b981' },
-  pending_verify: { label: '待验证', tone: 'info', color: '#2563eb' },
-  closed: { label: '已关闭', tone: 'default', color: '#94a3b8' },
-  reopened: { label: '重新打开', tone: 'error', color: '#ef4444' }
+  unfixed:   { label: '未修复',         tone: 'warning', color: '#f59e0b' },
+  fixed:     { label: '已修复',         tone: 'success', color: '#10b981' },
+  not_a_bug: { label: '开发确认非Bug',  tone: 'info',    color: '#6366f1' },
+  closed:    { label: '已关闭',         tone: 'default', color: '#94a3b8' }
 }
 
 export const priorityMeta = {

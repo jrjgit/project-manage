@@ -15,7 +15,7 @@ const props = defineProps({ bugs: Array })
 const emit = defineEmits(['bug-click'])
 
 const columns = [
-  { title: 'ID', key: 'id', width: 60 },
+  { title: 'ID', key: 'id', width: 80, render(row) { return `BUG-${row.id}` } },
   { title: '标题', key: 'title' },
   {
     title: '严重程度',

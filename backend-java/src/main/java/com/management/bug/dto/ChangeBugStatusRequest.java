@@ -6,5 +6,5 @@ import lombok.Data;
 @Data
 public class ChangeBugStatusRequest {
     @NotBlank private String newStatus;
-    private String comment;
+    private String comment; // 备注
 }

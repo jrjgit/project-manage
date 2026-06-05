@@ -19,6 +19,12 @@
       <n-form-item label="指派给" path="assignee_id">
         <n-select v-model:value="form.assignee_id" :options="bugDevOptions" placeholder="选择修复人" />
       </n-form-item>
+      <n-form-item label="截图">
+        <n-upload :show-file-list="false" :custom-request="handleAttachUpload" accept="image/*">
+          <n-button :loading="imageUploading">选择图片</n-button>
+        </n-upload>
+        <span v-if="attachFileName" style="font-size:12px;color:#18a058;margin-left:8px">{{ attachFileName }}</span>
+      </n-form-item>
     </n-form>
     <template #action>
       <n-button @click="show = false">取消</n-button>
@@ -29,10 +35,10 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue'
-import { createBug } from '@/api/bugs'
+import { createBug, uploadBugImage } from '@/api/bugs'
 import { getTasks } from '@/api/tasks'
 import { getUsers } from '@/api/users'
-import { NModal, NForm, NFormItem, NInput, NSelect, NButton } from 'naive-ui'
+import { NModal, NForm, NFormItem, NInput, NSelect, NButton, NUpload } from 'naive-ui'
 
 const show = defineModel('show', { type: Boolean, default: false })
 const emit = defineEmits(['success'])
@@ -41,6 +47,9 @@ const formRef = ref(null)
 const loading = ref(false)
 const tasks = ref([])
 const users = ref([])
+const imageFile = ref(null)
+const attachFileName = ref('')
+const imageUploading = ref(false)
 
 const form = ref({
   title: '',
@@ -53,8 +62,7 @@ const form = ref({
 
 const rules = {
   title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
-  task_id: [{ required: true, type: 'number', message: '请选择任务', trigger: 'change' }],
-  assignee_id: [{ required: true, type: 'number', message: '请选择修复人', trigger: 'change' }]
+  task_id: [{ required: true, type: 'number', message: '请选择任务', trigger: 'change' }]
 }
 
 const taskOptions = computed(() => tasks.value.map(t => ({ label: t.title, value: t.id })))
@@ -105,15 +113,27 @@ watch(() => form.value.task_id, () => {
   form.value.assignee_id = null
 })
 
+function handleAttachUpload({ file }) {
+  imageFile.value = file.file
+  attachFileName.value = file.name
+}
+
 async function submit() {
   await formRef.value?.validate()
   loading.value = true
   try {
-    await createBug(form.value)
+    const created = await createBug(form.value)
+    if (imageFile.value) {
+      imageUploading.value = true
+      await uploadBugImage(created.id, imageFile.value)
+    }
     window.$message.success('创建成功')
     show.value = false
     emit('success')
   } catch (e) { console.error(e) }
-  finally { loading.value = false }
+  finally {
+    loading.value = false
+    imageUploading.value = false
+  }
 }
 </script>

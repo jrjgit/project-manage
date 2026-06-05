@@ -19,6 +19,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.multipart.MultipartFile;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +36,9 @@ public class BugService {
     private final TaskMapper taskMapper;
     private final WorkflowService workflowService;
     private final NotificationService notificationService;
+
+    @Value("${app.upload-dir:./uploads}")
+    private String uploadDir;
 
     private JwtUserDetails currentUser() {
         return (JwtUserDetails) SecurityContextHolder.getContext()
@@ -84,7 +91,7 @@ public class BugService {
         bug.setTitle(req.getTitle());
         bug.setDescription(req.getDescription());
         bug.setSeverity(req.getSeverity() != null ? req.getSeverity() : "medium");
-        bug.setStatus("assigned"); // 创建即指派
+        bug.setStatus("unfixed");
         bug.setTaskId(req.getTaskId());
         bug.setCreatorId(userId);
         bug.setAssigneeId(req.getAssigneeId());
@@ -139,8 +146,7 @@ public class BugService {
                 throw new BusinessException(400, "指派人不存在");
             bug.setAssigneeId(req.getAssigneeId());
         }
-        if (req.getFixComment() != null) bug.setFixComment(req.getFixComment());
-        if (req.getReopenReason() != null) bug.setReopenReason(req.getReopenReason());
+        if (req.getRemark() != null) bug.setRemark(req.getRemark());
         if (req.getTestType() != null) bug.setTestType(req.getTestType());
         bugMapper.updateById(bug);
 
@@ -166,9 +172,9 @@ public class BugService {
         Bug bug = bugMapper.selectById(bugId);
         if (bug == null) throw new BusinessException("Bug 不存在");
 
-        if ("reopened".equals(req.getNewStatus())
-                && (req.getComment() == null || req.getComment().isBlank())) {
-            throw new BusinessException("reopen reason is required");
+        if (("dev".equals(role) || "dev_lead".equals(role))
+                && !operatorId.equals(bug.getAssigneeId())) {
+            throw new BusinessException("只能操作指派给自己的 Bug");
         }
 
         String oldStatus = bug.getStatus();
@@ -196,20 +202,9 @@ public class BugService {
         List<User> targets = resolveBugNotifyTargets(bug, oldStatus, req.getNewStatus());
         notificationService.emitBugEvent(bug, oldStatus, req.getNewStatus(), operatorName, targets, req.getComment());
 
-        // 关键：fixed -> pending_verify 自动跳转（不单独记录历史，由 fixing→fixed 的备注体现）
-        if ("fixed".equals(req.getNewStatus())) {
-            bug.setStatus("pending_verify");
-            bugMapper.updateById(bug);
-
-            List<User> verifyTargets = resolveBugNotifyTargets(bug, "fixed", "pending_verify");
-            notificationService.emitBugEvent(bug, "fixed", "pending_verify",
-                    operatorName, verifyTargets, "Bug 已进入待验证");
-        }
-
-        // reopened 时保存原因
-        if ("reopened".equals(req.getNewStatus())) {
+        if (req.getComment() != null && !req.getComment().isBlank()) {
             bugMapper.update(null, new LambdaUpdateWrapper<Bug>()
-                    .eq(Bug::getId, bugId).set(Bug::getReopenReason, req.getComment()));
+                    .eq(Bug::getId, bugId).set(Bug::getRemark, req.getComment()));
         }
     }
 
@@ -257,5 +252,49 @@ public class BugService {
         if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
         if (b.getCreatorId() != null) b.setCreator(userMapper.selectById(b.getCreatorId()));
         if (b.getAssigneeId() != null) b.setAssignee(userMapper.selectById(b.getAssigneeId()));
+    }
+
+    public void uploadImage(Long id, MultipartFile file) throws IOException {
+        Bug bug = bugMapper.selectById(id);
+        if (bug == null) throw new BusinessException(404, "Bug不存在");
+        JwtUserDetails u = currentUser();
+        if (!u.getUserId().equals(bug.getCreatorId()) && !"pm".equals(u.getRole()))
+            throw new BusinessException(403, "无权限上传图片");
+        String dir = uploadDir + "/bugs/" + id;
+        java.io.File dirFile = new java.io.File(dir);
+        if (!dirFile.exists()) dirFile.mkdirs();
+        String ext = "";
+        int dot = file.getOriginalFilename().lastIndexOf('.');
+        if (dot >= 0) ext = file.getOriginalFilename().substring(dot);
+        String name = java.util.UUID.randomUUID().toString() + ext;
+        file.transferTo(new java.io.File(dirFile, name));
+        bug.setImagePath("bugs/" + id + "/" + name);
+        bug.setImageName(file.getOriginalFilename());
+        bug.setImageSize(file.getSize());
+        bugMapper.updateById(bug);
+    }
+
+    public void downloadImage(Long id, HttpServletResponse response) throws IOException {
+        Bug bug = bugMapper.selectById(id);
+        if (bug == null || bug.getImagePath() == null) throw new BusinessException(404, "图片不存在");
+        java.io.File f = new java.io.File(uploadDir + "/" + bug.getImagePath());
+        if (!f.exists()) throw new BusinessException(404, "文件不存在");
+        response.setContentType("application/octet-stream");
+        response.setHeader("Content-Disposition", "attachment;filename=" + java.net.URLEncoder.encode(bug.getImageName(), "UTF-8"));
+        org.springframework.util.FileCopyUtils.copy(new java.io.FileInputStream(f), response.getOutputStream());
+    }
+
+    public void deleteImage(Long id) {
+        Bug bug = bugMapper.selectById(id);
+        if (bug == null) throw new BusinessException(404, "Bug不存在");
+        JwtUserDetails u = currentUser();
+        if (!u.getUserId().equals(bug.getCreatorId()) && !"pm".equals(u.getRole()))
+            throw new BusinessException(403, "无权限删除图片");
+        if (bug.getImagePath() != null) {
+            java.io.File f = new java.io.File(uploadDir + "/" + bug.getImagePath());
+            if (f.exists()) f.delete();
+        }
+        bug.setImagePath(null); bug.setImageName(null); bug.setImageSize(null);
+        bugMapper.updateById(bug);
     }
 }

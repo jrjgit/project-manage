@@ -32,9 +32,6 @@ public class Task {
     private Long devLeadId;
     @TableField(exist = false)
     private User devLead;
-    private Long testerLeadId;
-    @TableField(exist = false)
-    private User testerLead;
     private Long testerId;
     @TableField(exist = false)
     private User tester;

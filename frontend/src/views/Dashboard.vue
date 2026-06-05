@@ -161,7 +161,7 @@ const dashData = ref({})
 const d = dashData
 
 const roleLabel = computed(() => {
-  const map = { pm: '项目经理', dev_lead: '开发组长', dev: '开发', tester_lead: '测试组长', tester: '测试' }
+  const map = { pm: '项目经理', dev_lead: '开发组长', dev: '开发', tester: '测试' }
   return map[authStore.userInfo?.role] || ''
 })
 
