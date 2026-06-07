@@ -18,7 +18,7 @@
 
       <section class="toolbar-row">
         <div style="flex:1"></div>
-        <n-button type="primary" ghost size="small" @click="openCreateBug">+ 创建Bug</n-button>
+        <n-button type="primary" size="small" @click="openCreateBug">+ 创建Bug</n-button>
       </section>
 
       <div class="main-split">
