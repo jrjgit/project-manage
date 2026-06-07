@@ -16,6 +16,11 @@
         </div>
       </section>
 
+      <section class="toolbar-row">
+        <div style="flex:1"></div>
+        <n-button type="primary" ghost size="small" @click="openCreateBug">+ 创建Bug</n-button>
+      </section>
+
       <div class="main-split">
         <div class="left-panel">
           <section class="section-card">
@@ -46,6 +51,39 @@
           </section>
         </div>
       </div>
+
+      <!-- Create Bug Modal -->
+      <n-modal v-model:show="showCreateBug" preset="card" style="width:520px" title="创建 Bug" :mask-closable="false">
+        <n-form label-placement="top">
+          <n-form-item label="测试类型">
+            <n-select v-model:value="bugForm.test_type" :options="testTypeOptions" />
+          </n-form-item>
+          <n-form-item v-if="bugForm.test_type !== 'integration'" label="关联需求">
+            <n-select v-model:value="bugForm.requirement_id" :options="reqOptions" placeholder="请选择需求" clearable filterable />
+          </n-form-item>
+          <n-form-item label="标题" path="title">
+            <n-input v-model:value="bugForm.title" placeholder="Bug标题" />
+          </n-form-item>
+          <n-form-item label="描述">
+            <n-input v-model:value="bugForm.description" type="textarea" placeholder="描述 Bug 现象" />
+          </n-form-item>
+          <n-form-item label="严重程度">
+            <n-select v-model:value="bugForm.severity" :options="severityOptions" />
+          </n-form-item>
+          <n-form-item label="截图">
+            <n-upload :show-file-list="false" :custom-request="handleAttachUpload" accept="image/*">
+              <n-button :loading="imageUploading">选择图片</n-button>
+            </n-upload>
+            <span v-if="attachFileName" style="font-size:12px;color:#18a058;margin-left:8px">{{ attachFileName }}</span>
+          </n-form-item>
+        </n-form>
+        <template #footer>
+          <n-space justify="end">
+            <n-button @click="showCreateBug = false">取消</n-button>
+            <n-button type="primary" :loading="bugSubmitting" @click="submitBug">确定</n-button>
+          </n-space>
+        </template>
+      </n-modal>
     </div>
 
     <TaskDetailDrawer v-model:show="showTaskDetail" :task-id="selectedTaskId" @refresh="loadData" />
@@ -57,11 +95,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getTesterDashboard } from '@/api/statistics'
+import { createBug, uploadBugImage } from '@/api/bugs'
+import { getRequirements } from '@/api/requirements'
 import { severityMeta } from '@/constants/statusMeta'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import BugDetailDrawer from '@/components/BugDetailDrawer.vue'
 import AppLayout from '@/components/AppLayout.vue'
-import { NTag } from 'naive-ui'
+import { NTag, NButton, NModal, NForm, NFormItem, NInput, NSelect, NUpload, NSpace } from 'naive-ui'
 
 const authStore = useAuthStore()
 
@@ -71,12 +111,84 @@ const selectedTaskId = ref(null)
 const showBugDetail = ref(false)
 const selectedBugId = ref(null)
 
+const requirements = ref([])
+
+// Create Bug
+const showCreateBug = ref(false)
+const bugForm = ref({ test_type: 'integration', requirement_id: null, title: '', description: '', severity: 'medium' })
+const bugSubmitting = ref(false)
+const imageFile = ref(null)
+const attachFileName = ref('')
+const imageUploading = ref(false)
+
+const testTypeOptions = [
+  { label: '综合测试', value: 'integration' },
+  { label: '业务测试', value: 'business' },
+  { label: 'IT测试', value: 'it_test' }
+]
+
+const severityOptions = [
+  { label: '低', value: 'low' },
+  { label: '中', value: 'medium' },
+  { label: '高', value: 'high' },
+  { label: '紧急', value: 'critical' }
+]
+
+const reqOptions = computed(() =>
+  requirements.value.map(r => ({ label: `${r.number || r.requirement_id || 'REQ-'+r.id} ${r.description || ''}`.substring(0, 60), value: r.id }))
+)
+
 const stats = computed(() => dashData.value.stats || { totalTesting: 0, pendingVerify: 0 })
 const tasks = computed(() => dashData.value.tasks || [])
 const pendingVerifyBugs = computed(() => dashData.value.pendingVerifyBugs || [])
 
 async function loadData() {
   try { dashData.value = await getTesterDashboard() } catch (e) { console.error(e) }
+}
+
+async function loadRequirements() {
+  try { requirements.value = await getRequirements() || [] } catch (e) { console.error(e) }
+}
+
+function openCreateBug() {
+  bugForm.value = { test_type: 'integration', requirement_id: null, title: '', description: '', severity: 'medium' }
+  imageFile.value = null
+  attachFileName.value = ''
+  showCreateBug.value = true
+}
+
+function handleAttachUpload({ file }) {
+  imageFile.value = file.file
+  attachFileName.value = file.name
+}
+
+async function submitBug() {
+  if (!bugForm.value.title.trim()) { window.$message?.warning('请输入标题'); return }
+  if (bugForm.value.test_type !== 'integration' && !bugForm.value.requirement_id) {
+    window.$message?.warning('请选择关联需求'); return
+  }
+  bugSubmitting.value = true
+  try {
+    const payload = {
+      title: bugForm.value.title,
+      description: bugForm.value.description || undefined,
+      severity: bugForm.value.severity,
+      test_type: bugForm.value.test_type,
+      task_id: bugForm.value.test_type === 'integration' ? undefined : null,
+      assignee_id: undefined
+    }
+    if (bugForm.value.requirement_id) {
+      payload.requirement_id = bugForm.value.requirement_id
+    }
+    const created = await createBug(payload)
+    if (imageFile.value) {
+      await uploadBugImage(created.id, imageFile.value)
+    }
+    window.$message?.success('Bug 创建成功')
+    showCreateBug.value = false
+    await loadData()
+  } catch (e) { console.error(e) }
+  bugSubmitting.value = false
 }
 
 function onTaskClick(taskId) {
@@ -89,7 +201,7 @@ function onBugClick(bug) {
   showBugDetail.value = true
 }
 
-onMounted(loadData)
+onMounted(() => { loadData(); loadRequirements() })
 </script>
 
 <style scoped>
@@ -109,6 +221,7 @@ onMounted(loadData)
 .stat-pill { min-width:80px;padding:10px 14px;border-radius:14px;background:white;border:1px solid #e2e8f0;text-align:center; }
 .stat-num { display:block;font-size:20px;font-weight:700; }
 .stat-label { font-size:11px;color:#64748b;margin-top:2px; }
+.toolbar-row { display:flex;align-items:center;padding:0 4px; }
 .main-split { display:flex;gap:16px;align-items:flex-start; }
 .left-panel { flex:1;display:flex;flex-direction:column;gap:16px;min-width:0; }
 .right-panel { flex:1;min-width:0; }
@@ -117,10 +230,9 @@ onMounted(loadData)
 .section-header h3 { margin:0;font-size:15px;font-weight:700;color:#0f172a; }
 .task-item { padding:10px 12px;border:1px solid #f1f5f9;border-radius:10px;margin-bottom:6px;cursor:pointer;transition:background .12s; }
 .task-item:hover { background:#f1f5f9; }
-.task-item-top { display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px; }
+.task-item-top { display:flex;align-items:center;justify-content:space-between;gap:8px; }
 .task-item-title { font-size:13px;font-weight:500;color:#0f172a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .task-item-assignee { font-size:11px;color:#94a3b8;white-space:nowrap; }
-.task-item-actions { display:flex;gap:6px; }
 .bug-item { padding:10px 12px;border:1px solid #f1f5f9;border-radius:10px;cursor:pointer;transition:background .12s;margin-bottom:6px; }
 .bug-item:hover { background:#f1f5f9; }
 .bug-item-top { display:flex;align-items:center;justify-content:space-between;gap:8px; }

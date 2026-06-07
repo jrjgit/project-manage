@@ -87,7 +87,7 @@ public class BugService {
     /** 创建 Bug */
     @Transactional
     public Bug createBug(CreateBugRequest req) {
-        if (taskMapper.selectById(req.getTaskId()) == null)
+        if (req.getTaskId() != null && taskMapper.selectById(req.getTaskId()) == null)
             throw new BusinessException(400, "关联任务不存在");
         if (req.getAssigneeId() != null && userMapper.selectById(req.getAssigneeId()) == null)
             throw new BusinessException(400, "指派人不存在");
@@ -102,8 +102,10 @@ public class BugService {
         bug.setCreatorId(userId);
         bug.setAssigneeId(req.getAssigneeId());
         bug.setTestType(req.getTestType() != null ? req.getTestType() : "integration");
-        // 从关联任务获取需求ID
-        if (req.getTaskId() != null) {
+        // 优先用请求中的 requirementId，其次从关联任务获取
+        if (req.getRequirementId() != null) {
+            bug.setRequirementId(req.getRequirementId());
+        } else if (req.getTaskId() != null) {
             Task t = taskMapper.selectById(req.getTaskId());
             if (t != null) bug.setRequirementId(t.getRequirementId());
         }
