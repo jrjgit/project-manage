@@ -173,8 +173,6 @@ const availableActions = computed(() => {
   if (['dev', 'dev_lead'].includes(role) && isMyTask && status === 'pending') actions.push({ label: '开始开发', status: 'developing', type: 'primary' })
   if (['dev', 'dev_lead'].includes(role) && isMyTask && status === 'developing') actions.push({ label: '完成开发', status: 'testing', type: 'primary' })
   if (role === 'tester' && status === 'testing') {
-    actions.push({ label: '测试通过', status: 'closed', type: 'success' })
-    actions.push({ label: '打回开发', status: 'developing', type: 'error' })
     actions.push({ label: '创建Bug', status: null, type: 'warning', action: 'createBug' })
   }
   return actions
