@@ -143,7 +143,7 @@ function navigateToDetail(msg) {
   const routes = { task: '/tasks/', bug: '/developer?bugId=', requirement: '/requirements/' }
   const path = routes[msg.type]
   if (path) {
-    window.location.href = path + id
+    router.push(path + id).catch(e => console.error('[nav]', e))
   }
 }
 
