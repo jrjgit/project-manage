@@ -90,6 +90,12 @@
         </section>
       </div>
     </n-drawer-content>
+    <n-drawer-content v-else-if="bugNotFound" closable>
+      <div style="text-align:center;padding:60px 0;color:#94a3b8">
+        <div style="font-size:40px;font-weight:700;color:#d03050;margin-bottom:12px">404</div>
+        <div style="font-size:15px">该 Bug 已被删除</div>
+      </div>
+    </n-drawer-content>
   </n-drawer>
 
   <n-modal v-model:show="showCommentModal" title="操作备注" preset="dialog">
@@ -132,6 +138,7 @@ const pendingComment = ref('')
 const pendingAction = ref(null)
 const imageUrl = ref('')
 const imageUploading = ref(false)
+const bugNotFound = ref(false)
 
 const statusMeta = computed(() => bugStatusMeta[bug.value?.status] || { label: bug.value?.status || '-', tone: 'default' })
 const severityMetaItem = computed(() => severityMeta[bug.value?.severity] || { label: bug.value?.severity || '-', tone: 'default' })
@@ -194,11 +201,13 @@ watch(
 )
 
 async function loadDetail() {
+  bugNotFound.value = false
   try {
     bug.value = await getBug(props.bugId)
-    console.log('[BugDetailDrawer] getBug response:', JSON.stringify(bug.value, null, 2))
     await loadImage()
   } catch (error) {
+    bugNotFound.value = true
+    bug.value = null
     console.error(error)
   }
 }

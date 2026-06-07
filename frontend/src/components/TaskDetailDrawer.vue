@@ -128,6 +128,12 @@
         </section>
       </div>
     </n-drawer-content>
+    <n-drawer-content v-else-if="taskNotFound" closable>
+      <div style="text-align:center;padding:60px 0;color:#94a3b8">
+        <div style="font-size:40px;font-weight:700;color:#d03050;margin-bottom:12px">404</div>
+        <div style="font-size:15px">该任务已被删除</div>
+      </div>
+    </n-drawer-content>
   </n-drawer>
 
   <!-- Create Bug Modal -->
@@ -184,6 +190,7 @@ const taskBugs = ref([])
 const reportProgress = ref(0)
 const progressComment = ref('')
 const submittingProgress = ref(false)
+const taskNotFound = ref(false)
 
 // 创建 Bug 弹窗
 const showCreateBugModal = ref(false)
@@ -252,6 +259,7 @@ watch([() => props.taskId, show], async ([id, visible]) => {
 
 async function loadUsers() { try { users.value = await getUsers() } catch (e) { console.error(e) } }
 async function loadDetail() {
+  taskNotFound.value = false
   try {
     const res = await getTask(props.taskId)
     task.value = res.task
@@ -262,7 +270,11 @@ async function loadDetail() {
       else reqDoc.value = null
     }
     taskBugs.value = await getBugs({ task_id: props.taskId }) || []
-  } catch (e) { console.error(e) }
+  } catch (e) {
+    taskNotFound.value = true
+    task.value = null
+    console.error(e)
+  }
 }
 async function loadHistory() { try { histories.value = await getTaskHistory(props.taskId) } catch (e) { console.error(e) } }
 
