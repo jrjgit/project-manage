@@ -22,7 +22,7 @@ public class BugController {
     private final BugService bugService;
 
     @GetMapping
-    public Result<List<Bug>> list(@RequestParam(required = false) String taskId,
+    public Result<List<Bug>> list(@RequestParam(name = "task_id", required = false) String taskId,
                                    @RequestParam(required = false) String status,
                                    @RequestParam(required = false) String severity) {
         return Result.ok(bugService.listBugs(taskId, status, severity));
