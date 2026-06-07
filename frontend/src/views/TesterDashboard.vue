@@ -26,9 +26,6 @@
                 <span class="task-item-title">{{ t.title }}</span>
                 <span class="task-item-assignee">{{ t.assignee }}</span>
               </div>
-              <div class="task-item-actions" @click.stop>
-                <n-button size="tiny" type="warning" @click.stop="openCreateBug(t)">创建Bug</n-button>
-              </div>
             </div>
           </section>
         </div>
@@ -53,33 +50,6 @@
 
     <TaskDetailDrawer v-model:show="showTaskDetail" :task-id="selectedTaskId" @refresh="loadData" />
     <BugDetailDrawer v-model:show="showBugDetail" :bug-id="selectedBugId" @refresh="loadData" />
-
-    <!-- Create Bug Modal -->
-    <n-modal v-model:show="showCreateBug" preset="card" style="width:500px" title="创建 Bug" :mask-closable="false">
-      <n-form ref="formRef" :model="bugForm" :rules="bugRules" label-width="80">
-        <n-form-item label="标题" path="title">
-          <n-input v-model:value="bugForm.title" placeholder="Bug标题" />
-        </n-form-item>
-        <n-form-item label="描述">
-          <n-input v-model:value="bugForm.description" type="textarea" placeholder="描述 Bug 现象" />
-        </n-form-item>
-        <n-form-item label="严重程度">
-          <n-select v-model:value="bugForm.severity" :options="severityOptions" />
-        </n-form-item>
-        <n-form-item label="截图">
-          <n-upload :show-file-list="false" :custom-request="handleAttachUpload" accept="image/*">
-            <n-button :loading="imageUploading">选择图片</n-button>
-          </n-upload>
-          <span v-if="attachFileName" style="font-size:12px;color:#18a058;margin-left:8px">{{ attachFileName }}</span>
-        </n-form-item>
-      </n-form>
-      <template #footer>
-        <n-space justify="end">
-          <n-button @click="showCreateBug = false">取消</n-button>
-          <n-button type="primary" :loading="bugSubmitting" @click="submitBug">确定</n-button>
-        </n-space>
-      </template>
-    </n-modal>
   </AppLayout>
 </template>
 
@@ -87,12 +57,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getTesterDashboard } from '@/api/statistics'
-import { createBug, uploadBugImage } from '@/api/bugs'
 import { severityMeta } from '@/constants/statusMeta'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import BugDetailDrawer from '@/components/BugDetailDrawer.vue'
 import AppLayout from '@/components/AppLayout.vue'
-import { NTag, NButton, NModal, NForm, NFormItem, NInput, NSelect, NSpace, NUpload } from 'naive-ui'
+import { NTag } from 'naive-ui'
 
 const authStore = useAuthStore()
 
@@ -101,25 +70,6 @@ const showTaskDetail = ref(false)
 const selectedTaskId = ref(null)
 const showBugDetail = ref(false)
 const selectedBugId = ref(null)
-
-const showCreateBug = ref(false)
-const bugForm = ref({ title: '', description: '', severity: 'medium' })
-const bugFormTargetTask = ref(null)
-const bugSubmitting = ref(false)
-const imageFile = ref(null)
-const attachFileName = ref('')
-const imageUploading = ref(false)
-
-const severityOptions = [
-  { label: '低', value: 'low' },
-  { label: '中', value: 'medium' },
-  { label: '高', value: 'high' },
-  { label: '紧急', value: 'critical' }
-]
-
-const bugRules = {
-  title: [{ required: true, message: '请输入标题', trigger: 'blur' }]
-}
 
 const stats = computed(() => dashData.value.stats || { totalTesting: 0, pendingVerify: 0 })
 const tasks = computed(() => dashData.value.tasks || [])
@@ -137,43 +87,6 @@ function onTaskClick(taskId) {
 function onBugClick(bug) {
   selectedBugId.value = bug.id
   showBugDetail.value = true
-}
-
-function openCreateBug(t) {
-  bugFormTargetTask.value = t
-  bugForm.value = { title: t.title, description: '', severity: 'medium' }
-  imageFile.value = null
-  attachFileName.value = ''
-  showCreateBug.value = true
-}
-
-function handleAttachUpload({ file }) {
-  imageFile.value = file.file
-  attachFileName.value = file.name
-}
-
-async function submitBug() {
-  if (!bugForm.value.title.trim()) { window.$message?.warning('请输入标题'); return }
-  const t = bugFormTargetTask.value
-  if (!t) return
-  bugSubmitting.value = true
-  try {
-    const payload = {
-      title: bugForm.value.title,
-      description: bugForm.value.description || undefined,
-      severity: bugForm.value.severity,
-      task_id: t.id,
-      assignee_id: t.assignee_id || null
-    }
-    const created = await createBug(payload)
-    if (imageFile.value) {
-      await uploadBugImage(created.id, imageFile.value)
-    }
-    window.$message?.success('Bug 创建成功')
-    showCreateBug.value = false
-    await loadData()
-  } catch (e) { console.error(e) }
-  bugSubmitting.value = false
 }
 
 onMounted(loadData)
