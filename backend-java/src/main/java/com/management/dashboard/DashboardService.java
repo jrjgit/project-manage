@@ -264,7 +264,7 @@ public class DashboardService {
         List<Bug> pendingVerifyBugs = bugMapper.selectList(
                 new LambdaQueryWrapper<Bug>()
                         .and(w -> w.in(Bug::getStatus, "fixed", "not_a_bug")
-                                .or(w -> w.eq(Bug::getCreatorId, userId).ne(Bug::getStatus, "closed")))
+                                .or(x -> x.eq(Bug::getCreatorId, userId).ne(Bug::getStatus, "closed")))
                         .orderByDesc(Bug::getUpdatedAt));
         for (Bug b : pendingVerifyBugs) {
             if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
