@@ -282,9 +282,12 @@ public class BugService {
 
     public void downloadImage(Long id, HttpServletResponse response) throws IOException {
         Bug bug = bugMapper.selectById(id);
-        if (bug == null || bug.getImagePath() == null) throw new BusinessException(404, "图片不存在");
+        if (bug == null || bug.getImagePath() == null) {
+            response.setStatus(204);
+            return;
+        }
         java.io.File f = new java.io.File(uploadDir + "/" + bug.getImagePath());
-        if (!f.exists()) throw new BusinessException(404, "文件不存在");
+        if (!f.exists()) { response.setStatus(204); return; }
         response.setContentType("application/octet-stream");
         response.setHeader("Content-Disposition", "attachment;filename=" + java.net.URLEncoder.encode(bug.getImageName(), "UTF-8"));
         org.springframework.util.FileCopyUtils.copy(new java.io.FileInputStream(f), response.getOutputStream());
