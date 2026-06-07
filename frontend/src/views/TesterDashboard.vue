@@ -234,9 +234,9 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers() })
 .stat-num { display:block;font-size:20px;font-weight:700; }
 .stat-label { font-size:11px;color:#64748b;margin-top:2px; }
 .toolbar-row { display:flex;align-items:center;padding:0 4px; }
-.main-split { display:flex;gap:16px;align-items:flex-start; }
-.left-panel { flex:1;display:flex;flex-direction:column;gap:16px;min-width:0; }
-.right-panel { flex:1;min-width:0; }
+.main-split { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.left-panel { flex: 1; display: flex; flex-direction: column; gap: 16px; min-width: 300px; }
+.right-panel { flex: 1; min-width: 300px; }
 .section-card { background:white;border-radius:16px;border:1px solid #e2e8f0;padding:16px; }
 .section-header { margin-bottom:12px; }
 .section-header h3 { margin:0;font-size:15px;font-weight:700;color:#0f172a; }
