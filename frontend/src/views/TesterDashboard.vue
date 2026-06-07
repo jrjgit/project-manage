@@ -252,4 +252,10 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers() })
 .bug-item-meta { margin-top:6px; }
 .bug-task { font-size:11px;color:#94a3b8; }
 .empty-state { text-align:center;padding:24px;color:#94a3b8;font-size:13px; }
+@media (max-width: 900px) {
+  .hero-card { flex-direction: column; align-items: stretch; }
+  .hero-stats { flex-wrap: wrap; }
+  .stat-pill { flex: 1; min-width: 60px; }
+  .main-split { flex-direction: column; }
+}
 </style>
