@@ -19,21 +19,21 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/developer',
+    name: 'DeveloperDashboard',
+    component: () => import('@/views/DeveloperDashboard.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/tester',
+    name: 'TesterDashboard',
+    component: () => import('@/views/TesterDashboard.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/projects',
     name: 'Projects',
     component: () => import('@/views/Projects.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/tasks',
-    name: 'Tasks',
-    component: () => import('@/views/Tasks.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/tasks/:id',
-    name: 'TaskDetail',
-    component: () => import('@/views/Tasks.vue'),
     meta: { requiresAuth: true }
   },
   {
