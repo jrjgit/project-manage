@@ -520,31 +520,21 @@ public class TaskService {
     private List<User> resolveTaskNotifyTargets(Task task, String oldStatus, String newStatus) {
         List<User> targets = new ArrayList<>();
         String key = oldStatus + "->" + newStatus;
-
         switch (key) {
-            case "pending->assigned_lead":
+            case "pending->developing":
                 if (task.getDevLeadId() != null) addUser(targets, task.getDevLeadId());
                 break;
-            case "assigned_lead->developing":
-                if (task.getAssigneeId() != null) addUser(targets, task.getAssigneeId());
-                break;
-            case "developing->developed":
-                break;
-            case "pending_test->testing":
-                if (task.getTesterId() != null) addUser(targets, task.getTesterId());
-                break;
-            case "testing->passed":
-                Project p = projectMapper.selectById(task.getProjectId());
-                if (p != null) addUser(targets, p.getPmId());
+            case "developing->testing":
                 if (task.getAssigneeId() != null) addUser(targets, task.getAssigneeId());
                 if (task.getDevLeadId() != null) addUser(targets, task.getDevLeadId());
                 break;
-            case "testing->rejected":
+            case "testing->closed":
                 if (task.getAssigneeId() != null) addUser(targets, task.getAssigneeId());
                 if (task.getDevLeadId() != null) addUser(targets, task.getDevLeadId());
                 break;
-            case "rejected->developing":
-                if (task.getTesterId() != null) addUser(targets, task.getTesterId());
+            case "testing->developing":
+                if (task.getAssigneeId() != null) addUser(targets, task.getAssigneeId());
+                if (task.getDevLeadId() != null) addUser(targets, task.getDevLeadId());
                 break;
         }
         return targets;

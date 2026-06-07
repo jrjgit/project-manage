@@ -138,7 +138,7 @@ async function loadMessages() {
 }
 
 function navigateToDetail(msg) {
-  const routes = { task: '/tasks/', bug: '/bugs/', requirement: '/requirements/' }
+  const routes = { task: '/tasks/', bug: '/developer?bugId=', requirement: '/requirements/' }
   const path = routes[msg.type]
   if (path && msg.related_id) {
     router.push(path + msg.related_id)

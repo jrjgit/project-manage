@@ -49,7 +49,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getDeveloperDashboard } from '@/api/statistics'
 import { taskStatusMeta, priorityMeta, bugStatusMeta, severityMeta } from '@/constants/statusMeta'
@@ -60,6 +61,7 @@ import AppLayout from '@/components/AppLayout.vue'
 import { NTag } from 'naive-ui'
 
 const authStore = useAuthStore()
+const route = useRoute()
 
 const dashData = ref({})
 const showTaskDetail = ref(false)
@@ -104,6 +106,13 @@ function onBugClick(bug) {
   selectedBugId.value = bug.id
   showBugDetail.value = true
 }
+
+watch(() => route.query.bugId, (id) => {
+  if (id) {
+    selectedBugId.value = Number(id)
+    showBugDetail.value = true
+  }
+}, { immediate: true })
 
 onMounted(loadData)
 </script>

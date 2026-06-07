@@ -41,15 +41,10 @@ public class NotificationService {
     }
 
     private static final Map<String, String> TASK_STATUS_LABELS = Map.of(
-            "pending", "待分配",
-            "assigned_lead", "已分配",
+            "pending", "待受理",
             "developing", "开发中",
-            "developed", "开发完成",
-            "pending_test", "待测试",
             "testing", "测试中",
-            "passed", "测试通过",
-            "rejected", "打回修改",
-            "closed", "已关闭"
+            "closed", "已完成"
     );
 
     private static final Map<String, String> BUG_STATUS_LABELS = Map.of(
@@ -60,11 +55,13 @@ public class NotificationService {
     );
 
     private static final Map<String, String> REQUIREMENT_STATUS_LABELS = Map.of(
-            "planned", "规划中",
-            "assigned", "已分配",
-            "pending_task", "待拆任务",
-            "in_progress", "进行中",
-            "completed", "已完成",
+            "planned", "未开始",
+            "pending_task", "任务待分配",
+            "in_progress", "开发中",
+            "integration_test", "综合测试",
+            "business_test", "业务测试",
+            "pending_release", "待发布",
+            "released", "已发布",
             "closed", "已关闭"
     );
 

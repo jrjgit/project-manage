@@ -120,7 +120,7 @@ public class BugService {
         if (bug.getAssigneeId() != null) {
             User target = userMapper.selectById(bug.getAssigneeId());
             if (target != null) {
-                notificationService.emitBugEvent(bug, "new", "assigned",
+                notificationService.emitBugEvent(bug, "", "unfixed",
                         currentUser().getName(), List.of(target), "");
             }
         }
@@ -235,19 +235,17 @@ public class BugService {
         List<User> targets = new ArrayList<>();
         String key = oldStatus + "->" + newStatus;
         switch (key) {
-            case "new->assigned":
-            case "reopened->assigned":
+            case "->unfixed":
                 if (bug.getAssigneeId() != null) addUser(targets, bug.getAssigneeId());
                 break;
-            case "assigned->fixing":
-                addUser(targets, bug.getCreatorId());
+            case "unfixed->fixed":
+            case "unfixed->not_a_bug":
+                if (bug.getCreatorId() != null) addUser(targets, bug.getCreatorId());
                 break;
-            case "fixing->fixed":
-            case "fixed->pending_verify":
-                addUser(targets, bug.getCreatorId());
-                break;
-            case "pending_verify->closed":
-            case "pending_verify->reopened":
+            case "fixed->closed":
+            case "fixed->unfixed":
+            case "not_a_bug->closed":
+            case "not_a_bug->unfixed":
                 if (bug.getAssigneeId() != null) addUser(targets, bug.getAssigneeId());
                 break;
         }
