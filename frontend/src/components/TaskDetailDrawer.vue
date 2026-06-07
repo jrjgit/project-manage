@@ -50,16 +50,6 @@
               </n-button>
             </div>
           </div>
-
-          <div v-if="isTransferring" class="action-block">
-            <div class="action-block-title">转派测试</div>
-            <div class="action-block-copy">将任务转给其他测试人员。</div>
-            <div class="action-row">
-              <n-select v-model:value="transferTesterId" :options="testerOptionsAll" placeholder="选择测试人员" style="width: 200px;" />
-              <n-button :loading="actionLoading" @click="confirmTransfer">确定</n-button>
-              <n-button @click="isTransferring = false">取消</n-button>
-            </div>
-          </div>
         </section>
 
         <section v-if="canReportProgress" class="section-card">
@@ -161,9 +151,6 @@ const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_le
 
 const canEditDevLead = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'developing'].includes(task.value?.status))
 const canEditTester = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'developing', 'testing'].includes(task.value?.status))
-const isTransferring = ref(false)
-const transferTesterId = ref(null)
-const testerOptionsAll = computed(() => users.value.filter(u => u.role === 'tester').map(u => ({ label: u.name, value: u.id })))
 
 const nextActionText = computed(() => ({
   pending: '等待分配开发人员进行开发。',
@@ -186,15 +173,9 @@ const availableActions = computed(() => {
   if (['dev', 'dev_lead'].includes(role) && isMyTask && status === 'pending') actions.push({ label: '开始开发', status: 'developing', type: 'primary' })
   if (['dev', 'dev_lead'].includes(role) && isMyTask && status === 'developing') actions.push({ label: '完成开发', status: 'testing', type: 'primary' })
   if (role === 'tester' && status === 'testing') {
-    if (!task.value?.tester_id || task.value.tester_id !== myId) {
-      actions.push({ label: '接取测试', status: null, type: 'primary', action: 'pick' })
-    }
-    if (!task.value?.tester_id || task.value.tester_id === myId) {
-      actions.push({ label: '测试通过', status: 'closed', type: 'success' })
-      actions.push({ label: '打回开发', status: 'developing', type: 'error' })
-      actions.push({ label: '创建Bug', status: null, type: 'warning', action: 'createBug' })
-      actions.push({ label: '转派测试', status: null, type: 'default', action: 'transfer' })
-    }
+    actions.push({ label: '测试通过', status: 'closed', type: 'success' })
+    actions.push({ label: '打回开发', status: 'developing', type: 'error' })
+    actions.push({ label: '创建Bug', status: null, type: 'warning', action: 'createBug' })
   }
   return actions
 })
@@ -266,50 +247,31 @@ async function saveTester() {
   actionLoading.value = false
 }
 
-async function pickTask() {
-  actionLoading.value = true
-  try {
-    await updateTask(props.taskId, { tester_id: authStore.userInfo?.id })
-    window.$message?.success('已接取测试')
-    await loadDetail(); emit('refresh')
-  } catch (e) { console.error(e) }
-  actionLoading.value = false
-}
-
 function handleCreateBug() {
   if (!task.value) return
   window.$dialog?.info({
     title: '创建Bug',
-    content: `即将为任务「${task.value.title}」创建Bug，确认后跳转到Bug管理页。`,
+    content: `即将为任务「${task.value.title}」创建Bug。`,
     positiveText: '确定',
-    onPositiveClick: () => {
-      const router = { push: (path) => window.location.href = path }
-      // 跳转到创建 Bug 页面，预填 task_id
-      window.location.href = `/bugs?taskId=${props.taskId}&assigneeId=${task.value?.assignee_id || ''}`
+    onPositiveClick: async () => {
+      try {
+        const { createBug } = await import('@/api/bugs')
+        await createBug({
+          title: task.value.title,
+          description: '',
+          severity: 'medium',
+          task_id: props.taskId,
+          assignee_id: task.value?.assignee_id
+        })
+        window.$message?.success('Bug 创建成功')
+      } catch (e) { console.error(e) }
     }
   })
 }
 
-async function confirmTransfer() {
-  if (!transferTesterId.value) { window.$message?.warning('请选择测试人员'); return }
-  actionLoading.value = true
-  try {
-    await updateTask(props.taskId, { tester_id: transferTesterId.value })
-    window.$message?.success('已转派')
-    isTransferring.value = false
-    transferTesterId.value = null
-    await loadDetail(); emit('refresh')
-  } catch (e) { console.error(e) }
-  actionLoading.value = false
-}
-
 function executeAction(action) {
-  if (action.action === 'pick') {
-    pickTask()
-  } else if (action.action === 'createBug') {
+  if (action.action === 'createBug') {
     handleCreateBug()
-  } else if (action.action === 'transfer') {
-    isTransferring.value = true
   } else {
     doChangeStatus(action.status, '')
   }
