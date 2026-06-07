@@ -91,6 +91,19 @@
           </div>
         </section>
 
+        <!-- 关联 Bug -->
+        <section v-if="taskBugs.length > 0" class="section-card">
+          <div class="section-title">关联 Bug（{{ taskBugs.length }}）</div>
+          <div class="bug-list-compact">
+            <div v-for="bug in taskBugs" :key="bug.id" class="bug-item-compact">
+              <span class="bugc-title">{{ bug.title }}</span>
+              <n-tag size="tiny" :type="bugStatusMeta[bug.status]?.tone || 'default'">{{ bugStatusMeta[bug.status]?.label || bug.status }}</n-tag>
+              <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'">{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
+              <span class="bugc-creator">{{ bug.creator?.name || '-' }}</span>
+            </div>
+          </div>
+        </section>
+
         <!-- 需求文档 -->
         <section v-if="reqDoc?.document_name" class="section-card">
           <div class="section-title">需求文档</div>
@@ -149,10 +162,10 @@
 import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getTask, getTaskHistory, changeTaskStatus, updateTask } from '@/api/tasks'
-import { createBug, uploadBugImage } from '@/api/bugs'
+import { createBug, uploadBugImage, getBugs } from '@/api/bugs'
 import { getRequirement, downloadRequirementDocument } from '@/api/requirements'
 import { getUsers } from '@/api/users'
-import { priorityMeta, taskStatusMeta } from '@/constants/statusMeta'
+import { priorityMeta, taskStatusMeta, bugStatusMeta, severityMeta } from '@/constants/statusMeta'
 import { NDrawer, NDrawerContent, NTag, NButton, NTimeline, NTimelineItem, NSelect, NSlider, NModal, NForm, NFormItem, NInput, NUpload, NSpace } from 'naive-ui'
 
 const show = defineModel('show', { type: Boolean, default: false })
@@ -167,6 +180,7 @@ const selectedTester = ref(null)
 const selectedDevLead = ref(null)
 const actionLoading = ref(false)
 const reqDoc = ref(null)
+const taskBugs = ref([])
 const reportProgress = ref(0)
 const progressComment = ref('')
 const submittingProgress = ref(false)
@@ -215,6 +229,7 @@ const availableActions = computed(() => {
   if (['dev', 'dev_lead'].includes(role) && isMyTask && status === 'developing') actions.push({ label: '完成开发', status: 'testing', type: 'primary' })
   if (role === 'tester' && status === 'testing') {
     actions.push({ label: '创建Bug', status: null, type: 'warning', action: 'createBug' })
+    actions.push({ label: '关闭任务', status: 'closed', type: 'success' })
   }
   return actions
 })
@@ -245,6 +260,7 @@ async function loadDetail() {
       if (reqData.document_name) reqDoc.value = reqData
       else reqDoc.value = null
     }
+    taskBugs.value = await getBugs({ task_id: props.taskId }) || []
   } catch (e) { console.error(e) }
 }
 async function loadHistory() { try { histories.value = await getTaskHistory(props.taskId) } catch (e) { console.error(e) } }
@@ -406,4 +422,8 @@ function formatDate(value) {
 .doc-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px 12px; background: #f8fafc; border-radius: 8px; }
 .doc-name { flex: 1; font-size: 13px; color: #0f172a; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 760px) { .detail-grid { grid-template-columns: 1fr; } }
+.bug-list-compact { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.bug-item-compact { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+.bug-item-compact .bugc-title { flex: 1; color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bug-item-compact .bugc-creator { color: #94a3b8; min-width: 40px; text-align: right; }
 </style>
