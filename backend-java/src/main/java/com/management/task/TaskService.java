@@ -64,12 +64,10 @@ public class TaskService {
                 case "pm":
                     break;
                 case "dev_lead":
-                    q.inSql(Task::getId,
-                            "SELECT task_id FROM task_assignees WHERE user_id = " + u.getUserId());
+                    q.exists("SELECT 1 FROM task_assignees WHERE task_assignees.task_id = tasks.id AND task_assignees.user_id = {0}", u.getUserId());
                     break;
                 case "dev":
-                    q.inSql(Task::getId,
-                            "SELECT task_id FROM task_assignees WHERE user_id = " + u.getUserId());
+                    q.exists("SELECT 1 FROM task_assignees WHERE task_assignees.task_id = tasks.id AND task_assignees.user_id = {0}", u.getUserId());
                     break;
                 case "tester":
                     if (!scoped) q.eq(Task::getStatus, "testing");
@@ -191,7 +189,9 @@ public class TaskService {
         private List<TaskAssignee> assignees;
     }
 
-    /** 创建任务（仅 PM） */
+    /**
+     * 创建任务，校验关联实体存在性，初始化指派人列表，发送通知
+     */
     @Transactional
     public Task createTask(CreateTaskRequest req) {
         Long userId = currentUser().getUserId();
@@ -236,7 +236,7 @@ public class TaskService {
 
         // 处理多指派人
         if (req.getAssignees() != null && !req.getAssignees().isEmpty()) {
-            for (var item : req.getAssignees()) {
+            for (CreateTaskRequest.TaskAssigneeItem item : req.getAssignees()) {
                 if (userMapper.selectById(item.getUserId()) == null)
                     throw new BusinessException(400, "指派人不存在: " + item.getUserId());
                 TaskAssignee ta = new TaskAssignee();
@@ -289,7 +289,9 @@ public class TaskService {
         return task;
     }
 
-    /** 更新任务基本信息 */
+    /**
+     * 更新任务基本信息，处理人员变更通知，记录进度历史
+     */
     public Task updateTask(Long id, UpdateTaskRequest req) {
         Task task = taskMapper.selectById(id);
         if (task == null) throw new BusinessException(404, "task not found");
@@ -398,7 +400,9 @@ public class TaskService {
         return task;
     }
 
-    /** 变更任务状态（核心状态机逻辑） */
+    /**
+     * 变更任务状态，执行状态机流转校验，记录历史，处理多开发场景和自动跳转
+     */
     @Transactional
     public void changeStatus(Long taskId, ChangeTaskStatusRequest req) {
         Long operatorId = currentUser().getUserId();
@@ -516,7 +520,7 @@ public class TaskService {
         }
     }
 
-    /** 根据状态流转确定通知目标（对等 Go resolveTaskNotifyTargets） */
+    /** 根据状态流转确定通知目标（通知目标解析） */
     private List<User> resolveTaskNotifyTargets(Task task, String oldStatus, String newStatus) {
         List<User> targets = new ArrayList<>();
         String key = oldStatus + "->" + newStatus;

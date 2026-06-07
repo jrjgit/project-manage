@@ -23,7 +23,9 @@ public class WorkflowService {
         refreshCache();
     }
 
-    /** 判断流转是否合法 */
+    /**
+     * 获取允许的状态流转，判断指定角色的状态变更是否合法
+     */
     public boolean isAllowed(String role, String from, String to, String type) {
         Map<String, Map<String, Set<String>>> typeRules = cache.get(type);
         if (typeRules == null) return false;

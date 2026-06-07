@@ -38,7 +38,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleUnknown(Exception e) {
         log.error("Unexpected error", e);
-        String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-        return ResponseEntity.status(500).body(Map.of("error", "服务器内部错误: " + msg));
+        return ResponseEntity.status(500).body(Map.of("error", "服务器内部错误"));
     }
 }

@@ -12,10 +12,7 @@ import com.management.user.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -90,12 +87,5 @@ public class ProjectService {
     private void fillAssociations(Project p) {
         if (p.getPmId() != null) p.setPm(userMapper.selectById(p.getPmId()));
         if (p.getCreatedBy() != null) p.setCreator(userMapper.selectById(p.getCreatedBy()));
-        if (p.getHrScope() != null && !p.getHrScope().isBlank()) {
-            List<Long> ids = Arrays.stream(p.getHrScope().split(","))
-                    .filter(StringUtils::hasText)
-                    .map(Long::parseLong)
-                    .collect(Collectors.toList());
-            p.setHrUsers(userMapper.selectBatchIds(ids));
-        }
     }
 }

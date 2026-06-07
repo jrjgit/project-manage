@@ -87,7 +87,9 @@ public class BugService {
         return bugs;
     }
 
-    /** 创建 Bug */
+    /**
+     * 创建Bug，初始化状态为unfixed，从关联任务获取需求ID，发送通知
+     */
     @Transactional
     public Bug createBug(CreateBugRequest req) {
         if (req.getTaskId() != null && taskMapper.selectById(req.getTaskId()) == null)
@@ -137,7 +139,9 @@ public class BugService {
         return bug;
     }
 
-    /** 更新 Bug */
+    /**
+     * 更新Bug信息，处理指派人变更通知
+     */
     public Bug updateBug(Long id, UpdateBugRequest req) {
         Bug bug = bugMapper.selectById(id);
         if (bug == null) throw new BusinessException(404, "bug not found");
@@ -175,7 +179,9 @@ public class BugService {
         return bug;
     }
 
-    /** 变更 Bug 状态 */
+    /**
+     * 变更Bug状态，校验操作权限和流转合法性，记录历史，发送通知
+     */
     @Transactional
     public void changeStatus(Long bugId, ChangeBugStatusRequest req) {
         Long operatorId = currentUser().getUserId();
@@ -272,13 +278,17 @@ public class BugService {
         String dir = uploadDir + "/bugs/" + id;
         java.io.File dirFile = new java.io.File(dir);
         if (!dirFile.exists()) dirFile.mkdirs();
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null) {
+            originalFilename = "unknown";
+        }
         String ext = "";
-        int dot = file.getOriginalFilename().lastIndexOf('.');
-        if (dot >= 0) ext = file.getOriginalFilename().substring(dot);
+        int dot = originalFilename.lastIndexOf('.');
+        if (dot >= 0) ext = originalFilename.substring(dot);
         String name = java.util.UUID.randomUUID().toString() + ext;
         file.transferTo(new java.io.File(dirFile, name));
         bug.setImagePath("bugs/" + id + "/" + name);
-        bug.setImageName(file.getOriginalFilename());
+        bug.setImageName(originalFilename);
         bug.setImageSize(file.getSize());
         bugMapper.updateById(bug);
     }
@@ -293,7 +303,9 @@ public class BugService {
         if (!f.exists()) { response.setStatus(204); return; }
         response.setContentType("application/octet-stream");
         response.setHeader("Content-Disposition", "attachment;filename=" + java.net.URLEncoder.encode(bug.getImageName(), "UTF-8"));
-        org.springframework.util.FileCopyUtils.copy(new java.io.FileInputStream(f), response.getOutputStream());
+        try (java.io.FileInputStream fis = new java.io.FileInputStream(f)) {
+            org.springframework.util.FileCopyUtils.copy(fis, response.getOutputStream());
+        }
     }
 
     public void deleteImage(Long id) {

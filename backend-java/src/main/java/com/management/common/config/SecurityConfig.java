@@ -34,18 +34,27 @@ public class SecurityConfig {
                     res.setStatus(401);
                     res.setContentType("application/json;charset=UTF-8");
                     PrintWriter w = res.getWriter();
-                    w.write("{\"error\":\"未登录或令牌已过期\"}");
-                    w.flush();
+                    try {
+                        w.write("{\"error\":\"未登录或令牌已过期\"}");
+                        w.flush();
+                    } finally {
+                        w.close();
+                    }
                 })
                 .accessDeniedHandler((req, res, e) -> {
                     res.setStatus(403);
                     res.setContentType("application/json;charset=UTF-8");
                     PrintWriter w = res.getWriter();
-                    w.write("{\"error\":\"无权限执行此操作\"}");
-                    w.flush();
+                    try {
+                        w.write("{\"error\":\"无权限执行此操作\"}");
+                        w.flush();
+                    } finally {
+                        w.close();
+                    }
                 }))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**").permitAll()
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

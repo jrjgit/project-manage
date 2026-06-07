@@ -2,13 +2,12 @@ package com.management.common.jwt;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.util.Base64;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
@@ -17,8 +16,7 @@ public class JwtUtils {
     private final SecretKey key;
 
     public JwtUtils(@Value("${app.jwt-secret}") String secret) {
-        this.key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(
-                Base64.getEncoder().encodeToString(secret.getBytes())));
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(Long userId, String name, String role) {

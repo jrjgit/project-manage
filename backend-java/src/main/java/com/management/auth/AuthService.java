@@ -18,6 +18,9 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
 
+    /**
+     * 用户注册，校验账号唯一性，加密存储密码
+     */
     public Long register(RegisterRequest req) {
         User existing = userMapper.selectOne(new LambdaQueryWrapper<User>()
                 .eq(User::getAccount, req.getAccount()));
@@ -29,13 +32,15 @@ public class AuthService {
         user.setAccount(req.getAccount());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setRole(req.getRole());
-        user.setWechatId(req.getWechatId());
         user.setEmail(req.getEmail());
         userMapper.insert(user);
         log.info("User registered: name={}, account={}, role={}, id={}", req.getName(), req.getAccount(), req.getRole(), user.getId());
         return user.getId();
     }
 
+    /**
+     * 用户登录，校验账号密码，返回JWT令牌和用户信息
+     */
     public LoginResponse login(LoginRequest req) {
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
                 .eq(User::getAccount, req.getAccount()));

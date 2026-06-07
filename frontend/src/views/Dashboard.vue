@@ -136,7 +136,7 @@
         <section class="section-card">
           <div class="section-header"><h3>我的 Bug</h3></div>
           <div v-if="bugs.length" class="compact-list">
-            <div v-for="b in bugs" :key="b.id" class="compact-item" @click="$router.push(`/bugs`)">
+            <div v-for="b in bugs" :key="b.id" class="compact-item" @click="$router.push(`/developer?tab=bugs`)">
               <span class="compact-title">{{ b.title }}</span>
               <n-tag :type="bugStatusMeta[b.status]?.tone || 'default'" size="tiny" round>{{ bugStatusMeta[b.status]?.label || b.status }}</n-tag>
             </div>

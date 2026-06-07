@@ -51,7 +51,7 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     private void initDefaultWorkflowRules() {
-        if (workflowRuleMapper.selectCount(null) > 0) return;
+        if (workflowRuleMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
 
         log.info("Initializing default workflow rules");
         List<WorkflowRule> rules = List.of(
@@ -98,7 +98,7 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     private void initDefaultDictionaries() {
-        if (dictionaryMapper.selectCount(null) > 0) return;
+        if (dictionaryMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
 
         log.info("Initializing default dictionaries");
         String[][] dicts = {

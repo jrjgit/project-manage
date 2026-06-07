@@ -36,8 +36,6 @@ public class IterationService {
         Long userId = currentUser().getUserId();
         iteration.setCreatedBy(userId);
         iterationMapper.insert(iteration);
-        iteration.setIterationId("ITER-" + java.time.Year.now().getValue() + "-" + String.format("%03d", iteration.getId()));
-        iterationMapper.updateById(iteration);
         if (iteration.getCreatedBy() != null) iteration.setCreator(userMapper.selectById(iteration.getCreatedBy()));
         return iteration;
     }

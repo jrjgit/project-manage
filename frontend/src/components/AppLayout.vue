@@ -201,7 +201,7 @@ const allMenus = [
   { key: 'developer', label: '开发工作台', path: '/developer', icon: CodeIcon, roles: ['dev_lead', 'dev'] },
   { key: 'tester', label: '测试工作台', path: '/tester', icon: BugIcon, roles: ['tester'] },
   { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon, roles: ['pm'] },
-  { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon, roles: [] },
+  { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon, roles: ['pm', 'dev_lead', 'dev', 'tester_lead', 'tester'] },
   { key: 'messages', label: '消息中心', path: '/messages', icon: BellIcon, badge: 'unread', roles: ['pm', 'dev_lead', 'dev', 'tester'] },
   { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon, roles: ['pm', 'dev_lead'] },
   { key: 'iterations', label: '发布迭代', path: '/iterations', icon: MilestoneIcon, roles: ['pm', 'dev_lead', 'dev', 'tester'] },
