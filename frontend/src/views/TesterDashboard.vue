@@ -58,8 +58,8 @@
           <n-form-item label="测试类型">
             <n-select v-model:value="bugForm.test_type" :options="testTypeOptions" />
           </n-form-item>
-          <n-form-item v-if="bugForm.test_type !== 'integration'" label="关联需求">
-            <n-select v-model:value="bugForm.requirement_id" :options="reqOptions" placeholder="请选择需求" clearable filterable />
+          <n-form-item label="关联需求">
+            <n-select v-model:value="bugForm.requirement_id" :options="reqOptions" placeholder="（可选）请选择需求" clearable filterable />
           </n-form-item>
           <n-form-item label="标题" path="title">
             <n-input v-model:value="bugForm.title" placeholder="Bug标题" />
@@ -69,6 +69,9 @@
           </n-form-item>
           <n-form-item label="严重程度">
             <n-select v-model:value="bugForm.severity" :options="severityOptions" />
+          </n-form-item>
+          <n-form-item label="修复人">
+            <n-select v-model:value="bugForm.assignee_id" :options="devOptions" placeholder="（可选）指派给" clearable filterable />
           </n-form-item>
           <n-form-item label="截图">
             <n-upload :show-file-list="false" :custom-request="handleAttachUpload" accept="image/*">
@@ -97,6 +100,7 @@ import { useAuthStore } from '@/store/useAuthStore'
 import { getTesterDashboard } from '@/api/statistics'
 import { createBug, uploadBugImage } from '@/api/bugs'
 import { getRequirements } from '@/api/requirements'
+import { getUsers } from '@/api/users'
 import { severityMeta } from '@/constants/statusMeta'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import BugDetailDrawer from '@/components/BugDetailDrawer.vue'
@@ -112,10 +116,11 @@ const showBugDetail = ref(false)
 const selectedBugId = ref(null)
 
 const requirements = ref([])
+const users = ref([])
 
 // Create Bug
 const showCreateBug = ref(false)
-const bugForm = ref({ test_type: 'integration', requirement_id: null, title: '', description: '', severity: 'medium' })
+const bugForm = ref({ test_type: 'integration', requirement_id: null, assignee_id: null, title: '', description: '', severity: 'medium' })
 const bugSubmitting = ref(false)
 const imageFile = ref(null)
 const attachFileName = ref('')
@@ -137,6 +142,9 @@ const severityOptions = [
 const reqOptions = computed(() =>
   requirements.value.map(r => ({ label: `${r.number || r.requirement_id || 'REQ-'+r.id} ${r.description || ''}`.substring(0, 60), value: r.id }))
 )
+const devOptions = computed(() =>
+  users.value.filter(u => ['dev', 'dev_lead'].includes(u.role)).map(u => ({ label: u.name, value: u.id }))
+)
 
 const stats = computed(() => dashData.value.stats || { totalTesting: 0, pendingVerify: 0 })
 const tasks = computed(() => dashData.value.tasks || [])
@@ -150,8 +158,12 @@ async function loadRequirements() {
   try { requirements.value = await getRequirements() || [] } catch (e) { console.error(e) }
 }
 
+async function loadUsers() {
+  try { users.value = await getUsers() || [] } catch (e) { console.error(e) }
+}
+
 function openCreateBug() {
-  bugForm.value = { test_type: 'integration', requirement_id: null, title: '', description: '', severity: 'medium' }
+  bugForm.value = { test_type: 'integration', requirement_id: null, assignee_id: null, title: '', description: '', severity: 'medium' }
   imageFile.value = null
   attachFileName.value = ''
   showCreateBug.value = true
@@ -164,9 +176,6 @@ function handleAttachUpload({ file }) {
 
 async function submitBug() {
   if (!bugForm.value.title.trim()) { window.$message?.warning('请输入标题'); return }
-  if (bugForm.value.test_type !== 'integration' && !bugForm.value.requirement_id) {
-    window.$message?.warning('请选择关联需求'); return
-  }
   bugSubmitting.value = true
   try {
     const payload = {
@@ -174,8 +183,8 @@ async function submitBug() {
       description: bugForm.value.description || undefined,
       severity: bugForm.value.severity,
       test_type: bugForm.value.test_type,
-      task_id: bugForm.value.test_type === 'integration' ? undefined : null,
-      assignee_id: undefined
+      task_id: undefined,
+      assignee_id: bugForm.value.assignee_id || undefined
     }
     if (bugForm.value.requirement_id) {
       payload.requirement_id = bugForm.value.requirement_id
@@ -201,7 +210,7 @@ function onBugClick(bug) {
   showBugDetail.value = true
 }
 
-onMounted(() => { loadData(); loadRequirements() })
+onMounted(() => { loadData(); loadRequirements(); loadUsers() })
 </script>
 
 <style scoped>
