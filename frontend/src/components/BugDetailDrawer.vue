@@ -163,6 +163,7 @@ const availableActions = computed(() => {
   const myId = authStore.userInfo?.id
   const isMyBug = bug.value?.assignee_id === myId
   const actions = []
+  console.log('[BugDetailDrawer] role:', role, 'status:', status, 'bug:', bug.value?.id, 'isMyBug:', isMyBug, 'assignee_id:', bug.value?.assignee_id)
   if (['dev', 'dev_lead'].includes(role) && isMyBug && status === 'unfixed') {
     actions.push({ label: '标记已修复', status: 'fixed', type: 'primary' })
     actions.push({ label: '确认为非Bug', status: 'not_a_bug', type: 'info' })
@@ -171,6 +172,7 @@ const availableActions = computed(() => {
     actions.push({ label: '验证通过', status: 'closed', type: 'success' })
     actions.push({ label: '打回未修复', status: 'unfixed', type: 'error' })
   }
+  console.log('[BugDetailDrawer] availableActions:', actions.map(a => a.label))
   return actions
 })
 
@@ -193,6 +195,7 @@ watch(
 async function loadDetail() {
   try {
     bug.value = await getBug(props.bugId)
+    console.log('[BugDetailDrawer] getBug response:', JSON.stringify(bug.value, null, 2))
     await loadImage()
   } catch (error) {
     console.error(error)
