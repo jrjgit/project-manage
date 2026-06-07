@@ -223,7 +223,7 @@ public class DashboardService {
         List<Bug> bugs = bugMapper.selectList(
                 new LambdaQueryWrapper<Bug>()
                         .eq(Bug::getAssigneeId, userId)
-                        .in(Bug::getStatus, List.of("assigned", "fixing", "reopened"))
+                        .in(Bug::getStatus, "unfixed")
                         .orderByDesc(Bug::getUpdatedAt));
         for (Bug b : bugs) {
             if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
