@@ -19,4 +19,11 @@ public class MultiNotifier implements Notifier {
             n.notify(recipient, message);
         }
     }
+
+    @Override
+    public void notify(String recipient, String message, String type, Long relatedId) {
+        for (Notifier n : delegates) {
+            n.notify(recipient, message, type, relatedId);
+        }
+    }
 }
