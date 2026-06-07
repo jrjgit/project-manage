@@ -260,19 +260,21 @@ public class DashboardService {
                 new LambdaQueryWrapper<Task>().eq(Task::getStatus, "testing"));
         for (Task t : allTestingTasks) fillTaskUser(t);
 
+        // 待验证Bug：fixed/not_a_bug + 当前用户创建的非closed Bug
         List<Bug> pendingVerifyBugs = bugMapper.selectList(
-                new LambdaQueryWrapper<Bug>().eq(Bug::getStatus, "pending_verify")
+                new LambdaQueryWrapper<Bug>()
+                        .and(w -> w.in(Bug::getStatus, "fixed", "not_a_bug")
+                                .or(w -> w.eq(Bug::getCreatorId, userId).ne(Bug::getStatus, "closed")))
                         .orderByDesc(Bug::getUpdatedAt));
         for (Bug b : pendingVerifyBugs) {
             if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
         }
 
         long totalTesting = allTestingTasks.size();
-        long pickedByMe = allTestingTasks.stream().filter(t -> userId.equals(t.getTesterId())).count();
         long pendingVerify = pendingVerifyBugs.size();
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("stats", Map.of("totalTesting", totalTesting, "pickedByMe", pickedByMe, "pendingVerify", pendingVerify));
+        result.put("stats", Map.of("totalTesting", totalTesting, "pendingVerify", pendingVerify));
         result.put("tasks", allTestingTasks.stream().map(this::taskToMap).collect(Collectors.toList()));
         result.put("pendingVerifyBugs", pendingVerifyBugs.stream().map(b -> {
             Map<String, Object> m = new LinkedHashMap<>();

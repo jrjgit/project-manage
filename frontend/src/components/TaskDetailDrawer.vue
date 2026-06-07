@@ -116,16 +116,44 @@
       </div>
     </n-drawer-content>
   </n-drawer>
+
+  <!-- Create Bug Modal -->
+  <n-modal v-model:show="showCreateBugModal" preset="card" style="width:500px" title="创建 Bug" :mask-closable="false">
+    <n-form label-placement="top">
+      <n-form-item label="标题" path="title">
+        <n-input v-model:value="bugForm.title" placeholder="Bug标题" />
+      </n-form-item>
+      <n-form-item label="描述">
+        <n-input v-model:value="bugForm.description" type="textarea" placeholder="描述 Bug 现象" />
+      </n-form-item>
+      <n-form-item label="严重程度">
+        <n-select v-model:value="bugForm.severity" :options="severityOptions" />
+      </n-form-item>
+      <n-form-item label="截图">
+        <n-upload :show-file-list="false" :custom-request="handleBugUpload" accept="image/*">
+          <n-button :loading="bugSubmitting">选择图片</n-button>
+        </n-upload>
+        <span v-if="bugAttachName" style="font-size:12px;color:#18a058;margin-left:8px">{{ bugAttachName }}</span>
+      </n-form-item>
+    </n-form>
+    <template #footer>
+      <n-space justify="end">
+        <n-button @click="showCreateBugModal = false">取消</n-button>
+        <n-button type="primary" :loading="bugSubmitting" @click="submitBug">确定</n-button>
+      </n-space>
+    </template>
+  </n-modal>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getTask, getTaskHistory, changeTaskStatus, updateTask } from '@/api/tasks'
+import { createBug, uploadBugImage } from '@/api/bugs'
 import { getRequirement, downloadRequirementDocument } from '@/api/requirements'
 import { getUsers } from '@/api/users'
 import { priorityMeta, taskStatusMeta } from '@/constants/statusMeta'
-import { NDrawer, NDrawerContent, NTag, NButton, NTimeline, NTimelineItem, NSelect, NSlider } from 'naive-ui'
+import { NDrawer, NDrawerContent, NTag, NButton, NTimeline, NTimelineItem, NSelect, NSlider, NModal, NForm, NFormItem, NInput, NUpload, NSpace } from 'naive-ui'
 
 const show = defineModel('show', { type: Boolean, default: false })
 const props = defineProps({ taskId: Number })
@@ -142,6 +170,19 @@ const reqDoc = ref(null)
 const reportProgress = ref(0)
 const progressComment = ref('')
 const submittingProgress = ref(false)
+
+// 创建 Bug 弹窗
+const showCreateBugModal = ref(false)
+const bugForm = ref({ title: '', description: '', severity: 'medium' })
+const bugImageFile = ref(null)
+const bugAttachName = ref('')
+const bugSubmitting = ref(false)
+const severityOptions = [
+  { label: '低', value: 'low' },
+  { label: '中', value: 'medium' },
+  { label: '高', value: 'high' },
+  { label: '紧急', value: 'critical' }
+]
 
 const statusMeta = computed(() => taskStatusMeta[task.value?.status] || { label: task.value?.status || '-', tone: 'default' })
 const priorityMetaItem = computed(() => priorityMeta[task.value?.priority] || { label: task.value?.priority || '-', tone: 'default' })
@@ -247,24 +288,42 @@ async function saveTester() {
 
 function handleCreateBug() {
   if (!task.value) return
-  window.$dialog?.info({
-    title: '创建Bug',
-    content: `即将为任务「${task.value.title}」创建Bug。`,
-    positiveText: '确定',
-    onPositiveClick: async () => {
-      try {
-        const { createBug } = await import('@/api/bugs')
-        await createBug({
-          title: task.value.title,
-          description: '',
-          severity: 'medium',
-          task_id: props.taskId,
-          assignee_id: task.value?.assignee_id
-        })
-        window.$message?.success('Bug 创建成功')
-      } catch (e) { console.error(e) }
+  bugForm.value = {
+    title: task.value.title,
+    description: '',
+    severity: 'medium'
+  }
+  bugImageFile.value = null
+  bugAttachName.value = ''
+  showCreateBugModal.value = true
+}
+
+function handleBugUpload({ file }) {
+  bugImageFile.value = file.file
+  bugAttachName.value = file.name
+}
+
+async function submitBug() {
+  if (!bugForm.value.title.trim()) { window.$message?.warning('请输入标题'); return }
+  if (!task.value) return
+  bugSubmitting.value = true
+  try {
+    const payload = {
+      title: bugForm.value.title,
+      description: bugForm.value.description || undefined,
+      severity: bugForm.value.severity,
+      task_id: props.taskId,
+      assignee_id: task.value?.assignee_id
     }
-  })
+    const created = await createBug(payload)
+    if (bugImageFile.value) {
+      await uploadBugImage(created.id, bugImageFile.value)
+    }
+    window.$message?.success('Bug 创建成功')
+    showCreateBugModal.value = false
+    emit('refresh')
+  } catch (e) { console.error(e) }
+  bugSubmitting.value = false
 }
 
 function executeAction(action) {
