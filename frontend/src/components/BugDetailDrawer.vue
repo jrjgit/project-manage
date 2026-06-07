@@ -184,6 +184,7 @@ const actionGroups = computed(() => {
 watch(
   [() => props.bugId, show],
   async ([id, visible]) => {
+    console.log('[BugDetailDrawer] watch fired - bugId:', id, 'show:', visible)
     if (id && visible) {
       await loadDetail()
       await loadHistory()
