@@ -22,20 +22,29 @@
           <section class="section-card">
             <div class="section-header"><h3>待接取任务（{{ availableTasks.length }}）</h3></div>
             <div v-if="availableTasks.length === 0" class="empty-state">暂无待接取任务</div>
-            <div v-for="t in availableTasks" :key="t.id" class="task-item" @click="onTaskClick(t.id)">
+            <div v-for="t in availableTasks" :key="t.id" class="task-item">
               <div class="task-item-top">
                 <span class="task-item-title">{{ t.title }}</span>
                 <span class="task-item-assignee">{{ t.assignee }}</span>
+              </div>
+              <div class="task-item-actions">
+                <n-button size="tiny" type="primary" @click="pickTask(t)">接取测试</n-button>
+                <n-button size="tiny" type="warning" @click="openCreateBug(t)">创建Bug</n-button>
               </div>
             </div>
           </section>
 
           <section class="section-card" v-if="myTasks.length > 0">
             <div class="section-header"><h3>我已接取（{{ myTasks.length }}）</h3></div>
-            <div v-for="t in myTasks" :key="t.id" class="task-item picked" @click="onTaskClick(t.id)">
+            <div v-for="t in myTasks" :key="t.id" class="task-item picked">
               <div class="task-item-top">
                 <span class="task-item-title">{{ t.title }}</span>
                 <span class="task-item-assignee">{{ t.assignee }}</span>
+              </div>
+              <div class="task-item-actions">
+                <n-button size="tiny" type="success" @click="passTask(t)">测试通过</n-button>
+                <n-button size="tiny" type="error" @click="rejectTask(t)">打回开发</n-button>
+                <n-button size="tiny" type="warning" @click="openCreateBug(t)">创建Bug</n-button>
               </div>
             </div>
           </section>
@@ -57,9 +66,35 @@
           </section>
         </div>
       </div>
+
+      <!-- Create Bug Modal -->
+      <n-modal v-model:show="showCreateBug" preset="card" style="width:500px" title="创建 Bug" :mask-closable="false">
+        <n-form ref="formRef" :model="bugForm" :rules="bugRules" label-width="80">
+          <n-form-item label="标题" path="title">
+            <n-input v-model:value="bugForm.title" placeholder="Bug标题" />
+          </n-form-item>
+          <n-form-item label="描述" path="description">
+            <n-input v-model:value="bugForm.description" type="textarea" placeholder="描述 Bug 现象" />
+          </n-form-item>
+          <n-form-item label="严重程度" path="severity">
+            <n-select v-model:value="bugForm.severity" :options="severityOptions" />
+          </n-form-item>
+          <n-form-item label="截图">
+            <n-upload :show-file-list="false" :custom-request="handleAttachUpload" accept="image/*">
+              <n-button :loading="imageUploading">选择图片</n-button>
+            </n-upload>
+            <span v-if="attachFileName" style="font-size:12px;color:#18a058;margin-left:8px">{{ attachFileName }}</span>
+          </n-form-item>
+        </n-form>
+        <template #footer>
+          <n-space justify="end">
+            <n-button @click="showCreateBug = false">取消</n-button>
+            <n-button type="primary" :loading="bugSubmitting" @click="submitBug">确定</n-button>
+          </n-space>
+        </template>
+      </n-modal>
     </div>
 
-    <TaskDetailDrawer v-model:show="showTaskDetail" :task-id="selectedTaskId" @refresh="loadData" />
     <BugDetailDrawer v-model:show="showBugDetail" :bug-id="selectedBugId" @refresh="loadData" />
   </AppLayout>
 </template>
@@ -68,19 +103,39 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getTesterDashboard } from '@/api/statistics'
+import { createBug, uploadBugImage } from '@/api/bugs'
+import { updateTask } from '@/api/tasks'
+import { changeTaskStatus } from '@/api/tasks'
 import { severityMeta } from '@/constants/statusMeta'
-import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import BugDetailDrawer from '@/components/BugDetailDrawer.vue'
 import AppLayout from '@/components/AppLayout.vue'
-import { NTag } from 'naive-ui'
+import { NTag, NButton, NModal, NForm, NFormItem, NInput, NSelect, NSpace, NUpload } from 'naive-ui'
 
 const authStore = useAuthStore()
 
 const dashData = ref({})
-const showTaskDetail = ref(false)
-const selectedTaskId = ref(null)
 const showBugDetail = ref(false)
 const selectedBugId = ref(null)
+
+// Create Bug modal
+const showCreateBug = ref(false)
+const bugForm = ref({ title: '', description: '', severity: 'medium' })
+const bugFormTargetTask = ref(null)
+const bugSubmitting = ref(false)
+const imageFile = ref(null)
+const attachFileName = ref('')
+const imageUploading = ref(false)
+
+const severityOptions = [
+  { label: '低', value: 'low' },
+  { label: '中', value: 'medium' },
+  { label: '高', value: 'high' },
+  { label: '紧急', value: 'critical' }
+]
+
+const bugRules = {
+  title: [{ required: true, message: '请输入标题', trigger: 'blur' }]
+}
 
 const stats = computed(() => dashData.value.stats || { totalTesting: 0, pickedByMe: 0, pendingVerify: 0 })
 const tasks = computed(() => dashData.value.tasks || [])
@@ -98,9 +153,65 @@ async function loadData() {
   try { dashData.value = await getTesterDashboard() } catch (e) { console.error(e) }
 }
 
-function onTaskClick(taskId) {
-  selectedTaskId.value = taskId
-  showTaskDetail.value = true
+async function pickTask(t) {
+  try {
+    await updateTask(t.id, { tester_id: authStore.userInfo?.id })
+    window.$message?.success('已接取测试')
+    await loadData()
+  } catch (e) { console.error(e) }
+}
+
+async function passTask(t) {
+  try {
+    await changeTaskStatus(t.id, { new_status: 'closed', comment: '测试通过' })
+    window.$message?.success('测试通过')
+    await loadData()
+  } catch (e) { console.error(e) }
+}
+
+async function rejectTask(t) {
+  try {
+    await changeTaskStatus(t.id, { new_status: 'developing', comment: '打回开发' })
+    window.$message?.success('已打回开发')
+    await loadData()
+  } catch (e) { console.error(e) }
+}
+
+function openCreateBug(t) {
+  bugFormTargetTask.value = t
+  bugForm.value = { title: t.title, description: '', severity: 'medium' }
+  imageFile.value = null
+  attachFileName.value = ''
+  showCreateBug.value = true
+}
+
+function handleAttachUpload({ file }) {
+  imageFile.value = file.file
+  attachFileName.value = file.name
+}
+
+async function submitBug() {
+  if (!bugForm.value.title.trim()) { window.$message?.warning('请输入标题'); return }
+  const t = bugFormTargetTask.value
+  if (!t) return
+  bugSubmitting.value = true
+  try {
+    const payload = {
+      title: bugForm.value.title,
+      description: bugForm.value.description || undefined,
+      severity: bugForm.value.severity,
+      task_id: t.id,
+      assignee_id: t.assignee ? null : null
+    }
+    const created = await createBug(payload)
+    if (imageFile.value) {
+      await uploadBugImage(created.id, imageFile.value)
+    }
+    window.$message?.success('Bug 创建成功')
+    showCreateBug.value = false
+    await loadData()
+  } catch (e) { console.error(e) }
+  bugSubmitting.value = false
 }
 
 function onBugClick(bug) {
@@ -144,13 +255,13 @@ onMounted(loadData)
 .section-header h3 { margin: 0; font-size: 15px; font-weight: 700; color: #0f172a; }
 .task-item {
   padding: 10px 12px; border: 1px solid #f1f5f9; border-radius: 10px;
-  cursor: pointer; transition: background 0.12s; margin-bottom: 6px;
+  margin-bottom: 6px;
 }
-.task-item:hover { background: #f1f5f9; }
 .task-item.picked { border-color: #c7d2fe; background: #eef2ff; }
-.task-item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.task-item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .task-item-title { font-size: 13px; font-weight: 500; color: #0f172a; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-item-assignee { font-size: 11px; color: #94a3b8; white-space: nowrap; }
+.task-item-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .bug-item {
   padding: 10px 12px; border: 1px solid #f1f5f9; border-radius: 10px;
   cursor: pointer; transition: background 0.12s; margin-bottom: 6px;

@@ -2,6 +2,8 @@ package com.management.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.management.bug.entity.Bug;
+import com.management.bug.mapper.BugMapper;
 import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
 import com.management.common.notification.NotificationService;
@@ -37,6 +39,7 @@ public class TaskService {
     private final TaskAssigneeMapper taskAssigneeMapper;
     private final TaskStatusHistoryMapper historyMapper;
     private final TaskProgressHistoryMapper progressHistoryMapper;
+    private final BugMapper bugMapper;
     private final UserMapper userMapper;
     private final ProjectMapper projectMapper;
     private final WorkflowService workflowService;
@@ -438,6 +441,16 @@ public class TaskService {
         if (!workflowService.isAllowed(role, oldStatus, newStatus, "task")) {
             throw new BusinessException(
                     String.format("角色 %s 不能将任务从 %s 变更为 %s", role, oldStatus, newStatus));
+        }
+
+        // testing → closed 时校验该任务下所有 Bug 必须已关闭
+        if ("testing".equals(oldStatus) && "closed".equals(newStatus)) {
+            long openBugs = bugMapper.selectCount(
+                    new LambdaQueryWrapper<Bug>().eq(Bug::getTaskId, taskId).ne(Bug::getStatus, "closed"));
+            if (openBugs > 0) {
+                throw new BusinessException(
+                        "该任务下存在 " + openBugs + " 个未关闭的 Bug，请先处理完再关闭任务");
+            }
         }
 
         // 更新状态

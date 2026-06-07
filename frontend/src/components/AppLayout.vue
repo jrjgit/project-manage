@@ -196,7 +196,6 @@ const allMenus = [
   { key: 'tester', label: '测试工作台', path: '/tester', icon: BugIcon, roles: ['tester'] },
   { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon, roles: ['pm'] },
   { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon, roles: [] },
-  { key: 'bugs', label: 'Bug管理', path: '/bugs', icon: BugIcon, roles: ['pm'] },
   { key: 'messages', label: '消息中心', path: '/messages', icon: BellIcon, badge: 'unread', roles: ['pm', 'dev_lead', 'dev', 'tester'] },
   { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon, roles: ['pm', 'dev_lead'] },
   { key: 'iterations', label: '发布迭代', path: '/iterations', icon: MilestoneIcon, roles: ['pm', 'dev_lead', 'dev', 'tester'] },
@@ -232,18 +231,6 @@ const pageMeta = computed(() => {
     tasks: {
       title: '任务管理',
       subtitle: '按角色主视角切换任务队列，直接进入执行。'
-    },
-    bugs: {
-      title: 'Bug 管理',
-      subtitle: '优先处理待修复、待验证与重新打开的问题。'
-    },
-    requirements: {
-      title: '需求管理',
-      subtitle: '运维需求与项目需求清单'
-    },
-    iterations: {
-      title: '发布迭代',
-      subtitle: '管理发布迭代与版本计划'
     },
     messages: {
       title: '消息中心',
