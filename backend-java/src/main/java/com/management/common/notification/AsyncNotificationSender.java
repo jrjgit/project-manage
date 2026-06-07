@@ -21,7 +21,10 @@ public class AsyncNotificationSender {
     @Async("notifyExecutor")
     public void sendAsync(List<User> targets, String operatorName, String message, String type, Long relatedId) {
         if (targets == null) return;
+        java.util.Set<Long> sent = new java.util.HashSet<>();
         for (User target : targets) {
+            if (target == null || target.getId() == null || sent.contains(target.getId())) continue;
+            sent.add(target.getId());
             if (operatorName != null && operatorName.equals(target.getName())) continue;
             multiNotifier.notify(target.getName(), message, type, relatedId);
         }

@@ -58,7 +58,7 @@
 </template>
 
 <script setup>
-import { computed, h, onMounted, ref, watch } from 'vue'
+import { computed, h, onMounted, ref, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getTasks, changeTaskStatus } from '@/api/tasks'
@@ -168,7 +168,7 @@ function openDetail(id) {
 // 通过路由参数打开任务详情（消息跳转）
 watch(() => route.params.id, (id) => {
   if (id) {
-    openDetail(Number(id))
+    nextTick(() => openDetail(Number(id)))
   }
 }, { immediate: true })
 
