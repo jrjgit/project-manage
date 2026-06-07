@@ -143,7 +143,8 @@ function navigateToDetail(msg) {
   const routes = { task: '/tasks/', bug: '/developer?bugId=', requirement: '/requirements/' }
   const path = routes[msg.type]
   if (path) {
-    router.push(path + id).catch(e => console.error('[nav]', e))
+    const sep = path.includes('?') ? '&' : '?'
+    router.push(path + id + sep + '_t=' + Date.now()).catch(e => console.error('[nav]', e))
   }
 }
 
