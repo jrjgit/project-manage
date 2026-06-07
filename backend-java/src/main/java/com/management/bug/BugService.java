@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 
 @Slf4j
@@ -39,6 +40,11 @@ public class BugService {
 
     @Value("${app.upload-dir:./uploads}")
     private String uploadDir;
+
+    @PostConstruct
+    public void init() {
+        this.uploadDir = new java.io.File(uploadDir).getAbsolutePath();
+    }
 
     private JwtUserDetails currentUser() {
         return (JwtUserDetails) SecurityContextHolder.getContext()

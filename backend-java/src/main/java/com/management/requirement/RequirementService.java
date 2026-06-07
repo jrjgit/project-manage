@@ -53,6 +53,11 @@ public class RequirementService {
     @Value("${app.upload-dir:./uploads}")
     private String uploadDir;
 
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        this.uploadDir = new java.io.File(uploadDir).getAbsolutePath();
+    }
+
     private JwtUserDetails currentUser() {
         return (JwtUserDetails) SecurityContextHolder.getContext()
                 .getAuthentication().getPrincipal();
