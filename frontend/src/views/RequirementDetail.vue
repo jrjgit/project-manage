@@ -814,6 +814,13 @@ function removeTaskItem(item) {
     pendingDeleteTaskIds.value.push(item.id)
   }
   taskPreview.value.splice(idx, 1)
+  // 同时从缓存中移除，防止 rebuildTaskPreview 恢复
+  const uid = item.userId
+  const skill = item.skill
+  if (uid && skill && devTaskCache.value[uid]?.[skill]) {
+    const cacheIdx = devTaskCache.value[uid][skill].findIndex(c => c._key === item._key)
+    if (cacheIdx >= 0) devTaskCache.value[uid][skill].splice(cacheIdx, 1)
+  }
 }
 
 async function handleCreateTasks() {
