@@ -165,12 +165,12 @@ const availableActions = computed(() => {
   const actions = []
   console.log('[BugDetailDrawer] role:', role, 'status:', status, 'bug:', bug.value?.id, 'isMyBug:', isMyBug, 'assignee_id:', bug.value?.assignee_id)
   if (['dev', 'dev_lead'].includes(role) && isMyBug && status === 'unfixed') {
-    actions.push({ label: '标记已修复', status: 'fixed', type: 'primary' })
+    actions.push({ label: '已修复', status: 'fixed', type: 'primary' })
     actions.push({ label: '确认为非Bug', status: 'not_a_bug', type: 'info' })
   }
   if (role === 'tester' && ['fixed', 'not_a_bug', 'pending_verify'].includes(status)) {
     actions.push({ label: '验证通过', status: 'closed', type: 'success' })
-    actions.push({ label: '打回未修复', status: 'unfixed', type: 'error' })
+    actions.push({ label: '未修复', status: 'unfixed', type: 'error' })
   }
   console.log('[BugDetailDrawer] availableActions:', actions.map(a => a.label))
   return actions

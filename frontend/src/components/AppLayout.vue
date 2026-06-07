@@ -192,7 +192,7 @@ const avatarLetter = computed(() => authStore.userInfo?.name?.charAt(0)?.toUpper
 
 const allMenus = [
   { key: 'dashboard', label: '仪表盘', path: '/dashboard', icon: LayoutDashboardIcon, roles: ['pm'] },
-  { key: 'developer', label: '开发者工作台', path: '/developer', icon: CodeIcon, roles: ['dev_lead', 'dev'] },
+  { key: 'developer', label: '开发工作台', path: '/developer', icon: CodeIcon, roles: ['dev_lead', 'dev'] },
   { key: 'tester', label: '测试工作台', path: '/tester', icon: BugIcon, roles: ['tester'] },
   { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon, roles: ['pm'] },
   { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon, roles: [] },
@@ -217,7 +217,7 @@ const pageMeta = computed(() => {
       subtitle: '先处理最重要的事项，再回看整体进度。'
     },
     developer: {
-      title: '开发者工作台',
+      title: '开发工作台',
       subtitle: '一站式任务看板，兼顾任务与 Bug 处理。'
     },
     tester: {
