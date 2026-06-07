@@ -154,6 +154,7 @@ const nextActionMap = {
   unfixed: '开发负责人需要修复或确认为非 Bug。',
   fixed: '测试人员验证结果，确认关闭或打回未修复。',
   not_a_bug: '测试人员确认是否接受开发判定，接受则关闭。',
+  pending_verify: '测试人员验证结果，确认关闭或打回未修复。',
   closed: 'Bug 已完成闭环。'
 }
 const nextActionText = computed(() => nextActionMap[bug.value?.status] || '查看当前状态并继续推进。')
@@ -168,7 +169,7 @@ const availableActions = computed(() => {
     actions.push({ label: '标记已修复', status: 'fixed', type: 'primary' })
     actions.push({ label: '确认为非Bug', status: 'not_a_bug', type: 'info' })
   }
-  if (role === 'tester' && ['fixed', 'not_a_bug'].includes(status)) {
+  if (role === 'tester' && ['fixed', 'not_a_bug', 'pending_verify'].includes(status)) {
     actions.push({ label: '验证通过', status: 'closed', type: 'success' })
     actions.push({ label: '打回未修复', status: 'unfixed', type: 'error' })
   }
