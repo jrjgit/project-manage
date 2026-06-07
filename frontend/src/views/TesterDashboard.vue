@@ -155,7 +155,10 @@ async function loadData() {
 }
 
 async function loadRequirements() {
-  try { requirements.value = await getRequirements() || [] } catch (e) { console.error(e) }
+  try {
+    const all = await getRequirements() || []
+    requirements.value = all.filter(r => r.status !== 'closed' && r.status !== 'released')
+  } catch (e) { console.error(e) }
 }
 
 async function loadUsers() {
