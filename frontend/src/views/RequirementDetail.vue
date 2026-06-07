@@ -199,11 +199,11 @@
         <div class="bug-stat-grid" @click="showIntegrationBugs = !showIntegrationBugs">
           <div class="bug-stat-item"><span class="bug-stat-value">{{ integrationBugStats.total }}</span><span class="bug-stat-label">Bug 总数</span></div>
           <div class="bug-stat-item"><span class="bug-stat-value" style="color:#18a058">{{ integrationBugStats.closed }}</span><span class="bug-stat-label">已关闭</span></div>
-          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#f59e0b">{{ integrationBugStats.fixing }}</span><span class="bug-stat-label">修复中</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#f59e0b">{{ integrationBugStats.unfixed }}</span><span class="bug-stat-label">未修复</span></div>
           <div class="bug-stat-item"><span class="bug-stat-value" style="color:#d03050">{{ integrationBugStats.pending }}</span><span class="bug-stat-label">待验证</span></div>
         </div>
         <div v-if="showIntegrationBugs && integrationBugs.length" class="bug-list">
-          <div v-for="bug in integrationBugs" :key="bug.id" class="bug-item">
+          <div v-for="bug in integrationBugs" :key="bug.id" class="bug-item" @click="openBugDetail(bug)">
             <span class="bug-name">{{ bug.title }}</span>
             <n-tag :type="bug.status === 'closed' ? 'success' : 'warning'" size="tiny" round>{{ bug.status }}</n-tag>
           </div>
@@ -216,11 +216,11 @@
         <div class="bug-stat-grid" @click="showBusinessBugs = !showBusinessBugs">
           <div class="bug-stat-item"><span class="bug-stat-value">{{ businessBugStats.total }}</span><span class="bug-stat-label">Bug 总数</span></div>
           <div class="bug-stat-item"><span class="bug-stat-value" style="color:#18a058">{{ businessBugStats.closed }}</span><span class="bug-stat-label">已关闭</span></div>
-          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#f59e0b">{{ businessBugStats.fixing }}</span><span class="bug-stat-label">修复中</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#f59e0b">{{ businessBugStats.unfixed }}</span><span class="bug-stat-label">未修复</span></div>
           <div class="bug-stat-item"><span class="bug-stat-value" style="color:#d03050">{{ businessBugStats.pending }}</span><span class="bug-stat-label">待验证</span></div>
         </div>
         <div v-if="showBusinessBugs && businessBugs.length" class="bug-list">
-          <div v-for="bug in businessBugs" :key="bug.id" class="bug-item">
+          <div v-for="bug in businessBugs" :key="bug.id" class="bug-item" @click="openBugDetail(bug)">
             <span class="bug-name">{{ bug.title }}</span>
             <n-tag :type="bug.status === 'closed' ? 'success' : 'warning'" size="tiny" round>{{ bug.status }}</n-tag>
           </div>
@@ -233,17 +233,19 @@
         <div class="bug-stat-grid" @click="showItBugs = !showItBugs">
           <div class="bug-stat-item"><span class="bug-stat-value">{{ itBugStats.total }}</span><span class="bug-stat-label">Bug 总数</span></div>
           <div class="bug-stat-item"><span class="bug-stat-value" style="color:#18a058">{{ itBugStats.closed }}</span><span class="bug-stat-label">已关闭</span></div>
-          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#f59e0b">{{ itBugStats.fixing }}</span><span class="bug-stat-label">修复中</span></div>
+          <div class="bug-stat-item"><span class="bug-stat-value" style="color:#f59e0b">{{ itBugStats.unfixed }}</span><span class="bug-stat-label">未修复</span></div>
           <div class="bug-stat-item"><span class="bug-stat-value" style="color:#d03050">{{ itBugStats.pending }}</span><span class="bug-stat-label">待验证</span></div>
         </div>
         <div v-if="showItBugs && itBugs.length" class="bug-list">
-          <div v-for="bug in itBugs" :key="bug.id" class="bug-item">
+          <div v-for="bug in itBugs" :key="bug.id" class="bug-item" @click="openBugDetail(bug)">
             <span class="bug-name">{{ bug.title }}</span>
             <n-tag :type="bug.status === 'closed' ? 'success' : 'warning'" size="tiny" round>{{ bug.status }}</n-tag>
           </div>
         </div>
       </section>
     </div>
+
+    <BugDetailDrawer v-model:show="showBugDetail" :bug-id="selectedBugId" @refresh="loadReq" />
 
     <!-- Create Task Modal -->
     <n-modal v-model:show="showCreateTask" preset="card" style="width:90vw;max-width:1400px;height:90vh;overflow:auto" title="任务派发/修改" :mask-closable="false">
@@ -348,6 +350,7 @@ import { getDictionaries } from '@/api/dictionaries'
 import { requirementStatusMeta } from '@/constants/requirementMeta'
 import { priorityMeta, taskStatusMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
+import BugDetailDrawer from '@/components/BugDetailDrawer.vue'
 import { NButton, NModal, NInput, NSelect, NSpace, NTag, NProgress, NUpload, NForm, NFormItem, NDatePicker, NTransfer, NTimeline, NTimelineItem } from 'naive-ui'
 
 const route = useRoute()
@@ -520,8 +523,8 @@ const integrationBugStats = computed(() => {
   return {
     total: bugs.length,
     closed: bugs.filter((b) => b.status === 'closed').length,
-    fixing: bugs.filter((b) => b.status === 'fixing' || b.status === 'assigned').length,
-    pending: bugs.filter((b) => b.status === 'pending_verify').length
+    unfixed: bugs.filter((b) => b.status === 'unfixed').length,
+    pending: bugs.filter((b) => b.status === 'fixed' || b.status === 'not_a_bug').length
   }
 })
 
@@ -532,8 +535,8 @@ const businessBugStats = computed(() => {
   return {
     total: bugs.length,
     closed: bugs.filter((b) => b.status === 'closed').length,
-    fixing: bugs.filter((b) => b.status === 'fixing' || b.status === 'assigned').length,
-    pending: bugs.filter((b) => b.status === 'pending_verify').length
+    unfixed: bugs.filter((b) => b.status === 'unfixed').length,
+    pending: bugs.filter((b) => b.status === 'fixed' || b.status === 'not_a_bug').length
   }
 })
 
@@ -544,8 +547,8 @@ const itBugStats = computed(() => {
   return {
     total: bugs.length,
     closed: bugs.filter((b) => b.status === 'closed').length,
-    fixing: bugs.filter((b) => b.status === 'fixing' || b.status === 'assigned').length,
-    pending: bugs.filter((b) => b.status === 'pending_verify').length
+    unfixed: bugs.filter((b) => b.status === 'unfixed').length,
+    pending: bugs.filter((b) => b.status === 'fixed' || b.status === 'not_a_bug').length
   }
 })
 
@@ -859,6 +862,14 @@ async function handleCreateTasks() {
 const showProgressHistory = ref(false)
 const progressHistoryTask = ref(null)
 const progressRecords = ref([])
+
+const showBugDetail = ref(false)
+const selectedBugId = ref(null)
+
+function openBugDetail(bug) {
+  selectedBugId.value = bug.id
+  showBugDetail.value = true
+}
 
 async function openProgressHistory(t) {
   progressHistoryTask.value = t
