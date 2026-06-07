@@ -20,49 +20,51 @@
           </div>
         </section>
 
-        <section v-if="actionGroups.length || canEditDevLead || canEditTester" class="section-card">
-          <div class="section-title">可执行操作</div>
+        <template v-if="!readonly">
+          <section v-if="actionGroups.length || canEditDevLead || canEditTester" class="section-card">
+            <div class="section-title">可执行操作</div>
 
-          <div v-if="canEditDevLead" class="action-block">
-            <div class="action-block-title">切换开发组长</div>
-            <div class="action-block-copy">重新指定该任务的开发组长。</div>
-            <div class="action-row">
-              <n-select v-model:value="selectedDevLead" :options="devLeadOptions" placeholder="选择开发组长" style="width: 220px;" />
-              <n-button :loading="actionLoading" @click="saveDevLead">确认</n-button>
+            <div v-if="canEditDevLead" class="action-block">
+              <div class="action-block-title">切换开发组长</div>
+              <div class="action-block-copy">重新指定该任务的开发组长。</div>
+              <div class="action-row">
+                <n-select v-model:value="selectedDevLead" :options="devLeadOptions" placeholder="选择开发组长" style="width: 220px;" />
+                <n-button :loading="actionLoading" @click="saveDevLead">确认</n-button>
+              </div>
             </div>
-          </div>
 
-          <div v-if="canEditTester" class="action-block">
-            <div class="action-block-title">指派测试人员</div>
-            <div class="action-block-copy">为任务指定测试负责人。</div>
-            <div class="action-row">
-              <n-select v-model:value="selectedTester" :options="testerOptions" placeholder="选择测试人员" style="width: 220px;" />
-              <n-button :loading="actionLoading" @click="saveTester">确认指派</n-button>
+            <div v-if="canEditTester" class="action-block">
+              <div class="action-block-title">指派测试人员</div>
+              <div class="action-block-copy">为任务指定测试负责人。</div>
+              <div class="action-row">
+                <n-select v-model:value="selectedTester" :options="testerOptions" placeholder="选择测试人员" style="width: 220px;" />
+                <n-button :loading="actionLoading" @click="saveTester">确认指派</n-button>
+              </div>
             </div>
-          </div>
 
-          <div v-for="group in actionGroups" :key="group.title" class="action-block">
-            <div class="action-block-title">{{ group.title }}</div>
-            <div class="action-row wrap">
-              <n-button v-for="action in group.actions" :key="action.status"
-                :type="action.type" :loading="actionLoading" @click="executeAction(action)">
-                {{ action.label }}
-              </n-button>
+            <div v-for="group in actionGroups" :key="group.title" class="action-block">
+              <div class="action-block-title">{{ group.title }}</div>
+              <div class="action-row wrap">
+                <n-button v-for="action in group.actions" :key="action.status"
+                  :type="action.type" :loading="actionLoading" @click="executeAction(action)">
+                  {{ action.label }}
+                </n-button>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section v-if="canReportProgress" class="section-card">
-          <div class="section-title">上报进度</div>
-          <div style="margin-top:12px">
-            <div style="display:flex;align-items:center;gap:12px">
-              <n-slider v-model:value="reportProgress" :min="0" :max="100" :step="1" style="flex:1" />
-              <span style="font-size:15px;font-weight:700;color:#6366f1;min-width:40px;text-align:right">{{ reportProgress }}%</span>
+          <section v-if="canReportProgress" class="section-card">
+            <div class="section-title">上报进度</div>
+            <div style="margin-top:12px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <n-slider v-model:value="reportProgress" :min="0" :max="100" :step="1" style="flex:1" />
+                <span style="font-size:15px;font-weight:700;color:#6366f1;min-width:40px;text-align:right">{{ reportProgress }}%</span>
+              </div>
+              <n-input v-model:value="progressComment" type="textarea" :autosize="{ minRows: 1, maxRows: 3 }" placeholder="备注（可选）" style="margin-top:8px" />
+              <n-button type="primary" size="small" style="margin-top:8px" :loading="submittingProgress" @click="submitProgress">提交进度</n-button>
             </div>
-            <n-input v-model:value="progressComment" type="textarea" :autosize="{ minRows: 1, maxRows: 3 }" placeholder="备注（可选）" style="margin-top:8px" />
-            <n-button type="primary" size="small" style="margin-top:8px" :loading="submittingProgress" @click="submitProgress">提交进度</n-button>
-          </div>
-        </section>
+          </section>
+        </template>
 
         <section class="detail-grid">
           <div class="section-card">
@@ -175,7 +177,7 @@ import { priorityMeta, taskStatusMeta, bugStatusMeta, severityMeta } from '@/con
 import { NDrawer, NDrawerContent, NTag, NButton, NTimeline, NTimelineItem, NSelect, NSlider, NModal, NForm, NFormItem, NInput, NUpload, NSpace } from 'naive-ui'
 
 const show = defineModel('show', { type: Boolean, default: false })
-const props = defineProps({ taskId: Number })
+const props = defineProps({ taskId: Number, readonly: Boolean })
 const emit = defineEmits(['status-change', 'refresh'])
 
 const authStore = useAuthStore()

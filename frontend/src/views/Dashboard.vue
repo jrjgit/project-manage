@@ -44,7 +44,7 @@
           <div v-if="overdueTasks.length" class="compact-list">
             <div v-for="t in overdueTasks" :key="t.id" class="compact-item" @click="openTaskDetail(t.id)">
               <span class="compact-title">{{ t.title }}</span>
-              <span class="compact-meta" style="color:#ef4444">逾期{{ t.overdue_days }}天</span>
+              <span class="compact-meta" style="color:#ef4444">逾期{{ t.overdueDays }}天</span>
               <span class="compact-meta">{{ t.assignee }}</span>
             </div>
           </div>
@@ -92,7 +92,7 @@
           <div v-if="overdueTasks.length" class="compact-list">
             <div v-for="t in overdueTasks" :key="t.id" class="compact-item" @click="openTaskDetail(t.id)">
               <span class="compact-title">{{ t.title }}</span>
-              <span class="compact-meta" style="color:#ef4444">逾期{{ t.overdue_days }}天</span>
+              <span class="compact-meta" style="color:#ef4444">逾期{{ t.overdueDays }}天</span>
               <span class="compact-meta">{{ t.assignee }}</span>
             </div>
           </div>
@@ -111,7 +111,7 @@
                 <span class="compact-meta">指派: {{ t.assignee }}</span>
               </div>
               <div class="compact-right">
-                <n-tag v-if="t.overdue" type="error" size="tiny" round>逾期{{ t.overdue_days }}天</n-tag>
+                <n-tag v-if="t.overdue" type="error" size="tiny" round>逾期{{ t.overdueDays }}天</n-tag>
                 <n-tag :type="taskStatusMeta[t.status]?.tone || 'default'" size="tiny" round>{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag>
               </div>
             </div>
@@ -146,7 +146,7 @@
       </template>
     </div>
 
-    <TaskDetailDrawer v-model:show="showTaskDetail" :task-id="selectedTaskId" @refresh="loadData" />
+    <TaskDetailDrawer v-model:show="showTaskDetail" :task-id="selectedTaskId" readonly @refresh="loadData" />
   </AppLayout>
 </template>
 
