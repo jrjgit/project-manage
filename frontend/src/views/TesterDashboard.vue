@@ -252,14 +252,4 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers() })
 .bug-item-meta { margin-top:6px; }
 .bug-task { font-size:11px;color:#94a3b8; }
 .empty-state { text-align:center;padding:24px;color:#94a3b8;font-size:13px; }
-@media (max-width: 1200px) {
-  .hero-card { gap: 12px; padding: 16px 18px; }
-  .hero-avatar { width: 36px; height: 36px; font-size: 16px; }
-  .hero-name { font-size: 15px; }
-  .hero-stats { gap: 8px; }
-  .stat-pill { min-width: 60px; padding: 6px 10px; }
-  .stat-num { font-size: 16px; }
-  .main-split { gap: 10px; }
-  .section-card { padding: 12px; }
-}
 </style>
