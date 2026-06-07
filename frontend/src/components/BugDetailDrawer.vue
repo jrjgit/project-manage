@@ -64,15 +64,13 @@
             <div v-if="imageUrl" class="image-section">
               <n-image :src="imageUrl" width="100%" style="border-radius:8px;max-height:280px;object-fit:contain" />
               <div class="image-actions">
-                <n-button size="tiny" @click="downloadImage">下载</n-button>
                 <n-button v-if="isCreatorOrPM" size="tiny" type="error" @click="handleDeleteImage">删除</n-button>
               </div>
             </div>
             <div v-else>
-              <n-upload v-if="isCreatorOrPM" :show-file-list="false" :custom-request="handleImageUpload" accept="image/*">
+              <n-upload :show-file-list="false" :custom-request="handleImageUpload" accept="image/*">
                 <n-button :loading="imageUploading" size="small">上传截图</n-button>
               </n-upload>
-              <span v-else style="font-size:13px;color:#94a3b8">暂无截图</span>
             </div>
           </div>
         </section>
@@ -243,6 +241,7 @@ async function handleImageUpload({ file }) {
 async function loadImage() {
   try {
     const blob = await downloadBugImage(props.bugId)
+    if (!blob || blob.size === 0) { imageUrl.value = ''; return }
     imageUrl.value = URL.createObjectURL(blob)
   } catch (e) {
     imageUrl.value = ''
