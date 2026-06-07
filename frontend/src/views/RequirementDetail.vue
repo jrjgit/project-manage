@@ -560,7 +560,7 @@ const itBugStats = computed(() => {
 const itBugs = computed(() => req.value.it_test_bugs || [])
 
 function startEdit(field) {
-  if (!authStore.isPM) return
+  if (!authStore.isPM && !(field === 'dev_lead_id' && authStore.isDevLead)) return
   editingField.value = field
 }
 

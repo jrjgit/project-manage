@@ -119,7 +119,7 @@ public class RequirementController {
      * 指派开发组长
      */
     @PutMapping("/{id}/assign-lead")
-    @PreAuthorize("hasRole('PM')")
+    @PreAuthorize("hasRole('PM') or hasRole('DEV_LEAD')")
     public Result<Map<String, String>> assignDevLead(@PathVariable Long id,
                                                        @RequestBody Map<String, Long> body) {
         Long devLeadId = body.get("dev_lead_id");
