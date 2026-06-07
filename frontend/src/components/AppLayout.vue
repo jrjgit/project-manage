@@ -139,7 +139,7 @@ async function handleDropdownItemClick(msg) {
   }
   const id = msg.related_id || msg.relatedId || msg.id
   if (!id || !msg.type) return
-  const routes = { task: '/tasks/', bug: '/developer?bugId=', requirement: '/requirements/' }
+  const routes = { task: '/developer?taskId=', bug: '/developer?bugId=', requirement: '/requirements/' }
   const path = routes[msg.type]
   if (path) {
     const sep = path.includes('?') ? '&' : '?'

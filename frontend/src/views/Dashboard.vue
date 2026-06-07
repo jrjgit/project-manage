@@ -33,7 +33,7 @@
             </div>
             <div v-if="stats.overdueTasks > 0" class="todo-item">
               <span class="todo-icon">⚠️</span>
-              <span>{{ stats.overdueTasks }} 个任务已逾期，<a @click="$router.push('/tasks')" style="color:#ef4444">查看详情</a></span>
+              <span>{{ stats.overdueTasks }} 个任务已逾期</span>
             </div>
             <div v-if="!stats.pendingTask && !stats.pendingRelease && !stats.overdueTasks" class="empty-state">暂无待办事项</div>
           </div>
@@ -42,7 +42,7 @@
         <section class="section-card">
           <div class="section-header"><h3>逾期任务</h3></div>
           <div v-if="overdueTasks.length" class="compact-list">
-            <div v-for="t in overdueTasks" :key="t.id" class="compact-item" @click="$router.push(`/tasks?taskId=${t.id}`)">
+            <div v-for="t in overdueTasks" :key="t.id" class="compact-item" @click="openTaskDetail(t.id)">
               <span class="compact-title">{{ t.title }}</span>
               <span class="compact-meta" style="color:#ef4444">逾期{{ t.overdue_days }}天</span>
               <span class="compact-meta">{{ t.assignee }}</span>
@@ -90,7 +90,7 @@
         <section class="section-card">
           <div class="section-header"><h3>逾期任务</h3></div>
           <div v-if="overdueTasks.length" class="compact-list">
-            <div v-for="t in overdueTasks" :key="t.id" class="compact-item" @click="$router.push(`/tasks?taskId=${t.id}`)">
+            <div v-for="t in overdueTasks" :key="t.id" class="compact-item" @click="openTaskDetail(t.id)">
               <span class="compact-title">{{ t.title }}</span>
               <span class="compact-meta" style="color:#ef4444">逾期{{ t.overdue_days }}天</span>
               <span class="compact-meta">{{ t.assignee }}</span>
@@ -105,7 +105,7 @@
         <section class="section-card">
           <div class="section-header"><h3>我的任务</h3></div>
           <div v-if="myTasks.length" class="compact-list">
-            <div v-for="t in myTasks" :key="t.id" class="compact-item" @click="$router.push(`/tasks?taskId=${t.id}`)">
+            <div v-for="t in myTasks" :key="t.id" class="compact-item" @click="openTaskDetail(t.id)">
               <div class="compact-left">
                 <span class="compact-title">{{ t.title }}</span>
                 <span class="compact-meta">指派: {{ t.assignee }}</span>
@@ -125,7 +125,7 @@
         <section class="section-card">
           <div class="section-header"><h3>待综合测试的任务</h3></div>
           <div v-if="testingTasks.length" class="compact-list">
-            <div v-for="t in testingTasks" :key="t.id" class="compact-item" @click="$router.push(`/tasks?taskId=${t.id}`)">
+            <div v-for="t in testingTasks" :key="t.id" class="compact-item" @click="openTaskDetail(t.id)">
               <span class="compact-title">{{ t.title }}</span>
               <span class="compact-meta">{{ t.assignee }}</span>
             </div>
@@ -145,6 +145,8 @@
         </section>
       </template>
     </div>
+
+    <TaskDetailDrawer v-model:show="showTaskDetail" :task-id="selectedTaskId" @refresh="loadData" />
   </AppLayout>
 </template>
 
@@ -154,11 +156,14 @@ import { useAuthStore } from '@/store/useAuthStore'
 import { getDashboard } from '@/api/statistics'
 import { taskStatusMeta, bugStatusMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
+import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import { NTag } from 'naive-ui'
 
 const authStore = useAuthStore()
 const dashData = ref({})
 const d = dashData
+const showTaskDetail = ref(false)
+const selectedTaskId = ref(null)
 
 const roleLabel = computed(() => {
   const map = { pm: '项目经理', dev_lead: '开发组长', dev: '开发', tester: '测试' }
@@ -224,6 +229,11 @@ const statItems = computed(() => {
   ]
   return []
 })
+
+function openTaskDetail(taskId) {
+  selectedTaskId.value = taskId
+  showTaskDetail.value = true
+}
 
 async function loadData() {
   try {

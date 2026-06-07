@@ -246,6 +246,7 @@
     </div>
 
     <BugDetailDrawer v-model:show="showBugDetail" :bug-id="selectedBugId" @refresh="loadReq" />
+    <TaskDetailDrawer v-model:show="showTaskDetail" :task-id="selectedTaskId" @refresh="loadTasks" />
 
     <!-- Create Task Modal -->
     <n-modal v-model:show="showCreateTask" preset="card" style="width:90vw;max-width:1400px;height:90vh;overflow:auto" title="任务派发/修改" :mask-closable="false">
@@ -351,6 +352,7 @@ import { requirementStatusMeta } from '@/constants/requirementMeta'
 import { priorityMeta, taskStatusMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
 import BugDetailDrawer from '@/components/BugDetailDrawer.vue'
+import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import { NButton, NModal, NInput, NSelect, NSpace, NTag, NProgress, NUpload, NForm, NFormItem, NDatePicker, NTransfer, NTimeline, NTimelineItem } from 'naive-ui'
 
 const route = useRoute()
@@ -381,6 +383,9 @@ const pendingDeleteTaskIds = ref([])
 const devTaskCache = ref({})
 
 const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
+
+const showTaskDetail = ref(false)
+const selectedTaskId = ref(null)
 const devOptions = computed(() => users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
 const projectDevOptions = computed(() => {
   return users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: `${u.name}${u.skills ? ' (' + u.skills.split(',').map(s => skillsMap.value[s] || s).join('、') + ')' : ''}`, value: u.id }))
@@ -604,7 +609,8 @@ function calcOverdueDays(deadline) {
 }
 
 function openTaskDetail(taskId) {
-  router.push(`/tasks?taskId=${taskId}`)
+  selectedTaskId.value = taskId
+  showTaskDetail.value = true
 }
 
 function formatSize(bytes) {

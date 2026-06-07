@@ -114,6 +114,13 @@ watch(() => route.query.bugId, (id) => {
   }
 }, { immediate: true })
 
+watch(() => route.query.taskId, (id) => {
+  if (id) {
+    selectedTaskId.value = Number(id)
+    showTaskDetail.value = true
+  }
+}, { immediate: true })
+
 onMounted(loadData)
 </script>
 
