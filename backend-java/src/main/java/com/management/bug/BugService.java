@@ -56,22 +56,25 @@ public class BugService {
         JwtUserDetails u = currentUser();
         LambdaQueryWrapper<Bug> q = new LambdaQueryWrapper<>();
 
-        switch (u.getRole()) {
-            case "pm":
-                break;
-            case "dev_lead":
-                q.eq(Bug::getAssigneeId, u.getUserId());
-                break;
-            case "dev":
-                q.eq(Bug::getAssigneeId, u.getUserId());
-                break;
-            case "tester":
-                q.and(w -> w.eq(Bug::getCreatorId, u.getUserId())
-                        .or().eq(Bug::getStatus, "pending_verify")
-                        .or().eq(Bug::getStatus, "reopened"));
-                break;
-            default:
-                q.apply("1=0");
+        boolean scoped = taskId != null && !taskId.isBlank();
+        if (!scoped) {
+            switch (u.getRole()) {
+                case "pm":
+                    break;
+                case "dev_lead":
+                    q.eq(Bug::getAssigneeId, u.getUserId());
+                    break;
+                case "dev":
+                    q.eq(Bug::getAssigneeId, u.getUserId());
+                    break;
+                case "tester":
+                    q.and(w -> w.eq(Bug::getCreatorId, u.getUserId())
+                            .or().eq(Bug::getStatus, "pending_verify")
+                            .or().eq(Bug::getStatus, "reopened"));
+                    break;
+                default:
+                    q.apply("1=0");
+            }
         }
 
         if (taskId != null && !taskId.isBlank()) q.eq(Bug::getTaskId, taskId);
