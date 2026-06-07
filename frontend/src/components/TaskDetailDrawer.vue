@@ -255,6 +255,7 @@ async function loadDetail() {
   try {
     const res = await getTask(props.taskId)
     task.value = res.task
+    if (task.value?.progress != null) reportProgress.value = task.value.progress
     if (task.value?.requirement_id) {
       const reqData = await getRequirement(task.value.requirement_id)
       if (reqData.document_name) reqDoc.value = reqData
