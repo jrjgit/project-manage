@@ -134,7 +134,7 @@ async function handleMarkAllRead() {
 
 function handleDropdownItemClick(msg) {
   showDropdown.value = false
-  const id = msg.related_id || msg.relatedId
+  const id = msg.related_id || msg.relatedId || msg.id
   if (!id || !msg.type) return
   const routes = { task: '/tasks/', bug: '/developer?bugId=', requirement: '/requirements/' }
   const path = routes[msg.type]
