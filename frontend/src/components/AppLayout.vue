@@ -100,7 +100,7 @@ import { computed, h, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useMessageStore } from '@/store/useMessageStore'
-import { fetchMessages, markAllRead } from '@/api/message'
+import { fetchMessages, markRead, markAllRead } from '@/api/message'
 
 const route = useRoute()
 const router = useRouter()
@@ -132,8 +132,11 @@ async function handleMarkAllRead() {
   showDropdown.value = false
 }
 
-function handleDropdownItemClick(msg) {
+async function handleDropdownItemClick(msg) {
   showDropdown.value = false
+  if (!msg.is_read && msg.is_read !== undefined) {
+    try { await markRead(msg.id); messageStore.refreshUnreadCount() } catch {}
+  }
   const id = msg.related_id || msg.relatedId || msg.id
   if (!id || !msg.type) return
   const routes = { task: '/tasks/', bug: '/developer?bugId=', requirement: '/requirements/' }
