@@ -282,7 +282,7 @@ public class TaskService {
         if (task.getTesterId() != null) addUser(notifyTargets, task.getTesterId());
         if (!notifyTargets.isEmpty()) {
             String msg = "任务【" + task.getTitle() + "】已创建，操作人：" + operator.getName() + "。请及时处理。";
-            notificationService.emitGenericEvent(msg, operator.getName(), notifyTargets);
+            notificationService.emitGenericEvent(msg, operator.getName(), notifyTargets, "task", task.getId());
         }
 
         log.info("Task created: id={}, title={}", task.getId(), task.getTitle());
