@@ -63,9 +63,10 @@
             <div class="section-title">截图（{{ images.length }}）</div>
             <div v-if="images.length" class="image-grid">
               <div v-for="img in images" :key="img.id" class="image-item">
-                <n-image :src="getImageUrl(img)" width="100%" style="border-radius:6px;max-height:180px;object-fit:contain" />
+                <img :src="getImageUrl(img)" :alt="img.image_name" :title="img.image_name" style="width:100%;border-radius:6px;max-height:180px;object-fit:contain;background:#f3f4f6" />
+                <span class="image-name-label">{{ img.image_name }}</span>
                 <div class="image-item-actions">
-                  <n-button v-if="isCreatorOrPM" size="tiny" type="error" ghost @click="handleDeleteImage(img)">删除</n-button>
+                  <n-button size="tiny" type="error" ghost @click="handleDeleteImage(img)">删除</n-button>
                 </div>
               </div>
             </div>
@@ -123,7 +124,6 @@ import {
   NTimelineItem,
   NModal,
   NInput,
-  NImage,
   NUpload
 } from 'naive-ui'
 
@@ -456,6 +456,16 @@ function formatTime(value) {
 .image-item-actions {
   margin-top: 6px;
   text-align: right;
+}
+
+.image-name-label {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .image-upload-area {
