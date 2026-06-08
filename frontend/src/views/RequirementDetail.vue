@@ -1521,7 +1521,7 @@ onMounted(() => {
   background: #e2e8f0;
 }
 .dispatch-left {
-  width: 380px;
+  width: 480px;
   flex-shrink: 0;
 }
 .dispatch-right {
