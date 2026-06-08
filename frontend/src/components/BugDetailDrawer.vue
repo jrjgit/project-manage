@@ -70,8 +70,9 @@
               </div>
             </div>
             <div class="image-upload-area">
-              <n-button :loading="imageUploading" size="small" @click="triggerUpload">上传截图</n-button>
-              <input ref="uploadInput" type="file" accept="image/*" multiple style="display:none" @change="onUploadChange" />
+              <n-upload :show-file-list="false" :custom-request="handleImageUpload" accept="image/*">
+                <n-button :loading="imageUploading" size="small">上传截图</n-button>
+              </n-upload>
             </div>
           </div>
         </section>
@@ -123,6 +124,7 @@ import {
   NModal,
   NInput,
   NImage,
+  NUpload
 } from 'naive-ui'
 
 const show = defineModel('show', { type: Boolean, default: false })
@@ -139,21 +141,9 @@ const pendingAction = ref(null)
 const imageUrls = ref({})
 const images = ref([])
 const imageUploading = ref(false)
-const uploadInput = ref(null)
 const bugNotFound = ref(false)
 
-function triggerUpload() {
-  uploadInput.value?.click()
-}
 
-async function onUploadChange(e) {
-  const files = e.target.files
-  if (!files?.length) return
-  imageUploading.value = true
-  try {
-    for (const f of files) {
-      await uploadBugImage(props.bugId, f)
-    }
     window.$message.success('截图上传成功')
     await loadImages()
   } catch (e) {
@@ -261,6 +251,20 @@ async function confirmAction() {
   } finally {
     actionLoading.value = false
   }
+}
+
+async function handleImageUpload({ file }) {
+  imageUploading.value = true
+  try {
+    await uploadBugImage(props.bugId, file.file)
+    window.$message.success('截图上传成功')
+    await loadImages()
+  } catch (e) {
+    console.error(e)
+  } finally {
+    imageUploading.value = false
+  }
+}
 }
 
 async function loadImages() {
