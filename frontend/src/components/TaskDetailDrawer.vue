@@ -151,12 +151,14 @@
         <n-select v-model:value="bugForm.severity" :options="severityOptions" />
       </n-form-item>
       <n-form-item label="截图">
-        <n-upload :show-file-list="false" :custom-request="handleBugUpload" accept="image/*">
+        <n-upload :show-file-list="false" :custom-request="handleBugUpload" accept="image/*" multiple>
           <n-button :loading="bugSubmitting">选择图片</n-button>
         </n-upload>
-        <div v-if="bugPreviewUrl" class="preview-single">
-          <img :src="bugPreviewUrl" style="width:120px;height:80px;object-fit:cover;border-radius:6px" />
-          <n-button size="tiny" type="error" ghost class="preview-remove" @click="removeBugImage">×</n-button>
+        <div v-if="bugPreviewUrls.length" class="preview-grid">
+          <div v-for="(url, idx) in bugPreviewUrls" :key="idx" class="preview-item">
+            <img :src="url" style="width:100%;height:80px;object-fit:cover;border-radius:6px" />
+            <n-button size="tiny" type="error" ghost class="preview-remove" @click="removeBugImage(idx)">×</n-button>
+          </div>
         </div>
       </n-form-item>
     </n-form>
@@ -200,9 +202,8 @@ const taskNotFound = ref(false)
 // 创建 Bug 弹窗
 const showCreateBugModal = ref(false)
 const bugForm = ref({ title: '', description: '', severity: 'medium' })
-const bugImageFile = ref(null)
-const bugAttachName = ref('')
-const bugPreviewUrl = ref('')
+const bugImageFiles = ref([])
+const bugPreviewUrls = ref([])
 const bugSubmitting = ref(false)
 
 const severityOptions = [
@@ -332,23 +333,22 @@ function handleCreateBug() {
   if (bugPreviewUrl.value) URL.revokeObjectURL(bugPreviewUrl.value)
   bugImageFile.value = null
   bugAttachName.value = ''
-  bugPreviewUrl.value = ''
+  for (const url of bugPreviewUrls.value) URL.revokeObjectURL(url)
+  bugImageFiles.value = []
+  bugPreviewUrls.value = []
   showCreateBugModal.value = true
 }
 
 function handleBugUpload({ file }) {
-  if (bugPreviewUrl.value) URL.revokeObjectURL(bugPreviewUrl.value)
-  bugImageFile.value = file.file
-  bugAttachName.value = file.name
-  bugPreviewUrl.value = URL.createObjectURL(file.file)
+  bugImageFiles.value.push(file.file)
+  bugPreviewUrls.value.push(URL.createObjectURL(file.file))
   return { abort: () => {} }
 }
 
-function removeBugImage() {
-  URL.revokeObjectURL(bugPreviewUrl.value)
-  bugImageFile.value = null
-  bugAttachName.value = ''
-  bugPreviewUrl.value = ''
+function removeBugImage(idx) {
+  URL.revokeObjectURL(bugPreviewUrls.value[idx])
+  bugImageFiles.value.splice(idx, 1)
+  bugPreviewUrls.value.splice(idx, 1)
 }
 
 async function submitBug() {
@@ -364,8 +364,8 @@ async function submitBug() {
       assignee_id: task.value?.assignee_id
     }
     const created = await createBug(payload)
-    if (bugImageFile.value) {
-      await uploadBugImage(created.id, bugImageFile.value)
+    for (const f of bugImageFiles.value) {
+      await uploadBugImage(created.id, f)
     }
     window.$message?.success('Bug 创建成功')
     showCreateBugModal.value = false
@@ -458,7 +458,8 @@ function formatDate(value) {
 .bug-item-compact { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
 .bug-item-compact .bugc-title { flex: 1; color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bug-item-compact .bugc-creator { color: #94a3b8; min-width: 40px; text-align: right; }
-.preview-single { position: relative; display: inline-block; margin-top: 10px; }
-.preview-single img { border-radius: 6px; }
-.preview-single .preview-remove { position: absolute; top: -8px; right: -8px; min-width: 20px; height: 20px; padding: 0; font-size: 12px; border-radius: 50%; }
+.preview-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.preview-item { position: relative; width: 80px; height: 80px; }
+.preview-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+.preview-remove { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0; font-size: 12px; border-radius: 50%; }
 </style>
