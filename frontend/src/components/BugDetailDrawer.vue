@@ -70,10 +70,8 @@
               </div>
             </div>
             <div class="image-upload-area">
-              <n-upload :show-file-list="false" :custom-request="handleImageUpload" accept="image/*" multiple
-                action="/api/upload/dummy">
-                <n-button :loading="imageUploading" size="small">上传截图</n-button>
-              </n-upload>
+              <n-button :loading="imageUploading" size="small" @click="triggerUpload">上传截图</n-button>
+              <input ref="uploadInput" type="file" accept="image/*" multiple style="display:none" @change="onUploadChange" />
             </div>
           </div>
         </section>
@@ -125,7 +123,6 @@ import {
   NModal,
   NInput,
   NImage,
-  NUpload
 } from 'naive-ui'
 
 const show = defineModel('show', { type: Boolean, default: false })
@@ -142,7 +139,31 @@ const pendingAction = ref(null)
 const imageUrls = ref({})
 const images = ref([])
 const imageUploading = ref(false)
+const uploadInput = ref(null)
 const bugNotFound = ref(false)
+
+function triggerUpload() {
+  uploadInput.value?.click()
+}
+
+async function onUploadChange(e) {
+  const files = e.target.files
+  if (!files?.length) return
+  imageUploading.value = true
+  try {
+    for (const f of files) {
+      await uploadBugImage(props.bugId, f)
+    }
+    window.$message.success('截图上传成功')
+    await loadImages()
+  } catch (e) {
+    console.error('[BugUpload]', e)
+    window.$message.error('上传失败: ' + (e.response?.data?.error || e.message || '未知错误'))
+  } finally {
+    imageUploading.value = false
+    uploadInput.value.value = ''
+  }
+}
 
 const statusMeta = computed(() => bugStatusMeta[bug.value?.status] || { label: bug.value?.status || '-', tone: 'default' })
 const severityMetaItem = computed(() => severityMeta[bug.value?.severity] || { label: bug.value?.severity || '-', tone: 'default' })
@@ -240,31 +261,6 @@ async function confirmAction() {
   } finally {
     actionLoading.value = false
   }
-}
-
-async function handleImageUpload({ file, onFinish, onError }) {
-  imageUploading.value = true
-  console.log('[BugUpload] file selected:', file?.name, 'file.file:', file?.file)
-  if (!file?.file) {
-    window.$message.error('文件对象为空')
-    imageUploading.value = false
-    onError?.()
-    return { abort: () => {} }
-  }
-  try {
-    const result = await uploadBugImage(props.bugId, file.file)
-    console.log('[BugUpload] upload success:', result)
-    window.$message.success('截图上传成功')
-    onFinish?.()
-    await loadImages()
-  } catch (e) {
-    console.error('[BugUpload] upload error:', e)
-    window.$message.error('上传失败: ' + (e.message || '未知错误'))
-    onError?.()
-  } finally {
-    imageUploading.value = false
-  }
-  return { abort: () => {} }
 }
 
 async function loadImages() {

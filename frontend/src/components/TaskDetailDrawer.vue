@@ -151,10 +151,9 @@
         <n-select v-model:value="bugForm.severity" :options="severityOptions" />
       </n-form-item>
       <n-form-item label="截图">
-        <n-upload :show-file-list="true" :custom-request="handleBugUpload" accept="image/*" multiple
-          :file-list="bugAttachFiles" @remove="handleBugRemoveAttach">
-          <n-button :loading="bugSubmitting">选择图片</n-button>
-        </n-upload>
+        <n-button :loading="bugSubmitting" size="small" @click="triggerBugFileInput">选择图片</n-button>
+        <span v-if="bugFileNames.length" style="font-size:12px;color:#18a058;margin-left:8px">{{ bugFileNames.join('、') }}</span>
+        <input ref="bugFileInput" type="file" accept="image/*" multiple style="display:none" @change="onBugFileChange" />
       </n-form-item>
     </n-form>
     <template #footer>
@@ -174,7 +173,7 @@ import { createBug, uploadBugImage, getBugs } from '@/api/bugs'
 import { getRequirement, downloadRequirementDocument } from '@/api/requirements'
 import { getUsers } from '@/api/users'
 import { priorityMeta, taskStatusMeta, bugStatusMeta, severityMeta } from '@/constants/statusMeta'
-import { NDrawer, NDrawerContent, NTag, NButton, NTimeline, NTimelineItem, NSelect, NSlider, NModal, NForm, NFormItem, NInput, NUpload, NSpace } from 'naive-ui'
+import { NDrawer, NDrawerContent, NTag, NButton, NTimeline, NTimelineItem, NSelect, NSlider, NModal, NForm, NFormItem, NInput, NSpace } from 'naive-ui'
 
 const show = defineModel('show', { type: Boolean, default: false })
 const props = defineProps({ taskId: Number, readonly: Boolean })
@@ -198,8 +197,21 @@ const taskNotFound = ref(false)
 const showCreateBugModal = ref(false)
 const bugForm = ref({ title: '', description: '', severity: 'medium' })
 const bugImageFiles = ref([])
-const bugAttachFiles = ref([])
+const bugFileNames = ref([])
 const bugSubmitting = ref(false)
+const bugFileInput = ref(null)
+
+function triggerBugFileInput() {
+  bugFileInput.value?.click()
+}
+
+function onBugFileChange(e) {
+  const files = e.target.files
+  if (!files?.length) return
+  bugImageFiles.value = Array.from(files)
+  bugFileNames.value = Array.from(files).map(f => f.name)
+  bugFileInput.value.value = ''
+}
 const severityOptions = [
   { label: '低', value: 'low' },
   { label: '中', value: 'medium' },
@@ -325,19 +337,8 @@ function handleCreateBug() {
     severity: 'medium'
   }
   bugImageFiles.value = []
-  bugAttachFiles.value = []
+  bugFileNames.value = []
   showCreateBugModal.value = true
-}
-
-function handleBugUpload({ file, onFinish }) {
-  bugImageFiles.value.push(file.file)
-  bugAttachFiles.value.push({ id: file.id, name: file.name })
-  onFinish?.()
-  return { abort: () => {} }
-}
-
-function handleBugRemoveAttach({ file }) {
-  bugAttachFiles.value = bugAttachFiles.value.filter(f => f.id !== file.id)
 }
 
 async function submitBug() {
