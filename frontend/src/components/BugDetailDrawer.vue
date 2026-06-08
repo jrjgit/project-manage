@@ -70,9 +70,7 @@
               </div>
             </div>
             <div class="image-upload-area">
-              <n-upload :show-file-list="false" :custom-request="handleImageUpload" accept="image/*">
-                <n-button :loading="imageUploading" size="small">上传截图</n-button>
-              </n-upload>
+              <n-button :loading="imageUploading" size="small" @click="testUpload">上传截图</n-button>
             </div>
           </div>
         </section>
@@ -124,7 +122,6 @@ import {
   NModal,
   NInput,
   NImage,
-  NUpload
 } from 'naive-ui'
 
 const show = defineModel('show', { type: Boolean, default: false })
@@ -143,17 +140,26 @@ const images = ref([])
 const imageUploading = ref(false)
 const bugNotFound = ref(false)
 
-async function handleImageUpload({ file }) {
-  imageUploading.value = true
-  try {
-    await uploadBugImage(props.bugId, file.file)
-    window.$message.success('截图上传成功')
-    await loadImages()
-  } catch (e) {
-    console.error(e)
-  } finally {
-    imageUploading.value = false
+function testUpload() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.onchange = async (e) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    imageUploading.value = true
+    try {
+      const result = await uploadBugImage(props.bugId, f)
+      window.$message.success('上传成功')
+      await loadImages()
+    } catch (e) {
+      window.$message.error('上传失败: ' + (e.response?.data?.error || e.message || '未知错误'))
+      console.error('[testUpload error]', e)
+    } finally {
+      imageUploading.value = false
+    }
   }
+  input.click()
 }
 
 const statusMeta = computed(() => bugStatusMeta[bug.value?.status] || { label: bug.value?.status || '-', tone: 'default' })
