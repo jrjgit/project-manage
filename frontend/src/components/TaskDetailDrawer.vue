@@ -330,9 +330,6 @@ function handleCreateBug() {
     description: '',
     severity: 'medium'
   }
-  if (bugPreviewUrl.value) URL.revokeObjectURL(bugPreviewUrl.value)
-  bugImageFile.value = null
-  bugAttachName.value = ''
   for (const url of bugPreviewUrls.value) URL.revokeObjectURL(url)
   bugImageFiles.value = []
   bugPreviewUrls.value = []
