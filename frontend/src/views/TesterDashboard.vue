@@ -74,10 +74,9 @@
             <n-select v-model:value="bugForm.assignee_id" :options="devOptions" placeholder="（可选）指派给" clearable filterable />
           </n-form-item>
           <n-form-item label="截图">
-            <n-upload :show-file-list="true" :custom-request="handleAttachUpload" accept="image/*" multiple
-              :file-list="attachFiles" @remove="handleRemoveAttach">
-              <n-button :loading="imageUploading">选择图片</n-button>
-            </n-upload>
+            <n-button :loading="imageUploading" size="small" @click="triggerFileInput">选择图片</n-button>
+            <span v-if="attachFileNames.length" style="font-size:12px;color:#18a058;margin-left:8px">{{ attachFileNames.join('、') }}</span>
+            <input ref="fileInputRef" type="file" accept="image/*" multiple style="display:none" @change="onFileChange" />
           </n-form-item>
         </n-form>
         <template #footer>
@@ -105,7 +104,7 @@ import { severityMeta } from '@/constants/statusMeta'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import BugDetailDrawer from '@/components/BugDetailDrawer.vue'
 import AppLayout from '@/components/AppLayout.vue'
-import { NTag, NButton, NModal, NForm, NFormItem, NInput, NSelect, NUpload, NSpace } from 'naive-ui'
+import { NTag, NButton, NModal, NForm, NFormItem, NInput, NSelect, NSpace } from 'naive-ui'
 
 const authStore = useAuthStore()
 
@@ -123,8 +122,21 @@ const showCreateBug = ref(false)
 const bugForm = ref({ test_type: 'integration', requirement_id: null, assignee_id: null, title: '', description: '', severity: 'medium' })
 const bugSubmitting = ref(false)
 const imageFiles = ref([])
-const attachFiles = ref([])
+const attachFileNames = ref([])
 const imageUploading = ref(false)
+const fileInputRef = ref(null)
+
+function triggerFileInput() {
+  fileInputRef.value?.click()
+}
+
+function onFileChange(e) {
+  const files = e.target.files
+  if (!files?.length) return
+  imageFiles.value = Array.from(files)
+  attachFileNames.value = Array.from(files).map(f => f.name)
+  fileInputRef.value.value = ''
+}
 
 const testTypeOptions = [
   { label: '综合测试', value: 'integration' },
@@ -168,21 +180,8 @@ async function loadUsers() {
 function openCreateBug() {
   bugForm.value = { test_type: 'integration', requirement_id: null, assignee_id: null, title: '', description: '', severity: 'medium' }
   imageFiles.value = []
-  attachFiles.value = []
+  attachFileNames.value = []
   showCreateBug.value = true
-}
-
-function handleAttachUpload({ file }) {
-  imageFiles.value.push(file.file)
-  attachFiles.value.push({ id: file.file.name, name: file.name })
-  return { abort: () => {} }
-}
-
-function handleRemoveAttach({ file }) {
-  const idx = imageFiles.value.indexOf(file.file)
-  if (idx >= 0) imageFiles.value.splice(idx, 1)
-  const fi = attachFiles.value.findIndex(f => f.id === file.file.name)
-  if (fi >= 0) attachFiles.value.splice(fi, 1)
 }
 
 async function submitBug() {
