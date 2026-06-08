@@ -125,8 +125,6 @@ const bugSubmitting = ref(false)
 const imageFiles = ref([])
 const attachFileNames = ref([])
 const imageUploading = ref(false)
-  bugFileNames.value = Array.from(files).map(f => f.name)
-}
 
 const testTypeOptions = [
   { label: '综合测试', value: 'integration' },
