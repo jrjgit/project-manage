@@ -1,6 +1,8 @@
 package com.management.user;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.management.bug.entity.Bug;
+import com.management.bug.mapper.BugMapper;
 import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
 import com.management.project.entity.Project;
@@ -26,6 +28,7 @@ public class UserService {
     private final UserMapper userMapper;
     private final ProjectMapper projectMapper;
     private final TaskMapper taskMapper;
+    private final BugMapper bugMapper;
     private final RequirementMapper requirementMapper;
 
     public JwtUserDetails currentUser() {
@@ -95,13 +98,13 @@ public class UserService {
         for (User u : devUsers) {
             long devCount = taskMapper.selectCount(
                     new LambdaQueryWrapper<Task>().eq(Task::getAssigneeId, u.getId()));
-            long testCount = taskMapper.selectCount(
-                    new LambdaQueryWrapper<Task>().eq(Task::getAssigneeId, u.getId())
-                            .eq(Task::getStatus, "testing"));
+            long bugCount = bugMapper.selectCount(
+                    new LambdaQueryWrapper<Bug>().eq(Bug::getAssigneeId, u.getId())
+                            .ne(Bug::getStatus, "closed"));
             Map<String, Object> item = new java.util.LinkedHashMap<>();
             item.put("userId", u.getId());
             item.put("devCount", devCount);
-            item.put("testCount", testCount);
+            item.put("bugCount", bugCount);
             result.add(item);
         }
         return result;

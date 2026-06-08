@@ -394,7 +394,7 @@ const projectDevOptions = computed(() => {
     const wl = userWorkloadMap.value[u.id] || {}
     const parts = []
     parts.push(`开发任务：${wl.devCount ?? 0}`)
-    parts.push(`测试任务：${wl.testCount ?? 0}`)
+    parts.push(`待修复bug：${wl.bugCount ?? 0}`)
     return { name: u.name, suffix: parts.join(' '), value: u.id }
   })
 })
@@ -707,7 +707,7 @@ async function loadUserWorkload() {
   try {
     const data = await getUserWorkload()
     const map = {}
-    for (const item of data) map[item.userId] = { devCount: item.devCount, testCount: item.testCount }
+    for (const item of data) map[item.userId] = { devCount: item.devCount, bugCount: item.bugCount }
     userWorkloadMap.value = map
   } catch (e) { console.error(e) }
 }
