@@ -93,6 +93,8 @@ public class UserService {
                 new LambdaQueryWrapper<User>().in(User::getRole, "dev", "dev_lead"));
         List<Map<String, Object>> result = new ArrayList<>();
         for (User u : devUsers) {
+            long total = taskMapper.selectCount(
+                    new LambdaQueryWrapper<Task>().eq(Task::getAssigneeId, u.getId()));
             long developing = taskMapper.selectCount(
                     new LambdaQueryWrapper<Task>().eq(Task::getAssigneeId, u.getId())
                             .eq(Task::getStatus, "developing"));
@@ -101,6 +103,7 @@ public class UserService {
                             .eq(Task::getStatus, "testing"));
             Map<String, Object> item = new java.util.LinkedHashMap<>();
             item.put("userId", u.getId());
+            item.put("total", total);
             item.put("developing", developing);
             item.put("testing", testing);
             result.add(item);

@@ -392,6 +392,7 @@ const projectDevOptions = computed(() => {
   return users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => {
     const wl = userWorkloadMap.value[u.id] || {}
     const parts = []
+    if (wl.total) parts.push(`共${wl.total}个任务`)
     if (wl.developing) parts.push(`开发中${wl.developing}`)
     if (wl.testing) parts.push(`测试中${wl.testing}`)
     const suffix = parts.length ? ` — ${parts.join(' · ')}` : ''
@@ -707,7 +708,7 @@ async function loadUserWorkload() {
   try {
     const data = await getUserWorkload()
     const map = {}
-    for (const item of data) map[item.userId] = { developing: item.developing, testing: item.testing }
+    for (const item of data) map[item.userId] = { total: item.total, developing: item.developing, testing: item.testing }
     userWorkloadMap.value = map
   } catch (e) { console.error(e) }
 }
