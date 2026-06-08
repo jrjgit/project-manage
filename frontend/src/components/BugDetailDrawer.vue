@@ -70,7 +70,8 @@
               </div>
             </div>
             <div class="image-upload-area">
-              <n-upload :show-file-list="false" :custom-request="handleImageUpload" accept="image/*" multiple>
+              <n-upload :show-file-list="false" :custom-request="handleImageUpload" accept="image/*" multiple
+                action="/api/upload/dummy">
                 <n-button :loading="imageUploading" size="small">上传截图</n-button>
               </n-upload>
             </div>
@@ -241,17 +242,29 @@ async function confirmAction() {
   }
 }
 
-async function handleImageUpload({ file }) {
+async function handleImageUpload({ file, onFinish, onError }) {
   imageUploading.value = true
+  console.log('[BugUpload] file selected:', file?.name, 'file.file:', file?.file)
+  if (!file?.file) {
+    window.$message.error('文件对象为空')
+    imageUploading.value = false
+    onError?.()
+    return { abort: () => {} }
+  }
   try {
-    await uploadBugImage(props.bugId, file.file)
+    const result = await uploadBugImage(props.bugId, file.file)
+    console.log('[BugUpload] upload success:', result)
     window.$message.success('截图上传成功')
+    onFinish?.()
     await loadImages()
   } catch (e) {
-    console.error(e)
+    console.error('[BugUpload] upload error:', e)
+    window.$message.error('上传失败: ' + (e.message || '未知错误'))
+    onError?.()
   } finally {
     imageUploading.value = false
   }
+  return { abort: () => {} }
 }
 
 async function loadImages() {

@@ -329,17 +329,15 @@ function handleCreateBug() {
   showCreateBugModal.value = true
 }
 
-function handleBugUpload({ file }) {
+function handleBugUpload({ file, onFinish }) {
   bugImageFiles.value.push(file.file)
-  bugAttachFiles.value.push({ id: file.file.name, name: file.name })
+  bugAttachFiles.value.push({ id: file.id, name: file.name })
+  onFinish?.()
   return { abort: () => {} }
 }
 
 function handleBugRemoveAttach({ file }) {
-  const idx = bugImageFiles.value.indexOf(file.file)
-  if (idx >= 0) bugImageFiles.value.splice(idx, 1)
-  const fi = bugAttachFiles.value.findIndex(f => f.id === file.file.name)
-  if (fi >= 0) bugAttachFiles.value.splice(fi, 1)
+  bugAttachFiles.value = bugAttachFiles.value.filter(f => f.id !== file.id)
 }
 
 async function submitBug() {

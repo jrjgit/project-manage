@@ -172,17 +172,15 @@ function openCreateBug() {
   showCreateBug.value = true
 }
 
-function handleAttachUpload({ file }) {
+function handleAttachUpload({ file, onFinish }) {
   imageFiles.value.push(file.file)
-  attachFiles.value.push({ id: file.file.name, name: file.name })
+  attachFiles.value.push({ id: file.id, name: file.name })
+  onFinish?.()
   return { abort: () => {} }
 }
 
 function handleRemoveAttach({ file }) {
-  const idx = imageFiles.value.indexOf(file.file)
-  if (idx >= 0) imageFiles.value.splice(idx, 1)
-  const fi = attachFiles.value.findIndex(f => f.id === file.file.name)
-  if (fi >= 0) attachFiles.value.splice(fi, 1)
+  attachFiles.value = attachFiles.value.filter(f => f.id !== file.id)
 }
 
 async function submitBug() {
