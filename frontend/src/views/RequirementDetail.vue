@@ -394,7 +394,7 @@ const projectDevOptions = computed(() => {
     const wl = userWorkloadMap.value[u.id] || {}
     const parts = []
     parts.push(`开发任务：${wl.devCount ?? 0}`)
-    parts.push(`待修复bug：${wl.bugCount ?? 0}`)
+    parts.push(`未修复bug：${wl.bugCount ?? 0}`)
     return { name: u.name, suffix: parts.join(' '), value: u.id }
   })
 })
