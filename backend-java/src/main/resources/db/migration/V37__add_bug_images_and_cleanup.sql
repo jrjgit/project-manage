@@ -1,23 +1,7 @@
 -- =============================================
 -- V37: 新增 bug_images 表（多图支持），清理废弃字段
+-- 说明：使用动态 SQL，不依赖 DELIMITER / 存储过程，兼容所有 MySQL 客户端
 -- =============================================
-
--- 0. 创建辅助存储过程：删除表中指定列（如果存在）
-DROP PROCEDURE IF EXISTS drop_col_if_exists;
-DELIMITER $$
-CREATE PROCEDURE drop_col_if_exists(IN tbl VARCHAR(255), IN col VARCHAR(255))
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = tbl AND COLUMN_NAME = col
-    ) THEN
-        SET @sql = CONCAT('ALTER TABLE ', tbl, ' DROP COLUMN ', col);
-        PREPARE stmt FROM @sql;
-        EXECUTE stmt;
-        DEALLOCATE PREPARE stmt;
-    END IF;
-END$$
-DELIMITER ;
 
 -- 1. 新增 bug_images 表
 CREATE TABLE IF NOT EXISTS bug_images (
@@ -30,28 +14,52 @@ CREATE TABLE IF NOT EXISTS bug_images (
     INDEX idx_bug_id (bug_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Bug截图表';
 
--- 2. 将 bugs 表中已有的单图数据迁移到 bug_images
-INSERT INTO bug_images (bug_id, image_path, image_name, image_size, created_at)
-SELECT id, image_path, image_name, image_size, COALESCE(updated_at, created_at, NOW())
-FROM bugs
-WHERE image_path IS NOT NULL AND image_path <> '';
+-- 2. 迁移 bugs 表中的单图数据（仅当 image_path 列存在时）
+SET @has_img = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bugs' AND COLUMN_NAME = 'image_path');
+SET @migrate = IF(@has_img > 0,
+    'INSERT INTO bug_images (bug_id, image_path, image_name, image_size, created_at) SELECT id, image_path, image_name, image_size, COALESCE(updated_at, created_at, NOW()) FROM bugs WHERE image_path IS NOT NULL AND LENGTH(image_path) > 0',
+    'SELECT 1');
+PREPARE stmt FROM @migrate;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- 3. 删除 bugs 表中旧的单图字段（必须先确认存在，否则多字段 ALTER 会整体失败）
-CALL drop_col_if_exists('bugs', 'image_path');
-CALL drop_col_if_exists('bugs', 'image_name');
-CALL drop_col_if_exists('bugs', 'image_size');
+-- 3. 删除 bugs 表中旧字段：image_path / image_name / image_size
+SET @has = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bugs' AND COLUMN_NAME = 'image_path');
+SET @sql = IF(@has > 0, 'ALTER TABLE bugs DROP COLUMN image_path', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- 4. 删除 bugs 表中已废弃的 developer_id 字段
-CALL drop_col_if_exists('bugs', 'developer_id');
+SET @has = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bugs' AND COLUMN_NAME = 'image_name');
+SET @sql = IF(@has > 0, 'ALTER TABLE bugs DROP COLUMN image_name', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- 5. 删除 users 表中已废弃的字段
-CALL drop_col_if_exists('users', 'wechat_id');
-CALL drop_col_if_exists('users', 'dingtalk_id');
-CALL drop_col_if_exists('users', 'feishu_id');
-CALL drop_col_if_exists('users', 'group_id');
+SET @has = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bugs' AND COLUMN_NAME = 'image_size');
+SET @sql = IF(@has > 0, 'ALTER TABLE bugs DROP COLUMN image_size', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- 6. 删除 tasks 表中已废弃的 feature_id 字段
-CALL drop_col_if_exists('tasks', 'feature_id');
+-- 4. 删除 bugs.developer_id
+SET @has = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bugs' AND COLUMN_NAME = 'developer_id');
+SET @sql = IF(@has > 0, 'ALTER TABLE bugs DROP COLUMN developer_id', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- 7. 清理辅助存储过程
-DROP PROCEDURE IF EXISTS drop_col_if_exists;
+-- 5. 删除 users 废弃字段
+SET @has = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'wechat_id');
+SET @sql = IF(@has > 0, 'ALTER TABLE users DROP COLUMN wechat_id', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @has = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'dingtalk_id');
+SET @sql = IF(@has > 0, 'ALTER TABLE users DROP COLUMN dingtalk_id', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @has = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'feishu_id');
+SET @sql = IF(@has > 0, 'ALTER TABLE users DROP COLUMN feishu_id', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @has = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'group_id');
+SET @sql = IF(@has > 0, 'ALTER TABLE users DROP COLUMN group_id', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 6. 删除 tasks.feature_id
+SET @has = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tasks' AND COLUMN_NAME = 'feature_id');
+SET @sql = IF(@has > 0, 'ALTER TABLE tasks DROP COLUMN feature_id', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
