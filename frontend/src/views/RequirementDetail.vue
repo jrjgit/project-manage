@@ -393,8 +393,8 @@ const projectDevOptions = computed(() => {
   return users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => {
     const wl = userWorkloadMap.value[u.id] || {}
     const parts = []
-    if (wl.devCount) parts.push(`开发任务：${wl.devCount}`)
-    if (wl.testCount) parts.push(`测试任务：${wl.testCount}`)
+    parts.push(`开发任务：${wl.devCount ?? 0}`)
+    parts.push(`测试任务：${wl.testCount ?? 0}`)
     return { name: u.name, suffix: parts.join(' '), value: u.id }
   })
 })
