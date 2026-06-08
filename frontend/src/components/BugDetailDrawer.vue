@@ -66,7 +66,7 @@
                 <img :src="getImageUrl(img)" :alt="img.image_name" :title="img.image_name" style="width:100%;border-radius:6px;max-height:180px;object-fit:contain;background:#f3f4f6" />
                 <span class="image-name-label">{{ img.image_name }}</span>
                 <div class="image-item-actions">
-                  <n-button size="tiny" type="error" ghost @click="handleDeleteImage(img)">删除</n-button>
+                  <n-button v-if="isCreatorOrPM" size="tiny" type="error" ghost @click="handleDeleteImage(img)">删除</n-button>
                 </div>
               </div>
             </div>
@@ -284,6 +284,7 @@ async function handleDeleteImage(img) {
     images.value = images.value.filter(i => i.id !== img.id)
     window.$message.success('截图已删除')
   } catch (e) {
+    window.$message.error('删除失败: ' + (e.response?.data?.error || e.message || '未知错误'))
     console.error(e)
   }
 }
