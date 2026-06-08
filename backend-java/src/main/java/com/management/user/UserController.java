@@ -74,6 +74,13 @@ public class UserController {
         return Result.ok(Map.of("message", "user deleted"));
     }
 
+    @Operation(summary = "获取开发人员工作负载（各状态任务数）")
+    @GetMapping("/workload")
+    @PreAuthorize("isAuthenticated()")
+    public Result<List<Map<String, Object>>> getUserWorkload() {
+        return Result.ok(userService.getUserWorkload());
+    }
+
     @Data
     static class UpdateRoleRequest {
         @NotBlank

@@ -6,3 +6,4 @@ export const updateUserRole = (id, data) => request.put(`/users/${id}/role`, dat
 export const createUser = (data) => request.post('/auth/register', data)
 export const updateUser = (id, data) => request.put(`/users/${id}`, data)
 export const deleteUser = (id) => request.delete(`/users/${id}`)
+export const getUserWorkload = () => request.get('/users/workload')

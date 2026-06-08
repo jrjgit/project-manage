@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -84,5 +86,25 @@ public class UserService {
                     "该用户存在以下关联数据，请先解除关联后再删除：\n " + String.join("\n ", refs));
         }
         userMapper.deleteById(id);
+    }
+
+    public List<Map<String, Object>> getUserWorkload() {
+        List<User> devUsers = userMapper.selectList(
+                new LambdaQueryWrapper<User>().in(User::getRole, "dev", "dev_lead"));
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (User u : devUsers) {
+            long developing = taskMapper.selectCount(
+                    new LambdaQueryWrapper<Task>().eq(Task::getAssigneeId, u.getId())
+                            .eq(Task::getStatus, "developing"));
+            long testing = taskMapper.selectCount(
+                    new LambdaQueryWrapper<Task>().eq(Task::getAssigneeId, u.getId())
+                            .eq(Task::getStatus, "testing"));
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("userId", u.getId());
+            item.put("developing", developing);
+            item.put("testing", testing);
+            result.add(item);
+        }
+        return result;
     }
 }

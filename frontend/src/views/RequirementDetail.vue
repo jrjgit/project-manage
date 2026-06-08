@@ -336,7 +336,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
-import { getUsers } from '@/api/users'
+import { getUsers, getUserWorkload } from '@/api/users'
 import { getTasks, createTask, updateTask, deleteTask, getTaskProgressHistory } from '@/api/tasks'
 import {
   getRequirement,
@@ -386,9 +386,17 @@ const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_le
 
 const showTaskDetail = ref(false)
 const selectedTaskId = ref(null)
+const userWorkloadMap = ref({})
 const devOptions = computed(() => users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
 const projectDevOptions = computed(() => {
-  return users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: `${u.name}${u.skills ? ' (' + u.skills.split(',').map(s => skillsMap.value[s] || s).join('、') + ')' : ''}`, value: u.id }))
+  return users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => {
+    const wl = userWorkloadMap.value[u.id] || {}
+    const parts = []
+    if (wl.developing) parts.push(`开发中${wl.developing}`)
+    if (wl.testing) parts.push(`测试中${wl.testing}`)
+    const suffix = parts.length ? ` — ${parts.join(' · ')}` : ''
+    return { label: `${u.name}${suffix}`, value: u.id }
+  })
 })
 const userNameMap = computed(() => {
   const map = {}
@@ -432,6 +440,7 @@ function toggleDev(id) {
 }
 
 async function openTaskDispatch() {
+  await loadUserWorkload()
   createTaskForm.value = { developer_ids: [] }
   taskPreview.value = []
   devTaskCache.value = {}
@@ -691,6 +700,15 @@ async function loadIterations() {
   try {
     const data = await getIterations()
     iterations.value = data || []
+  } catch (e) { console.error(e) }
+}
+
+async function loadUserWorkload() {
+  try {
+    const data = await getUserWorkload()
+    const map = {}
+    for (const item of data) map[item.userId] = { developing: item.developing, testing: item.testing }
+    userWorkloadMap.value = map
   } catch (e) { console.error(e) }
 }
 
