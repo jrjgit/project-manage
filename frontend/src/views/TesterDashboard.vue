@@ -77,7 +77,12 @@
             <n-upload :show-file-list="false" :custom-request="handleAttachUpload" accept="image/*" multiple>
               <n-button :loading="imageUploading">选择图片</n-button>
             </n-upload>
-            <span v-if="attachFileNames.length" style="font-size:12px;color:#18a058;margin-left:8px">{{ attachFileNames.join('、') }}</span>
+            <div v-if="previewUrls.length" class="preview-grid">
+              <div v-for="(url, idx) in previewUrls" :key="idx" class="preview-item">
+                <img :src="url" style="width:100%;height:80px;object-fit:cover;border-radius:6px" />
+                <n-button size="tiny" type="error" ghost class="preview-remove" @click="removeImage(idx)">×</n-button>
+              </div>
+            </div>
           </n-form-item>
         </n-form>
         <template #footer>
@@ -124,6 +129,7 @@ const bugForm = ref({ test_type: 'integration', requirement_id: null, assignee_i
 const bugSubmitting = ref(false)
 const imageFiles = ref([])
 const attachFileNames = ref([])
+const previewUrls = ref([])
 const imageUploading = ref(false)
 
 const testTypeOptions = [
@@ -165,16 +171,27 @@ async function loadUsers() {
   try { users.value = await getUsers() || [] } catch (e) { console.error(e) }
 }
 
-function handleAttachUpload({ file }) {
+function handleAttachUpload({ file, onFinish }) {
   imageFiles.value.push(file.file)
   attachFileNames.value.push(file.name)
+  previewUrls.value.push(URL.createObjectURL(file.file))
+  onFinish?.()
   return { abort: () => {} }
+}
+
+function removeImage(idx) {
+  URL.revokeObjectURL(previewUrls.value[idx])
+  imageFiles.value.splice(idx, 1)
+  attachFileNames.value.splice(idx, 1)
+  previewUrls.value.splice(idx, 1)
 }
 
 function openCreateBug() {
   bugForm.value = { test_type: 'integration', requirement_id: null, assignee_id: null, title: '', description: '', severity: 'medium' }
+  for (const url of previewUrls.value) URL.revokeObjectURL(url)
   imageFiles.value = []
   attachFileNames.value = []
+  previewUrls.value = []
   showCreateBug.value = true
 }
 
@@ -253,4 +270,8 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers() })
 .bug-item-meta { margin-top:6px; }
 .bug-task { font-size:11px;color:#94a3b8; }
 .empty-state { text-align:center;padding:24px;color:#94a3b8;font-size:13px; }
+.preview-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.preview-item { position: relative; width: 80px; height: 80px; }
+.preview-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+.preview-remove { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0; font-size: 12px; border-radius: 50%; }
 </style>

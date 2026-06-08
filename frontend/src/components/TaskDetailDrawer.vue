@@ -154,7 +154,10 @@
         <n-upload :show-file-list="false" :custom-request="handleBugUpload" accept="image/*">
           <n-button :loading="bugSubmitting">选择图片</n-button>
         </n-upload>
-        <span v-if="bugAttachName" style="font-size:12px;color:#18a058;margin-left:8px">{{ bugAttachName }}</span>
+        <div v-if="bugPreviewUrl" class="preview-single">
+          <img :src="bugPreviewUrl" style="width:120px;height:80px;object-fit:cover;border-radius:6px" />
+          <n-button size="tiny" type="error" ghost class="preview-remove" @click="removeBugImage">×</n-button>
+        </div>
       </n-form-item>
     </n-form>
     <template #footer>
@@ -199,6 +202,7 @@ const showCreateBugModal = ref(false)
 const bugForm = ref({ title: '', description: '', severity: 'medium' })
 const bugImageFile = ref(null)
 const bugAttachName = ref('')
+const bugPreviewUrl = ref('')
 const bugSubmitting = ref(false)
 
 const severityOptions = [
@@ -325,15 +329,26 @@ function handleCreateBug() {
     description: '',
     severity: 'medium'
   }
+  if (bugPreviewUrl.value) URL.revokeObjectURL(bugPreviewUrl.value)
   bugImageFile.value = null
   bugAttachName.value = ''
+  bugPreviewUrl.value = ''
   showCreateBugModal.value = true
 }
 
 function handleBugUpload({ file }) {
+  if (bugPreviewUrl.value) URL.revokeObjectURL(bugPreviewUrl.value)
   bugImageFile.value = file.file
   bugAttachName.value = file.name
+  bugPreviewUrl.value = URL.createObjectURL(file.file)
   return { abort: () => {} }
+}
+
+function removeBugImage() {
+  URL.revokeObjectURL(bugPreviewUrl.value)
+  bugImageFile.value = null
+  bugAttachName.value = ''
+  bugPreviewUrl.value = ''
 }
 
 async function submitBug() {
@@ -443,4 +458,7 @@ function formatDate(value) {
 .bug-item-compact { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
 .bug-item-compact .bugc-title { flex: 1; color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bug-item-compact .bugc-creator { color: #94a3b8; min-width: 40px; text-align: right; }
+.preview-single { position: relative; display: inline-block; margin-top: 10px; }
+.preview-single img { border-radius: 6px; }
+.preview-single .preview-remove { position: absolute; top: -8px; right: -8px; min-width: 20px; height: 20px; padding: 0; font-size: 12px; border-radius: 50%; }
 </style>
