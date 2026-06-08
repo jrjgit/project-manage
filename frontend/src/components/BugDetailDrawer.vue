@@ -143,15 +143,16 @@ const images = ref([])
 const imageUploading = ref(false)
 const bugNotFound = ref(false)
 
-
+async function handleImageUpload({ file }) {
+  imageUploading.value = true
+  try {
+    await uploadBugImage(props.bugId, file.file)
     window.$message.success('截图上传成功')
     await loadImages()
   } catch (e) {
-    console.error('[BugUpload]', e)
-    window.$message.error('上传失败: ' + (e.response?.data?.error || e.message || '未知错误'))
+    console.error(e)
   } finally {
     imageUploading.value = false
-    uploadInput.value.value = ''
   }
 }
 
