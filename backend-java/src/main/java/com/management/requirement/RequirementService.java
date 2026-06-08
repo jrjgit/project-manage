@@ -1,6 +1,7 @@
 package com.management.requirement;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.management.bug.BugService;
 import com.management.bug.entity.Bug;
 import com.management.bug.mapper.BugMapper;
 import com.management.common.exception.BusinessException;
@@ -48,6 +49,7 @@ public class RequirementService {
     private final IterationMapper iterationMapper;
     private final TaskMapper taskMapper;
     private final BugMapper bugMapper;
+    private final BugService bugService;
     private final NotificationService notificationService;
 
     @Value("${app.upload-dir:./uploads}")
@@ -260,6 +262,10 @@ public class RequirementService {
         r.setStatus(newStatus);
         requirementMapper.updateById(r);
 
+        if ("released".equals(newStatus)) {
+            cleanupBugScreenshots(id);
+        }
+
         List<User> notifyTargets = new ArrayList<>();
         if (r.getDevLeadId() != null) {
             User devLead = userMapper.selectById(r.getDevLeadId());
@@ -269,6 +275,20 @@ public class RequirementService {
             String operatorName = currentUser().getName();
             notificationService.emitRequirementEvent(r, oldStatus, newStatus, operatorName, notifyTargets, null);
         }
+    }
+
+    /** 需求发布后删除关联Bug的截图文件和数据记录 */
+    private void cleanupBugScreenshots(Long requirementId) {
+        List<Task> tasks = taskMapper.selectList(
+                new LambdaQueryWrapper<Task>().eq(Task::getRequirementId, requirementId));
+        if (tasks.isEmpty()) return;
+        List<Long> taskIds = tasks.stream().map(Task::getId).toList();
+        List<Bug> bugs = bugMapper.selectList(
+                new LambdaQueryWrapper<Bug>().in(Bug::getTaskId, taskIds));
+        for (Bug bug : bugs) {
+            bugService.deleteAllImages(bug.getId());
+        }
+        log.info("需求 {} 发布，已清理 {} 个Bug的截图", requirementId, bugs.size());
     }
 
     public void delete(Long id) {
