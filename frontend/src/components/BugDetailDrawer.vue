@@ -113,7 +113,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
-import { getBug, getBugHistory, changeBugStatus, uploadBugImage, getBugImages, downloadBugImage, deleteBugImageById } from '@/api/bugs'
+import { getBug, getBugHistory, changeBugStatus, uploadBugImage, getBugImages, deleteBugImageById } from '@/api/bugs'
 import { bugStatusMeta, severityMeta } from '@/constants/statusMeta'
 import {
   NDrawer,
@@ -138,7 +138,6 @@ const actionLoading = ref(false)
 const showCommentModal = ref(false)
 const pendingComment = ref('')
 const pendingAction = ref(null)
-const imageUrls = ref({})
 const images = ref([])
 const imageUploading = ref(false)
 const bugNotFound = ref(false)
@@ -258,29 +257,18 @@ async function loadImages() {
   try {
     const list = await getBugImages(props.bugId) || []
     images.value = list
-    for (const img of list) {
-      downloadBugImage(props.bugId, img.id).then(blob => {
-        if (blob && blob.size > 0) {
-          imageUrls.value[img.id] = URL.createObjectURL(blob)
-        }
-      }).catch(() => {})
-    }
   } catch (e) {
     images.value = []
   }
 }
 
 function getImageUrl(img) {
-  return imageUrls.value[img.id] || ''
+  return img?.image_path ? '/uploads/' + img.image_path : ''
 }
 
 async function handleDeleteImage(img) {
   try {
     await deleteBugImageById(props.bugId, img.id)
-    if (imageUrls.value[img.id]) {
-      URL.revokeObjectURL(imageUrls.value[img.id])
-      delete imageUrls.value[img.id]
-    }
     images.value = images.value.filter(i => i.id !== img.id)
     window.$message.success('截图已删除')
   } catch (e) {
