@@ -1514,19 +1514,21 @@ onMounted(() => {
 .dispatch-select-inner {
   display: flex;
   gap: 24px;
+  align-items: start;
 }
 .dispatch-divider {
   width: 1px;
   flex-shrink: 0;
   background: #e2e8f0;
+  align-self: stretch;
 }
 .dispatch-left {
-  width: 480px;
-  flex-shrink: 0;
-}
-.dispatch-right {
   flex: 1;
   min-width: 0;
+}
+.dispatch-right {
+  width: 320px;
+  flex-shrink: 0;
 }
 .dispatch-task-area {
   border: 1px solid #e2e8f0;
