@@ -63,7 +63,7 @@
             <div class="section-title">截图（{{ images.length }}）</div>
             <div v-if="images.length" class="image-grid">
               <div v-for="img in images" :key="img.id" class="image-item">
-                <img :src="getImageUrl(img)" :alt="img.image_name" :title="img.image_name" style="width:100%;border-radius:6px;max-height:180px;object-fit:contain;background:#f3f4f6" />
+                <n-image :src="getImageUrl(img)" width="100%" style="border-radius:6px;max-height:180px;object-fit:contain;background:#f3f4f6" />
                 <span class="image-name-label">{{ img.image_name }}</span>
                 <div class="image-item-actions">
                   <n-button v-if="isCreatorOrPM" size="tiny" type="error" ghost @click="handleDeleteImage(img)">删除</n-button>
@@ -124,6 +124,7 @@ import {
   NTimelineItem,
   NModal,
   NInput,
+  NImage,
   NUpload
 } from 'naive-ui'
 
