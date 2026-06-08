@@ -256,20 +256,22 @@ async function confirmAction() {
 
 async function loadImages() {
   try {
-    images.value = await getBugImages(props.bugId) || []
+    const list = await getBugImages(props.bugId) || []
+    images.value = list
+    for (const img of list) {
+      downloadBugImage(props.bugId, img.id).then(blob => {
+        if (blob && blob.size > 0) {
+          imageUrls.value[img.id] = URL.createObjectURL(blob)
+        }
+      }).catch(() => {})
+    }
   } catch (e) {
     images.value = []
   }
 }
 
 function getImageUrl(img) {
-  if (imageUrls.value[img.id]) return imageUrls.value[img.id]
-  downloadBugImage(props.bugId, img.id).then(blob => {
-    if (blob && blob.size > 0) {
-      imageUrls.value[img.id] = URL.createObjectURL(blob)
-    }
-  }).catch(() => {})
-  return ''
+  return imageUrls.value[img.id] || ''
 }
 
 async function handleDeleteImage(img) {
