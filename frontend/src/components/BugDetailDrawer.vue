@@ -70,8 +70,9 @@
               </div>
             </div>
             <div class="image-upload-area">
-              <n-button :loading="imageUploading" size="small" @click="triggerFileInput">上传截图</n-button>
-              <input ref="fileInputRef" type="file" accept="image/*" multiple style="display:none" @change="onFileChange" />
+              <n-upload :show-file-list="false" :custom-request="handleImageUpload" accept="image/*" multiple>
+                <n-button :loading="imageUploading" size="small">上传截图</n-button>
+              </n-upload>
             </div>
           </div>
         </section>
@@ -140,31 +141,7 @@ const pendingAction = ref(null)
 const imageUrls = ref({})
 const images = ref([])
 const imageUploading = ref(false)
-const fileInputRef = ref(null)
 const bugNotFound = ref(false)
-
-function triggerFileInput() {
-  fileInputRef.value?.click()
-}
-
-async function onFileChange(e) {
-  const files = e.target.files
-  if (!files?.length) return
-  imageUploading.value = true
-  try {
-    for (const f of files) {
-      await uploadBugImage(props.bugId, f)
-    }
-    window.$message.success('截图上传成功')
-    await loadImages()
-  } catch (e) {
-    window.$message.error('上传失败')
-    console.error(e)
-  } finally {
-    imageUploading.value = false
-    fileInputRef.value.value = ''
-  }
-}
 
 const statusMeta = computed(() => bugStatusMeta[bug.value?.status] || { label: bug.value?.status || '-', tone: 'default' })
 const severityMetaItem = computed(() => severityMeta[bug.value?.severity] || { label: bug.value?.severity || '-', tone: 'default' })
@@ -261,6 +238,19 @@ async function confirmAction() {
     showCommentModal.value = false
   } finally {
     actionLoading.value = false
+  }
+}
+
+async function handleImageUpload({ file }) {
+  imageUploading.value = true
+  try {
+    await uploadBugImage(props.bugId, file.file)
+    window.$message.success('截图上传成功')
+    await loadImages()
+  } catch (e) {
+    console.error(e)
+  } finally {
+    imageUploading.value = false
   }
 }
 
