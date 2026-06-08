@@ -96,7 +96,8 @@ public class UserService {
             long devCount = taskMapper.selectCount(
                     new LambdaQueryWrapper<Task>().eq(Task::getAssigneeId, u.getId()));
             long testCount = taskMapper.selectCount(
-                    new LambdaQueryWrapper<Task>().eq(Task::getTesterId, u.getId()));
+                    new LambdaQueryWrapper<Task>().eq(Task::getAssigneeId, u.getId())
+                            .eq(Task::getStatus, "testing"));
             Map<String, Object> item = new java.util.LinkedHashMap<>();
             item.put("userId", u.getId());
             item.put("devCount", devCount);
