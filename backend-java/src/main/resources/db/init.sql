@@ -134,9 +134,6 @@ CREATE TABLE IF NOT EXISTS bugs (
     creator_id     BIGINT       NOT NULL COMMENT '创建人ID',
     assignee_id    BIGINT       COMMENT '指派修复人ID',
     remark         TEXT         COMMENT '备注说明',
-    image_path     VARCHAR(500) COMMENT 'Bug图片存储路径',
-    image_name     VARCHAR(255) COMMENT 'Bug图片原始文件名',
-    image_size     BIGINT       COMMENT 'Bug图片大小(字节)',
     requirement_id BIGINT       COMMENT '关联需求ID',
     test_type      VARCHAR(20)  DEFAULT 'integration' COMMENT '测试类型: integration-综合测试, business-业务测试, it_test-IT测试',
     created_at     DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -149,7 +146,20 @@ CREATE TABLE IF NOT EXISTS bugs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Bug表';
 
 -- ============================================================
--- 8. Bug状态历史表
+-- 8. Bug截图表（支持多张截图）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS bug_images (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '图片ID',
+    bug_id      BIGINT       NOT NULL COMMENT '关联Bug ID',
+    image_path  VARCHAR(500) NOT NULL COMMENT '图片存储路径',
+    image_name  VARCHAR(255) COMMENT '原始文件名',
+    image_size  BIGINT       COMMENT '文件大小(字节)',
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',
+    INDEX idx_bug_id (bug_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Bug截图表';
+
+-- ============================================================
+-- 9. Bug状态历史表
 -- ============================================================
 CREATE TABLE IF NOT EXISTS bug_status_histories (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '记录ID',
@@ -164,7 +174,7 @@ CREATE TABLE IF NOT EXISTS bug_status_histories (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Bug状态历史表';
 
 -- ============================================================
--- 9. 工作流规则表
+-- 10. 工作流规则表
 -- ============================================================
 CREATE TABLE IF NOT EXISTS workflow_rules (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '规则ID',
@@ -176,7 +186,7 @@ CREATE TABLE IF NOT EXISTS workflow_rules (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='工作流规则表';
 
 -- ============================================================
--- 10. 需求表
+-- 11. 需求表
 -- ============================================================
 CREATE TABLE IF NOT EXISTS requirements (
     id                     BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '需求ID',
@@ -215,7 +225,7 @@ CREATE TABLE IF NOT EXISTS requirements (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求表';
 
 -- ============================================================
--- 11. 发布迭代表
+-- 12. 迭代表
 -- ============================================================
 CREATE TABLE IF NOT EXISTS iterations (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '迭代ID',
@@ -229,7 +239,7 @@ CREATE TABLE IF NOT EXISTS iterations (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='发布迭代表';
 
 -- ============================================================
--- 12. 系统信息表
+-- 13. 系统信息表
 -- ============================================================
 CREATE TABLE IF NOT EXISTS systems (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '系统ID',
@@ -244,7 +254,7 @@ CREATE TABLE IF NOT EXISTS systems (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统信息表';
 
 -- ============================================================
--- 13. 基础字典表
+-- 14. 字典表
 -- ============================================================
 CREATE TABLE IF NOT EXISTS dictionaries (
     id         BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '字典ID',
@@ -256,7 +266,7 @@ CREATE TABLE IF NOT EXISTS dictionaries (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='基础字典表';
 
 -- ============================================================
--- 14. 站内消息表
+-- 15. 站内消息表
 -- ============================================================
 CREATE TABLE IF NOT EXISTS site_messages (
     id         BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '消息ID',

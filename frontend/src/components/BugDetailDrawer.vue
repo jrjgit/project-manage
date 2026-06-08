@@ -60,15 +60,17 @@
           </div>
 
           <div class="section-card">
-            <div class="section-title">截图</div>
-            <div v-if="imageUrl" class="image-section">
-              <n-image :src="imageUrl" width="100%" style="border-radius:8px;max-height:280px;object-fit:contain" />
-              <div class="image-actions">
-                <n-button v-if="isCreatorOrPM" size="tiny" type="error" @click="handleDeleteImage">删除</n-button>
+            <div class="section-title">截图（{{ images.length }}）</div>
+            <div v-if="images.length" class="image-grid">
+              <div v-for="img in images" :key="img.id" class="image-item">
+                <n-image :src="getImageUrl(img)" width="100%" style="border-radius:6px;max-height:180px;object-fit:contain" />
+                <div class="image-item-actions">
+                  <n-button v-if="isCreatorOrPM" size="tiny" type="error" ghost @click="handleDeleteImage(img)">删除</n-button>
+                </div>
               </div>
             </div>
-            <div v-else>
-              <n-upload :show-file-list="false" :custom-request="handleImageUpload" accept="image/*">
+            <div class="image-upload-area">
+              <n-upload :show-file-list="false" :custom-request="handleImageUpload" accept="image/*" multiple>
                 <n-button :loading="imageUploading" size="small">上传截图</n-button>
               </n-upload>
             </div>
@@ -110,7 +112,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
-import { getBug, getBugHistory, changeBugStatus, uploadBugImage, downloadBugImage, deleteBugImage } from '@/api/bugs'
+import { getBug, getBugHistory, changeBugStatus, uploadBugImage, getBugImages, downloadBugImage, deleteBugImageById } from '@/api/bugs'
 import { bugStatusMeta, severityMeta } from '@/constants/statusMeta'
 import {
   NDrawer,
@@ -136,7 +138,8 @@ const actionLoading = ref(false)
 const showCommentModal = ref(false)
 const pendingComment = ref('')
 const pendingAction = ref(null)
-const imageUrl = ref('')
+const imageUrls = ref({})
+const images = ref([])
 const imageUploading = ref(false)
 const bugNotFound = ref(false)
 
@@ -204,7 +207,7 @@ async function loadDetail() {
   bugNotFound.value = false
   try {
     bug.value = await getBug(props.bugId)
-    await loadImage()
+    await loadImages()
   } catch (error) {
     bugNotFound.value = true
     bug.value = null
@@ -243,7 +246,7 @@ async function handleImageUpload({ file }) {
   try {
     await uploadBugImage(props.bugId, file.file)
     window.$message.success('截图上传成功')
-    await loadImage()
+    await loadImages()
   } catch (e) {
     console.error(e)
   } finally {
@@ -251,31 +254,36 @@ async function handleImageUpload({ file }) {
   }
 }
 
-async function loadImage() {
+async function loadImages() {
   try {
-    const blob = await downloadBugImage(props.bugId)
-    if (!blob || blob.size === 0) { imageUrl.value = ''; return }
-    imageUrl.value = URL.createObjectURL(blob)
+    images.value = await getBugImages(props.bugId) || []
   } catch (e) {
-    imageUrl.value = ''
+    images.value = []
   }
 }
 
-async function handleDeleteImage() {
+function getImageUrl(img) {
+  if (imageUrls.value[img.id]) return imageUrls.value[img.id]
+  downloadBugImage(props.bugId, img.id).then(blob => {
+    if (blob && blob.size > 0) {
+      imageUrls.value[img.id] = URL.createObjectURL(blob)
+    }
+  }).catch(() => {})
+  return ''
+}
+
+async function handleDeleteImage(img) {
   try {
-    await deleteBugImage(props.bugId)
-    imageUrl.value = ''
+    await deleteBugImageById(props.bugId, img.id)
+    if (imageUrls.value[img.id]) {
+      URL.revokeObjectURL(imageUrls.value[img.id])
+      delete imageUrls.value[img.id]
+    }
+    images.value = images.value.filter(i => i.id !== img.id)
     window.$message.success('截图已删除')
   } catch (e) {
     console.error(e)
   }
-}
-
-function downloadImage() {
-  const a = document.createElement('a')
-  a.href = imageUrl.value
-  a.download = `BUG-${props.bugId}.png`
-  a.click()
 }
 
 async function doChangeStatus(newStatus, comment) {
@@ -430,6 +438,26 @@ function formatTime(value) {
 
 .description-block {
   margin-top: 14px;
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.image-item {
+  position: relative;
+}
+
+.image-item-actions {
+  margin-top: 6px;
+  text-align: right;
+}
+
+.image-upload-area {
+  margin-top: 12px;
 }
 
 .reason-block {

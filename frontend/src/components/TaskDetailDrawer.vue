@@ -151,10 +151,10 @@
         <n-select v-model:value="bugForm.severity" :options="severityOptions" />
       </n-form-item>
       <n-form-item label="截图">
-        <n-upload :show-file-list="false" :custom-request="handleBugUpload" accept="image/*">
+        <n-upload :show-file-list="true" :custom-request="handleBugUpload" accept="image/*" multiple
+          :file-list="bugAttachFiles" @remove="handleBugRemoveAttach">
           <n-button :loading="bugSubmitting">选择图片</n-button>
         </n-upload>
-        <span v-if="bugAttachName" style="font-size:12px;color:#18a058;margin-left:8px">{{ bugAttachName }}</span>
       </n-form-item>
     </n-form>
     <template #footer>
@@ -197,8 +197,8 @@ const taskNotFound = ref(false)
 // 创建 Bug 弹窗
 const showCreateBugModal = ref(false)
 const bugForm = ref({ title: '', description: '', severity: 'medium' })
-const bugImageFile = ref(null)
-const bugAttachName = ref('')
+const bugImageFiles = ref([])
+const bugAttachFiles = ref([])
 const bugSubmitting = ref(false)
 const severityOptions = [
   { label: '低', value: 'low' },
@@ -324,14 +324,22 @@ function handleCreateBug() {
     description: '',
     severity: 'medium'
   }
-  bugImageFile.value = null
-  bugAttachName.value = ''
+  bugImageFiles.value = []
+  bugAttachFiles.value = []
   showCreateBugModal.value = true
 }
 
 function handleBugUpload({ file }) {
-  bugImageFile.value = file.file
-  bugAttachName.value = file.name
+  bugImageFiles.value.push(file.file)
+  bugAttachFiles.value.push({ id: file.file.name, name: file.name })
+  return { abort: () => {} }
+}
+
+function handleBugRemoveAttach({ file }) {
+  const idx = bugImageFiles.value.indexOf(file.file)
+  if (idx >= 0) bugImageFiles.value.splice(idx, 1)
+  const fi = bugAttachFiles.value.findIndex(f => f.id === file.file.name)
+  if (fi >= 0) bugAttachFiles.value.splice(fi, 1)
 }
 
 async function submitBug() {
@@ -347,8 +355,8 @@ async function submitBug() {
       assignee_id: task.value?.assignee_id
     }
     const created = await createBug(payload)
-    if (bugImageFile.value) {
-      await uploadBugImage(created.id, bugImageFile.value)
+    for (const f of bugImageFiles.value) {
+      await uploadBugImage(created.id, f)
     }
     window.$message?.success('Bug 创建成功')
     showCreateBugModal.value = false

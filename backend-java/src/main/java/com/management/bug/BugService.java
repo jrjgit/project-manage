@@ -22,16 +22,18 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.ArrayList;
-import jakarta.annotation.PostConstruct;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class BugService {
     private final BugMapper bugMapper;
+    private final BugImageMapper bugImageMapper;
     private final BugStatusHistoryMapper historyMapper;
     private final UserMapper userMapper;
     private final TaskMapper taskMapper;
@@ -279,46 +281,61 @@ public class BugService {
         java.io.File dirFile = new java.io.File(dir);
         if (!dirFile.exists()) dirFile.mkdirs();
         String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null) {
-            originalFilename = "unknown";
-        }
+        if (originalFilename == null) originalFilename = "unknown";
         String ext = "";
         int dot = originalFilename.lastIndexOf('.');
         if (dot >= 0) ext = originalFilename.substring(dot);
         String name = java.util.UUID.randomUUID().toString() + ext;
         file.transferTo(new java.io.File(dirFile, name));
-        bug.setImagePath("bugs/" + id + "/" + name);
-        bug.setImageName(originalFilename);
-        bug.setImageSize(file.getSize());
-        bugMapper.updateById(bug);
+
+        BugImage bi = new BugImage();
+        bi.setBugId(id);
+        bi.setImagePath("bugs/" + id + "/" + name);
+        bi.setImageName(originalFilename);
+        bi.setImageSize(file.getSize());
+        bugImageMapper.insert(bi);
     }
 
-    public void downloadImage(Long id, HttpServletResponse response) throws IOException {
-        Bug bug = bugMapper.selectById(id);
-        if (bug == null || bug.getImagePath() == null) {
+    public List<BugImage> listImages(Long bugId) {
+        return bugImageMapper.selectList(
+                new LambdaQueryWrapper<BugImage>().eq(BugImage::getBugId, bugId)
+                        .orderByAsc(BugImage::getCreatedAt));
+    }
+
+    public void downloadImage(Long bugId, Long imageId, HttpServletResponse response) throws IOException {
+        BugImage bi = bugImageMapper.selectById(imageId);
+        if (bi == null || !bi.getBugId().equals(bugId)) {
             response.setStatus(204);
             return;
         }
-        java.io.File f = new java.io.File(uploadDir + "/" + bug.getImagePath());
+        java.io.File f = new java.io.File(uploadDir + "/" + bi.getImagePath());
         if (!f.exists()) { response.setStatus(204); return; }
         response.setContentType("application/octet-stream");
-        response.setHeader("Content-Disposition", "attachment;filename=" + java.net.URLEncoder.encode(bug.getImageName(), "UTF-8"));
+        response.setHeader("Content-Disposition", "attachment;filename=" + java.net.URLEncoder.encode(bi.getImageName(), "UTF-8"));
         try (java.io.FileInputStream fis = new java.io.FileInputStream(f)) {
             org.springframework.util.FileCopyUtils.copy(fis, response.getOutputStream());
         }
     }
 
-    public void deleteImage(Long id) {
-        Bug bug = bugMapper.selectById(id);
-        if (bug == null) throw new BusinessException(404, "Bug不存在");
+    public void deleteImageById(Long bugId, Long imageId) {
+        BugImage bi = bugImageMapper.selectById(imageId);
+        if (bi == null || !bi.getBugId().equals(bugId)) throw new BusinessException(404, "图片不存在");
+        Bug bug = bugMapper.selectById(bugId);
         JwtUserDetails u = currentUser();
         if (!u.getUserId().equals(bug.getCreatorId()) && !"pm".equals(u.getRole()))
             throw new BusinessException(403, "无权限删除图片");
-        if (bug.getImagePath() != null) {
-            java.io.File f = new java.io.File(uploadDir + "/" + bug.getImagePath());
+        java.io.File f = new java.io.File(uploadDir + "/" + bi.getImagePath());
+        if (f.exists()) f.delete();
+        bugImageMapper.deleteById(imageId);
+    }
+
+    public void deleteAllImages(Long bugId) {
+        List<BugImage> images = bugImageMapper.selectList(
+                new LambdaQueryWrapper<BugImage>().eq(BugImage::getBugId, bugId));
+        for (BugImage bi : images) {
+            java.io.File f = new java.io.File(uploadDir + "/" + bi.getImagePath());
             if (f.exists()) f.delete();
         }
-        bug.setImagePath(null); bug.setImageName(null); bug.setImageSize(null);
-        bugMapper.updateById(bug);
+        bugImageMapper.delete(new LambdaQueryWrapper<BugImage>().eq(BugImage::getBugId, bugId));
     }
 }

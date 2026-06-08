@@ -97,22 +97,32 @@ public class BugController {
     }
 
     /**
-     * 下载Bug截图
+     * 获取Bug所有截图列表
      */
-    @Operation(summary = "下载Bug图片")
-    @GetMapping("/{id}/image")
-    public void downloadImage(@PathVariable Long id, HttpServletResponse response) throws IOException {
-        bugService.downloadImage(id, response);
+    @Operation(summary = "获取Bug所有截图列表")
+    @GetMapping("/{id}/images")
+    public Result<List<BugImage>> listImages(@PathVariable Long id) {
+        return Result.ok(bugService.listImages(id));
     }
 
     /**
-     * 删除Bug截图
+     * 下载指定Bug截图
      */
-    @Operation(summary = "删除Bug图片")
-    @DeleteMapping("/{id}/image")
+    @Operation(summary = "下载指定Bug截图")
+    @GetMapping("/{id}/images/{imageId}")
+    public void downloadImage(@PathVariable Long id, @PathVariable Long imageId,
+                              HttpServletResponse response) throws IOException {
+        bugService.downloadImage(id, imageId, response);
+    }
+
+    /**
+     * 删除指定Bug截图
+     */
+    @Operation(summary = "删除指定Bug截图")
+    @DeleteMapping("/{id}/images/{imageId}")
     @PreAuthorize("hasAnyRole('TESTER','PM')")
-    public Result<Map<String, String>> deleteImage(@PathVariable Long id) {
-        bugService.deleteImage(id);
+    public Result<Map<String, String>> deleteImage(@PathVariable Long id, @PathVariable Long imageId) {
+        bugService.deleteImageById(id, imageId);
         return Result.ok(Map.of("message", "image deleted"));
     }
 }

@@ -9,9 +9,6 @@ CREATE TABLE IF NOT EXISTS users (
     account     VARCHAR(255),
     password    VARCHAR(255) NOT NULL,
     role        VARCHAR(50)  NOT NULL,
-    wechat_id   VARCHAR(255),
-    dingtalk_id VARCHAR(255),
-    feishu_id   VARCHAR(255),
     email       VARCHAR(255),
     skills      VARCHAR(500),
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -91,13 +88,19 @@ CREATE TABLE IF NOT EXISTS bugs (
     creator_id     BIGINT       NOT NULL,
     assignee_id    BIGINT,
     remark         TEXT,
-    image_path     VARCHAR(500),
-    image_name     VARCHAR(255),
-    image_size     BIGINT,
     requirement_id BIGINT,
     test_type      VARCHAR(20)  DEFAULT 'integration',
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS bug_images (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    bug_id      BIGINT       NOT NULL,
+    image_path  VARCHAR(500) NOT NULL,
+    image_name  VARCHAR(255),
+    image_size  BIGINT,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS bug_status_histories (

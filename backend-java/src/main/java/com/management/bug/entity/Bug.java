@@ -43,12 +43,6 @@ public class Bug {
     private User assignee;
     /** 备注/处理说明 */
     private String remark;
-    /** 截图路径 */
-    private String imagePath;
-    /** 截图文件名 */
-    private String imageName;
-    /** 截图文件大小（字节） */
-    private Long imageSize;
     /** 关联需求ID */
     private Long requirementId;
     /** 测试类型（integration=集成测试, system=系统测试, acceptance=验收测试） */

@@ -74,10 +74,10 @@
             <n-select v-model:value="bugForm.assignee_id" :options="devOptions" placeholder="（可选）指派给" clearable filterable />
           </n-form-item>
           <n-form-item label="截图">
-            <n-upload :show-file-list="false" :custom-request="handleAttachUpload" accept="image/*">
+            <n-upload :show-file-list="true" :custom-request="handleAttachUpload" accept="image/*" multiple
+              :file-list="attachFiles" @remove="handleRemoveAttach">
               <n-button :loading="imageUploading">选择图片</n-button>
             </n-upload>
-            <span v-if="attachFileName" style="font-size:12px;color:#18a058;margin-left:8px">{{ attachFileName }}</span>
           </n-form-item>
         </n-form>
         <template #footer>
@@ -122,8 +122,8 @@ const users = ref([])
 const showCreateBug = ref(false)
 const bugForm = ref({ test_type: 'integration', requirement_id: null, assignee_id: null, title: '', description: '', severity: 'medium' })
 const bugSubmitting = ref(false)
-const imageFile = ref(null)
-const attachFileName = ref('')
+const imageFiles = ref([])
+const attachFiles = ref([])
 const imageUploading = ref(false)
 
 const testTypeOptions = [
@@ -167,14 +167,22 @@ async function loadUsers() {
 
 function openCreateBug() {
   bugForm.value = { test_type: 'integration', requirement_id: null, assignee_id: null, title: '', description: '', severity: 'medium' }
-  imageFile.value = null
-  attachFileName.value = ''
+  imageFiles.value = []
+  attachFiles.value = []
   showCreateBug.value = true
 }
 
 function handleAttachUpload({ file }) {
-  imageFile.value = file.file
-  attachFileName.value = file.name
+  imageFiles.value.push(file.file)
+  attachFiles.value.push({ id: file.file.name, name: file.name })
+  return { abort: () => {} }
+}
+
+function handleRemoveAttach({ file }) {
+  const idx = imageFiles.value.indexOf(file.file)
+  if (idx >= 0) imageFiles.value.splice(idx, 1)
+  const fi = attachFiles.value.findIndex(f => f.id === file.file.name)
+  if (fi >= 0) attachFiles.value.splice(fi, 1)
 }
 
 async function submitBug() {
@@ -193,8 +201,8 @@ async function submitBug() {
       payload.requirement_id = bugForm.value.requirement_id
     }
     const created = await createBug(payload)
-    if (imageFile.value) {
-      await uploadBugImage(created.id, imageFile.value)
+    for (const f of imageFiles.value) {
+      await uploadBugImage(created.id, f)
     }
     window.$message?.success('Bug 创建成功')
     showCreateBug.value = false
