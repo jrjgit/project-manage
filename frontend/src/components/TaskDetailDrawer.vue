@@ -352,8 +352,6 @@ async function submitBug() {
     if (bugImageFile.value) {
       await uploadBugImage(created.id, bugImageFile.value)
     }
-      await uploadBugImage(created.id, f)
-    }
     window.$message?.success('Bug 创建成功')
     showCreateBugModal.value = false
     emit('refresh')
