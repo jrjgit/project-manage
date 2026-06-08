@@ -254,20 +254,6 @@ async function confirmAction() {
   }
 }
 
-async function handleImageUpload({ file }) {
-  imageUploading.value = true
-  try {
-    await uploadBugImage(props.bugId, file.file)
-    window.$message.success('截图上传成功')
-    await loadImages()
-  } catch (e) {
-    console.error(e)
-  } finally {
-    imageUploading.value = false
-  }
-}
-}
-
 async function loadImages() {
   try {
     images.value = await getBugImages(props.bugId) || []
