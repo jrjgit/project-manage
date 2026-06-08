@@ -257,7 +257,8 @@
               <div class="dispatch-section-title">选择开发人员</div>
               <div class="dev-select-grid">
                 <div v-for="opt in projectDevOptions" :key="opt.value" class="dev-select-item" :class="{ selected: createTaskForm.developer_ids.includes(opt.value) }" @click="toggleDev(opt.value)">
-                  <span class="dev-select-name">{{ opt.label }}</span>
+                  <span class="dev-select-name">{{ opt.name }}</span>
+                  <span v-if="opt.suffix" class="dev-select-wl">{{ opt.suffix }}</span>
                 </div>
               </div>
               <div v-if="createTaskForm.developer_ids.length === 0" class="empty-hint">请选择开发人员</div>
@@ -392,10 +393,9 @@ const projectDevOptions = computed(() => {
   return users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => {
     const wl = userWorkloadMap.value[u.id] || {}
     const parts = []
-    if (wl.devCount) parts.push(`开发${wl.devCount}`)
-    if (wl.testCount) parts.push(`测试${wl.testCount}`)
-    const suffix = parts.length ? ` — ${parts.join(' · ')}` : ''
-    return { label: `${u.name}${suffix}`, value: u.id }
+    if (wl.devCount) parts.push(`开发任务：${wl.devCount}`)
+    if (wl.testCount) parts.push(`测试任务：${wl.testCount}`)
+    return { name: u.name, suffix: parts.join(' '), value: u.id }
   })
 })
 const userNameMap = computed(() => {
@@ -1457,13 +1457,13 @@ onMounted(() => {
 }
 
 .dev-select-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 8px;
 }
 
 .dev-select-item {
-  padding: 6px 14px;
+  padding: 6px 12px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   cursor: pointer;
@@ -1472,6 +1472,17 @@ onMounted(() => {
   background: white;
   transition: all 0.15s;
   user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dev-select-name {
+  font-weight: 600;
+}
+.dev-select-wl {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
 }
 
 .dev-select-item:hover {
@@ -1483,6 +1494,9 @@ onMounted(() => {
   border-color: #6366f1;
   background: #6366f1;
   color: white;
+}
+.dev-select-item.selected .dev-select-wl {
+  color: rgba(255,255,255,0.7);
 }
 
 .dispatch-layout {
@@ -1507,7 +1521,7 @@ onMounted(() => {
   background: #e2e8f0;
 }
 .dispatch-left {
-  width: 220px;
+  width: 280px;
   flex-shrink: 0;
 }
 .dispatch-right {
