@@ -33,15 +33,17 @@
               </div>
             </div>
             <div v-if="filteredTasks.length === 0" class="empty-state">暂无待测试任务</div>
-            <div v-for="t in filteredTasks" :key="t.id" class="task-item" @click="onTaskClick(t.id)">
-              <div class="task-item-top">
-                <span class="task-item-title">{{ t.title }}</span>
-                <n-tag v-if="t.terminal" size="tiny" round>{{ skillsMap[t.terminal] || t.terminal }}</n-tag>
-              </div>
-              <div class="task-item-meta">
-                <span class="task-meta">{{ t.reqNumber || '-' }}</span>
-                <span class="task-meta">{{ t.system || '-' }}</span>
-                <span class="task-meta">{{ t.assignee || '-' }}</span>
+            <div class="task-list-scroll">
+              <div v-for="t in filteredTasks" :key="t.id" class="task-item" @click="onTaskClick(t.id)">
+                <div class="task-item-top">
+                  <span class="task-item-title">{{ t.title }}</span>
+                  <n-tag v-if="t.terminal" size="tiny" round>{{ skillsMap[t.terminal] || t.terminal }}</n-tag>
+                </div>
+                <div class="task-item-meta">
+                  <span class="task-meta">{{ t.reqNumber || '-' }}</span>
+                  <span class="task-meta">{{ t.system || '-' }}</span>
+                  <span class="task-meta">{{ t.assignee || '-' }}</span>
+                </div>
               </div>
             </div>
           </section>
@@ -51,13 +53,15 @@
           <section class="section-card">
             <div class="section-header"><h3>待验证 BUG（{{ pendingVerifyBugs.length }}）</h3></div>
             <div v-if="pendingVerifyBugs.length === 0" class="empty-state">暂无待验证 Bug</div>
-            <div v-for="bug in pendingVerifyBugs" :key="bug.id" class="bug-item" @click="onBugClick(bug)">
-              <div class="bug-item-top">
-                <span class="bug-title">{{ bug.title }}</span>
-                <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
-              </div>
-              <div v-if="bug.taskTitle" class="bug-item-meta">
-                <span class="bug-task">关联: {{ bug.taskTitle }}</span>
+            <div class="task-list-scroll">
+              <div v-for="bug in pendingVerifyBugs" :key="bug.id" class="bug-item" @click="onBugClick(bug)">
+                <div class="bug-item-top">
+                  <span class="bug-title">{{ bug.title }}</span>
+                  <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
+                </div>
+                <div v-if="bug.taskTitle" class="bug-item-meta">
+                  <span class="bug-task">关联: {{ bug.taskTitle }}</span>
+                </div>
               </div>
             </div>
           </section>
@@ -310,7 +314,7 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers(); loadDictionaries(
 .section-card { background:white;border-radius:16px;border:1px solid #e2e8f0;padding:16px; }
 .section-header { margin-bottom:12px; }
 .section-header h3 { margin:0;font-size:15px;font-weight:700;color:#0f172a; }
-.left-panel .section-card:first-child { max-height: calc(100vh - 280px); overflow-y: auto; }
+.task-list-scroll { max-height: calc(100vh - 320px); overflow-y: auto; }
 .task-item { padding:10px 12px;border:1px solid #f1f5f9;border-radius:10px;margin-bottom:6px;cursor:pointer;transition:background .12s; }
 .task-item:hover { background:#f1f5f9; }
 .task-item-top { display:flex;align-items:center;justify-content:space-between;gap:8px; }
