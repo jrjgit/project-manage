@@ -19,6 +19,7 @@ public class CreateBugRequest {
     private Long assigneeId;
     /** 测试类型 */
     private String testType;
+    /** 预期结果 */
     private String expectedResult;
     /** 关联需求ID */
     private Long requirementId;
