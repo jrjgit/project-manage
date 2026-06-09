@@ -300,6 +300,14 @@ public class DashboardService {
         m.put("deadline", t.getDeadline() != null ? t.getDeadline().toString() : null);
         m.put("progress", t.getProgress());
         m.put("testerId", t.getTesterId());
+        m.put("terminal", t.getTerminal());
+        if (t.getRequirementId() != null) {
+            Requirement r = requirementMapper.selectById(t.getRequirementId());
+            if (r != null) {
+                m.put("reqNumber", r.getRequirementId());
+                m.put("system", r.getSystem());
+            }
+        }
         if (t.getDeadline() != null) {
             m.put("overdueDays", !"closed".equals(t.getStatus()) && t.getDeadline().isBefore(LocalDateTime.now())
                     ? LocalDateTime.now().toLocalDate().toEpochDay() - t.getDeadline().toLocalDate().toEpochDay() : 0);

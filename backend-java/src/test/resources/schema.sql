@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS bugs (
     remark         TEXT,
     requirement_id BIGINT,
     test_type      VARCHAR(20)  DEFAULT 'integration',
+    expected_result TEXT,
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

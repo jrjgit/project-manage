@@ -37,6 +37,7 @@
             <div class="bug-item-meta">
               <n-tag size="tiny" :type="bugStatusMeta[bug.status]?.tone || 'default'">{{ bugStatusMeta[bug.status]?.label || bug.status }}</n-tag>
               <span v-if="bug.taskTitle" class="bug-task">关联: {{ bug.taskTitle }}</span>
+              <span v-if="bug.expected_result" class="bug-expected">预期: {{ bug.expected_result.substring(0, 30) }}{{ bug.expected_result.length > 30 ? '...' : '' }}</span>
             </div>
           </div>
         </section>
@@ -165,5 +166,6 @@ onMounted(loadData)
 .bug-title { font-size: 13px; font-weight: 500; color: #0f172a; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bug-item-meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .bug-task { font-size: 11px; color: #94a3b8; }
+.bug-expected { font-size: 11px; color: #6366f1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
 .empty-state { text-align: center; padding: 24px; color: #94a3b8; font-size: 13px; }
 </style>

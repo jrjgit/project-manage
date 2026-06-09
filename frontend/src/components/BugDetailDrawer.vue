@@ -1,5 +1,5 @@
 <template>
-  <n-drawer v-model:show="show" :width="560" placement="right">
+  <n-drawer v-model:show="show" :width="780" placement="right">
     <n-drawer-content v-if="bug" closable>
       <template #header>
         <div class="drawer-header">
@@ -50,8 +50,12 @@
           </div>
 
           <div class="section-card">
-            <div class="section-title">说明</div>
+            <div class="section-title">实际结果</div>
             <div class="description-block">{{ bug.description || '暂无描述' }}</div>
+          </div>
+          <div class="section-card">
+            <div class="section-title">预期结果</div>
+            <div class="description-block">{{ bug.expected_result || '暂无描述' }}</div>
           </div>
 
           <div class="section-card">

@@ -24,12 +24,23 @@
       <div class="main-split">
         <div class="left-panel">
           <section class="section-card">
-            <div class="section-header"><h3>待测试任务（{{ tasks.length }}）</h3></div>
-            <div v-if="tasks.length === 0" class="empty-state">暂无待测试任务</div>
-            <div v-for="t in tasks" :key="t.id" class="task-item" @click="onTaskClick(t.id)">
+            <div class="section-header">
+              <h3>待测试任务（{{ filteredTasks.length }}）</h3>
+              <div class="filter-row">
+                <n-select v-model:value="filterTerminal" :options="terminalOptions" placeholder="全部端" clearable style="width:120px" />
+                <n-input v-model:value="filterRequirement" placeholder="需求编号" clearable style="width:140px" />
+                <n-input v-model:value="filterSystem" placeholder="系统" clearable style="width:120px" />
+              </div>
+            </div>
+            <div v-if="filteredTasks.length === 0" class="empty-state">暂无待测试任务</div>
+            <div v-for="t in filteredTasks" :key="t.id" class="task-item" @click="onTaskClick(t.id)">
               <div class="task-item-top">
                 <span class="task-item-title">{{ t.title }}</span>
-                <span class="task-item-assignee">{{ t.assignee }}</span>
+                <n-tag v-if="t.terminal" size="tiny" round>{{ t.terminal }}</n-tag>
+              </div>
+              <div class="task-item-meta">
+                <span class="task-meta">{{ t.reqNumber || '-' }}</span>
+                <span class="task-meta">{{ t.assignee || '-' }}</span>
               </div>
             </div>
           </section>
@@ -64,8 +75,11 @@
           <n-form-item label="标题" path="title">
             <n-input v-model:value="bugForm.title" placeholder="Bug标题" />
           </n-form-item>
-          <n-form-item label="描述">
-            <n-input v-model:value="bugForm.description" type="textarea" placeholder="描述 Bug 现象" />
+          <n-form-item label="实际结果">
+            <n-input v-model:value="bugForm.description" type="textarea" placeholder="描述实际出现的现象" />
+          </n-form-item>
+          <n-form-item label="预期结果">
+            <n-input v-model:value="bugForm.expected_result" type="textarea" placeholder="描述预期的正常行为" />
           </n-form-item>
           <n-form-item label="严重程度">
             <n-select v-model:value="bugForm.severity" :options="severityOptions" />
@@ -125,12 +139,31 @@ const users = ref([])
 
 // Create Bug
 const showCreateBug = ref(false)
-const bugForm = ref({ test_type: 'integration', requirement_id: null, assignee_id: null, title: '', description: '', severity: 'medium' })
+const bugForm = ref({ test_type: 'integration', requirement_id: null, assignee_id: null, title: '', description: '', expected_result: '', severity: 'medium' })
 const bugSubmitting = ref(false)
 const imageFiles = ref([])
 const attachFileNames = ref([])
 const previewUrls = ref([])
 const imageUploading = ref(false)
+
+// Filters
+const filterTerminal = ref('')
+const filterRequirement = ref('')
+const filterSystem = ref('')
+
+const terminalOptions = computed(() => {
+  const set = new Set(tasks.value.map(t => t.terminal).filter(Boolean))
+  return [...set].map(v => ({ label: v, value: v }))
+})
+
+const filteredTasks = computed(() => {
+  return tasks.value.filter(t => {
+    if (filterTerminal.value && t.terminal !== filterTerminal.value) return false
+    if (filterRequirement.value && !(t.reqNumber || '').includes(filterRequirement.value)) return false
+    if (filterSystem.value && !(t.system || '').includes(filterSystem.value)) return false
+    return true
+  })
+})
 
 const testTypeOptions = [
   { label: '综合测试', value: 'integration' },
@@ -172,6 +205,10 @@ async function loadUsers() {
 }
 
 function handleAttachUpload({ file, onFinish }) {
+  if (file.file && imageFiles.value.some(f => f === file.file || f.name === file.file.name && f.size === file.file.size)) {
+    onFinish?.()
+    return { abort: () => {} }
+  }
   imageFiles.value.push(file.file)
   attachFileNames.value.push(file.name)
   previewUrls.value.push(URL.createObjectURL(file.file))
@@ -187,7 +224,7 @@ function removeImage(idx) {
 }
 
 function openCreateBug() {
-  bugForm.value = { test_type: 'integration', requirement_id: null, assignee_id: null, title: '', description: '', severity: 'medium' }
+  bugForm.value = { test_type: 'integration', requirement_id: null, assignee_id: null, title: '', description: '', expected_result: '', severity: 'medium' }
   for (const url of previewUrls.value) URL.revokeObjectURL(url)
   imageFiles.value = []
   attachFileNames.value = []
@@ -202,6 +239,7 @@ async function submitBug() {
     const payload = {
       title: bugForm.value.title,
       description: bugForm.value.description || undefined,
+      expected_result: bugForm.value.expected_result || undefined,
       severity: bugForm.value.severity,
       test_type: bugForm.value.test_type,
       task_id: undefined,
@@ -274,4 +312,7 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers() })
 .preview-item { position: relative; width: 80px; height: 80px; }
 .preview-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
 .preview-remove { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0; font-size: 12px; border-radius: 50%; }
+.filter-row { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+.task-item-meta { display: flex; gap: 12px; margin-top: 4px; font-size: 11px; color: #94a3b8; }
+.task-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

@@ -109,6 +109,7 @@ public class BugService {
         bug.setCreatorId(userId);
         bug.setAssigneeId(req.getAssigneeId());
         bug.setTestType(req.getTestType() != null ? req.getTestType() : "integration");
+        bug.setExpectedResult(req.getExpectedResult());
         // 优先用请求中的 requirementId，其次从关联任务获取
         if (req.getRequirementId() != null) {
             bug.setRequirementId(req.getRequirementId());
@@ -165,6 +166,7 @@ public class BugService {
         }
         if (req.getRemark() != null) bug.setRemark(req.getRemark());
         if (req.getTestType() != null) bug.setTestType(req.getTestType());
+        if (req.getExpectedResult() != null) bug.setExpectedResult(req.getExpectedResult());
         bugMapper.updateById(bug);
 
         // assignee_id 变化时通知新指派人

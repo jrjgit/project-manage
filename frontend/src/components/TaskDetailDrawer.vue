@@ -1,5 +1,5 @@
 <template>
-  <n-drawer v-model:show="show" :width="760" placement="right">
+  <n-drawer v-model:show="show" :width="920" placement="right">
     <n-drawer-content v-if="task" closable>
       <template #header>
         <div class="drawer-header">
@@ -144,8 +144,11 @@
       <n-form-item label="标题" path="title">
         <n-input v-model:value="bugForm.title" placeholder="Bug标题" />
       </n-form-item>
-      <n-form-item label="描述">
-        <n-input v-model:value="bugForm.description" type="textarea" placeholder="描述 Bug 现象" />
+      <n-form-item label="实际结果">
+        <n-input v-model:value="bugForm.description" type="textarea" placeholder="描述实际出现的现象" />
+      </n-form-item>
+      <n-form-item label="预期结果">
+        <n-input v-model:value="bugForm.expected_result" type="textarea" placeholder="描述预期的正常行为" />
       </n-form-item>
       <n-form-item label="严重程度">
         <n-select v-model:value="bugForm.severity" :options="severityOptions" />
@@ -201,7 +204,7 @@ const taskNotFound = ref(false)
 
 // 创建 Bug 弹窗
 const showCreateBugModal = ref(false)
-const bugForm = ref({ title: '', description: '', severity: 'medium' })
+const bugForm = ref({ title: '', description: '', expected_result: '', severity: 'medium' })
 const bugImageFiles = ref([])
 const bugPreviewUrls = ref([])
 const bugSubmitting = ref(false)
@@ -328,6 +331,7 @@ function handleCreateBug() {
   bugForm.value = {
     title: task.value.title,
     description: '',
+    expected_result: '',
     severity: 'medium'
   }
   for (const url of bugPreviewUrls.value) URL.revokeObjectURL(url)
@@ -356,6 +360,7 @@ async function submitBug() {
     const payload = {
       title: bugForm.value.title,
       description: bugForm.value.description || undefined,
+      expected_result: bugForm.value.expected_result || undefined,
       severity: bugForm.value.severity,
       task_id: props.taskId,
       assignee_id: task.value?.assignee_id

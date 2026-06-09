@@ -20,4 +20,5 @@ public class UpdateBugRequest {
     private String remark;
     /** 测试类型 */
     private String testType;
+    private String expectedResult;
 }

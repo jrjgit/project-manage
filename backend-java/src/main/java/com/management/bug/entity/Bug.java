@@ -47,6 +47,8 @@ public class Bug {
     private Long requirementId;
     /** 测试类型（integration=集成测试, system=系统测试, acceptance=验收测试） */
     private String testType;
+    /** 预期结果 */
+    private String expectedResult;
     /** 创建时间 */
     private LocalDateTime createdAt;
     /** 更新时间 */
