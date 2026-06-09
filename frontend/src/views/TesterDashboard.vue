@@ -36,10 +36,11 @@
             <div v-for="t in filteredTasks" :key="t.id" class="task-item" @click="onTaskClick(t.id)">
               <div class="task-item-top">
                 <span class="task-item-title">{{ t.title }}</span>
-                <n-tag v-if="t.terminal" size="tiny" round>{{ t.terminal }}</n-tag>
+                <n-tag v-if="t.terminal" size="tiny" round>{{ skillsMap[t.terminal] || t.terminal }}</n-tag>
               </div>
               <div class="task-item-meta">
                 <span class="task-meta">{{ t.reqNumber || '-' }}</span>
+                <span class="task-meta">{{ t.system || '-' }}</span>
                 <span class="task-meta">{{ t.assignee || '-' }}</span>
               </div>
             </div>
@@ -119,6 +120,7 @@ import { useAuthStore } from '@/store/useAuthStore'
 import { getTesterDashboard } from '@/api/statistics'
 import { createBug, uploadBugImage } from '@/api/bugs'
 import { getRequirements } from '@/api/requirements'
+import { getDictionaries } from '@/api/dictionaries'
 import { getUsers } from '@/api/users'
 import { severityMeta } from '@/constants/statusMeta'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
@@ -129,6 +131,7 @@ import { NTag, NButton, NModal, NForm, NFormItem, NInput, NSelect, NUpload, NSpa
 const authStore = useAuthStore()
 
 const dashData = ref({})
+const skillsMap = ref({})
 const showTaskDetail = ref(false)
 const selectedTaskId = ref(null)
 const showBugDetail = ref(false)
@@ -153,7 +156,7 @@ const filterSystem = ref('')
 
 const terminalOptions = computed(() => {
   const set = new Set(tasks.value.map(t => t.terminal).filter(Boolean))
-  return [...set].map(v => ({ label: v, value: v }))
+  return [...set].map(v => ({ label: skillsMap.value[v] || v, value: v }))
 })
 
 const filteredTasks = computed(() => {
@@ -259,6 +262,17 @@ async function submitBug() {
   bugSubmitting.value = false
 }
 
+async function loadDictionaries() {
+  try {
+    const data = await getDictionaries() || []
+    const map = {}
+    for (const d of data) {
+      if (d.dict_type === 'skill') map[d.dict_key] = d.dict_value
+    }
+    skillsMap.value = map
+  } catch (e) { console.error(e) }
+}
+
 function onTaskClick(taskId) {
   selectedTaskId.value = taskId
   showTaskDetail.value = true
@@ -269,7 +283,7 @@ function onBugClick(bug) {
   showBugDetail.value = true
 }
 
-onMounted(() => { loadData(); loadRequirements(); loadUsers() })
+onMounted(() => { loadData(); loadRequirements(); loadUsers(); loadDictionaries() })
 </script>
 
 <style scoped>
