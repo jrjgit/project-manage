@@ -310,6 +310,7 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers(); loadDictionaries(
 .section-card { background:white;border-radius:16px;border:1px solid #e2e8f0;padding:16px; }
 .section-header { margin-bottom:12px; }
 .section-header h3 { margin:0;font-size:15px;font-weight:700;color:#0f172a; }
+.left-panel .section-card:first-child { max-height: calc(100vh - 280px); overflow-y: auto; }
 .task-item { padding:10px 12px;border:1px solid #f1f5f9;border-radius:10px;margin-bottom:6px;cursor:pointer;transition:background .12s; }
 .task-item:hover { background:#f1f5f9; }
 .task-item-top { display:flex;align-items:center;justify-content:space-between;gap:8px; }
