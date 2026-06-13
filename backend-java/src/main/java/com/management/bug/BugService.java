@@ -329,6 +329,9 @@ public class BugService {
         java.io.File f = new java.io.File(uploadDir + "/" + bi.getImagePath());
         if (f.exists()) f.delete();
         bugImageMapper.deleteById(imageId);
+        // 删除空目录
+        java.io.File dir = f.getParentFile();
+        if (dir.isDirectory() && dir.list().length == 0) dir.delete();
     }
 
     public void deleteAllImages(Long bugId) {
@@ -337,6 +340,8 @@ public class BugService {
         for (BugImage bi : images) {
             java.io.File f = new java.io.File(uploadDir + "/" + bi.getImagePath());
             if (f.exists()) f.delete();
+            java.io.File dir = f.getParentFile();
+            if (dir.isDirectory() && dir.list().length == 0) dir.delete();
         }
         bugImageMapper.delete(new LambdaQueryWrapper<BugImage>().eq(BugImage::getBugId, bugId));
     }

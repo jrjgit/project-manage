@@ -260,11 +260,12 @@ public class DashboardService {
                 new LambdaQueryWrapper<Task>().eq(Task::getStatus, "testing"));
         for (Task t : allTestingTasks) fillTaskUser(t);
 
-        // 待验证Bug：fixed/not_a_bug + 当前用户创建的非closed Bug
+        // 待验证Bug：fixed/not_a_bug（需验证的）+ 当前用户创建的非unfixed/closed的Bug
         List<Bug> pendingVerifyBugs = bugMapper.selectList(
                 new LambdaQueryWrapper<Bug>()
                         .and(w -> w.in(Bug::getStatus, "fixed", "not_a_bug")
-                                .or(x -> x.eq(Bug::getCreatorId, userId).ne(Bug::getStatus, "closed")))
+                                .or(x -> x.eq(Bug::getCreatorId, userId)
+                                        .notIn(Bug::getStatus, "unfixed", "closed")))
                         .orderByDesc(Bug::getUpdatedAt));
         for (Bug b : pendingVerifyBugs) {
             if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
