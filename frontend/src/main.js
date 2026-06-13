@@ -3,7 +3,6 @@ import { createPinia } from 'pinia'
 import { createDiscreteApi, zhCN, dateZhCN } from 'naive-ui'
 import App from './App.vue'
 import router from './router'
-import './assets/tailwind.css'
 
 const { message, dialog, notification } = createDiscreteApi(
   ['message', 'dialog', 'notification'],
