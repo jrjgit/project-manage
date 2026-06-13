@@ -126,7 +126,7 @@ onMounted(loadData)
 </script>
 
 <style scoped>
-.developer-page { display: flex; flex-direction: column; gap: 16px; }
+.developer-page { display: flex; flex-direction: column; gap: 16px; flex: 1; min-height: 0; overflow: hidden; }
 .hero-card {
   display: flex; align-items: center; justify-content: space-between; gap: 20px;
   padding: 22px 24px; border-radius: 18px;
