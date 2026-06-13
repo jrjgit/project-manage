@@ -13,6 +13,7 @@
         <div class="hero-stats">
           <div class="stat-pill"><span class="stat-num" style="color:#2563eb">{{ stats.totalTesting }}</span><span class="stat-label">待测试</span></div>
           <div class="stat-pill"><span class="stat-num" style="color:#d03050">{{ stats.pendingVerify }}</span><span class="stat-label">待验证 Bug</span></div>
+          <div class="stat-pill"><span class="stat-num" style="color:#f59e0b">{{ stats.unfixed }}</span><span class="stat-label">未修复 Bug</span></div>
         </div>
       </section>
 
@@ -50,6 +51,21 @@
         </div>
 
         <div class="right-panel">
+          <section class="section-card">
+            <div class="section-header"><h3>未修复 BUG（{{ unfixedBugs.length }}）</h3></div>
+            <div v-if="unfixedBugs.length === 0" class="empty-state">暂无未修复 Bug</div>
+            <div class="task-list-scroll">
+              <div v-for="bug in unfixedBugs" :key="bug.id" class="bug-item" @click="onBugClick(bug)">
+                <div class="bug-item-top">
+                  <span class="bug-title">{{ bug.title }}</span>
+                  <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
+                </div>
+                <div v-if="bug.taskTitle" class="bug-item-meta">
+                  <span class="bug-task">关联: {{ bug.taskTitle }}</span>
+                </div>
+              </div>
+            </div>
+          </section>
           <section class="section-card">
             <div class="section-header"><h3>待验证 BUG（{{ pendingVerifyBugs.length }}）</h3></div>
             <div v-if="pendingVerifyBugs.length === 0" class="empty-state">暂无待验证 Bug</div>
@@ -198,9 +214,10 @@ const devOptions = computed(() =>
   users.value.filter(u => ['dev', 'dev_lead'].includes(u.role)).map(u => ({ label: u.name, value: u.id }))
 )
 
-const stats = computed(() => dashData.value.stats || { totalTesting: 0, pendingVerify: 0 })
+const stats = computed(() => dashData.value.stats || { totalTesting: 0, pendingVerify: 0, unfixed: 0 })
 const tasks = computed(() => dashData.value.tasks || [])
 const pendingVerifyBugs = computed(() => dashData.value.pendingVerifyBugs || [])
+const unfixedBugs = computed(() => dashData.value.unfixedBugs || [])
 
 async function loadData() {
   try { dashData.value = await getTesterDashboard() } catch (e) { console.error(e) }

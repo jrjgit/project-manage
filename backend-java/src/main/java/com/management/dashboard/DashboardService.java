@@ -270,17 +270,40 @@ public class DashboardService {
             if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
         }
 
+        // 我创建的未修复Bug
+        List<Bug> unfixedBugs = bugMapper.selectList(
+                new LambdaQueryWrapper<Bug>()
+                        .eq(Bug::getCreatorId, userId)
+                        .eq(Bug::getStatus, "unfixed")
+                        .orderByDesc(Bug::getUpdatedAt));
+        for (Bug b : unfixedBugs) {
+            if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
+        }
+
         long totalTesting = allTestingTasks.size();
         long pendingVerify = pendingVerifyBugs.size();
+        long unfixedCount = unfixedBugs.size();
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("stats", Map.of("totalTesting", totalTesting, "pendingVerify", pendingVerify));
+        result.put("stats", Map.of("totalTesting", totalTesting, "pendingVerify", pendingVerify, "unfixed", unfixedCount));
         result.put("tasks", allTestingTasks.stream().map(this::taskToMap).collect(Collectors.toList()));
         result.put("pendingVerifyBugs", pendingVerifyBugs.stream().map(b -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", b.getId());
             m.put("title", b.getTitle());
             m.put("severity", b.getSeverity());
+            if (b.getTaskId() != null) {
+                Task t = taskMapper.selectById(b.getTaskId());
+                m.put("taskTitle", t != null ? t.getTitle() : null);
+            }
+            return m;
+        }).collect(Collectors.toList()));
+        result.put("unfixedBugs", unfixedBugs.stream().map(b -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", b.getId());
+            m.put("title", b.getTitle());
+            m.put("severity", b.getSeverity());
+            m.put("status", b.getStatus());
             if (b.getTaskId() != null) {
                 Task t = taskMapper.selectById(b.getTaskId());
                 m.put("taskTitle", t != null ? t.getTitle() : null);
