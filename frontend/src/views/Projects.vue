@@ -20,11 +20,12 @@
           :bordered="false"
           :single-line="false"
           striped
+          :scroll-x="840"
         />
       </section>
     </div>
 
-    <n-modal v-model:show="showModal" preset="card" style="width: 560px" :title="editingId ? '编辑项目' : '新增项目'" :mask-closable="false">
+    <n-modal v-model:show="showModal" preset="card" style="width: min(92vw, 560px)" :title="editingId ? '编辑项目' : '新增项目'" :mask-closable="false">
       <n-form :model="form" label-placement="top">
         <n-form-item label="项目名称" path="name" :rule="{ required: true, message: '请输入项目名称' }">
           <n-input v-model:value="form.name" placeholder="输入项目名称" />
@@ -166,6 +167,6 @@ onMounted(() => loadData())
 
 <style scoped>
 .projects-page { display: flex; flex-direction: column; gap: 20px; }
-.section-card { background: white; border-radius: 20px; border: 1px solid #e2e8f0; padding: 22px; }
+.section-card { background: white; border-radius: 20px; border: 1px solid #e2e8f0; padding: 22px; overflow-x: auto; }
 .action-btn { border-radius: 10px; font-weight: 500; }
 </style>

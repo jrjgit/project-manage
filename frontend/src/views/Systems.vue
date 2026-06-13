@@ -20,11 +20,12 @@
           :bordered="false"
           :single-line="false"
           striped
+          scroll-x="1160"
         />
       </section>
     </div>
 
-    <n-modal v-model:show="showModal" preset="card" style="width: 520px" :title="editingId ? '编辑系统' : '新增系统'" :mask-closable="false">
+    <n-modal v-model:show="showModal" preset="card" style="width: min(92vw, 520px)" :title="editingId ? '编辑系统' : '新增系统'" :mask-closable="false">
       <n-form :model="form" label-placement="top">
         <n-form-item label="系统名称" path="name" :rule="{ required: true, message: '请输入系统名称' }">
           <n-input v-model:value="form.name" placeholder="输入系统名称" />
@@ -135,6 +136,6 @@ onMounted(() => loadData())
 
 <style scoped>
 .systems-page { display: flex; flex-direction: column; gap: 20px; }
-.section-card { background: white; border-radius: 20px; border: 1px solid #e2e8f0; padding: 22px; }
+.section-card { background: white; border-radius: 20px; border: 1px solid #e2e8f0; padding: 22px; overflow-x: auto; }
 .action-btn { border-radius: 10px; font-weight: 500; }
 </style>

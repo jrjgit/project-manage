@@ -38,12 +38,13 @@
           :bordered="false"
           :single-line="false"
           striped
+          scroll-x="710"
         />
       </section>
     </div>
 
     <!-- Create / Edit Modal -->
-    <n-modal v-model:show="showModal" preset="card" style="width: 480px" :title="isEditing ? '编辑字典' : '新建字典'" :mask-closable="false">
+    <n-modal v-model:show="showModal" preset="card" style="width: min(92vw, 480px)" :title="isEditing ? '编辑字典' : '新建字典'" :mask-closable="false">
       <n-form :model="form" label-placement="top">
         <n-form-item label="字典类型" path="dictType" :rule="{ required: true, message: '请选择字典类型' }">
           <n-select v-model:value="form.dictType" :options="typeOptions" placeholder="选择字典类型" />
@@ -261,10 +262,18 @@ onMounted(loadData)
   gap: 10px;
 }
 
+@media (max-width: 768px) {
+  .toolbar-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 .section-card {
   background: white;
   border-radius: 18px;
   border: 1px solid #e2e8f0;
   padding: 16px;
+  overflow-x: auto;
 }
 </style>

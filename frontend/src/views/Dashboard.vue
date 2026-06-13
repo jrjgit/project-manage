@@ -257,7 +257,7 @@ onMounted(loadData)
 .hero-kicker { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 8px; }
 .hero-title { margin: 0; font-size: 24px; font-weight: 700; }
 .hero-subtitle { margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,0.75); }
-.hero-stats { display: flex; gap: 12px; align-items: flex-start; }
+.hero-stats { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
 .stat-pill { min-width: 80px; text-align: center; padding: 12px 14px; background: rgba(255,255,255,0.08); border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); }
 .stat-value { display: block; font-size: 26px; font-weight: 700; }
 .stat-label { display: block; margin-top: 2px; font-size: 11px; color: rgba(255,255,255,0.7); }
@@ -284,7 +284,7 @@ onMounted(loadData)
 .compact-left { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .compact-right { display: flex; gap: 6px; flex-shrink: 0; }
 .workload-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-.workload-item { padding: 12px 16px; background: #f8fafc; border-radius: 10px; min-width: 180px; }
+.workload-item { padding: 12px 16px; background: #f8fafc; border-radius: 10px; min-width: 180px; flex: 1; }
 .wl-name { display: block; font-size: 14px; font-weight: 600; color: #0f172a; }
 .wl-count { display: block; margin-top: 4px; font-size: 12px; color: #64748b; }
 .empty-state { padding: 20px; text-align: center; font-size: 13px; color: #94a3b8; }

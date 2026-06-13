@@ -259,4 +259,19 @@ onMounted(loadData)
 @media (max-width: 700px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .toolbar-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .stat-value {
+    font-size: 24px;
+  }
+  .chart-wrap {
+    padding: 4px;
+  }
+}
 </style>

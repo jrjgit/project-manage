@@ -124,44 +124,46 @@
           <h3>开发任务整体进度 <span style="font-size:14px;font-weight:700;color:#6366f1;margin-left:6px">{{ overallDevProgress }}%</span></h3>
           <n-button type="primary" ghost round size="small" @click="openTaskDispatch">任务派发/修改</n-button>
         </div>
-        <div v-if="tasks.length > 0">
-          <div class="task-table-header">
-            <span class="col-person">人员</span>
-            <span class="col-terminal">终端</span>
-            <span class="col-title">任务描述</span>
-            <span class="col-status">任务状态</span>
-            <span class="col-overdue">逾期天数</span>
-            <span class="col-progress">当前进度</span>
-            <span class="col-actions">操作</span>
-          </div>
-          <div v-for="t in tasks" :key="t.id" class="task-table-row">
-            <span class="col-person">{{ t.assignee?.name || userNameMap[t.assignee_id] || '-' }}</span>
-            <span class="col-terminal">{{ skillsMap[t.terminal] || t.terminal || '-' }}</span>
-            <span class="col-title" :title="t.title">{{ t.title }}</span>
-            <span class="col-status"><n-tag size="tiny" :type="taskStatusMeta[t.status]?.tone || 'default'">{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag></span>
-            <span class="col-overdue"><span v-if="calcOverdueDays(t.deadline) > 0" style="color:#d03050">{{ calcOverdueDays(t.deadline) }}天</span><span v-else style="color:#94a3b8">-</span></span>
-            <span class="col-progress"><span v-if="t.progress != null" :style="{fontSize:'14px',fontWeight:'700',color: t.progress >= 100 ? '#18a058' : '#6366f1'}">{{ t.progress }}%</span><span v-else style="color:#94a3b8">-</span></span>
-            <span class="col-actions">
-              <template v-if="transferringTaskId === t.id">
-                <n-select v-model:value="t.assignee_id" :options="devOptions" size="tiny" style="width:110px" filterable />
-                <n-button size="tiny" type="primary" @click="confirmTransfer(t)">确定</n-button>
-                <n-button size="tiny" @click="cancelTransfer">取消</n-button>
-              </template>
-              <template v-else>
-                <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="warning" @click="startTransfer(t)">转派</n-button>
-                <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteTask(t)">删除</n-button>
-                <n-button text size="tiny" type="primary" @click="openProgressHistory(t)">进度明细</n-button>
-                <n-button v-if="authStore.isPM && !t.iteration_id" text size="tiny" type="primary" @click="openTaskRelease(t)">发布</n-button>
-                <n-button v-if="authStore.isPM && t.iteration_id" text size="tiny" type="error" @click="removeTaskRelease(t)">取消发布</n-button>
-              </template>
-            </span>
+        <div v-if="tasks.length > 0" class="task-table-wrapper">
+          <div class="task-table-inner">
+            <div class="task-table-header">
+              <span class="col-person">人员</span>
+              <span class="col-terminal">终端</span>
+              <span class="col-title">任务描述</span>
+              <span class="col-status">任务状态</span>
+              <span class="col-overdue">逾期天数</span>
+              <span class="col-progress">当前进度</span>
+              <span class="col-actions">操作</span>
+            </div>
+            <div v-for="t in tasks" :key="t.id" class="task-table-row">
+              <span class="col-person">{{ t.assignee?.name || userNameMap[t.assignee_id] || '-' }}</span>
+              <span class="col-terminal">{{ skillsMap[t.terminal] || t.terminal || '-' }}</span>
+              <span class="col-title" :title="t.title">{{ t.title }}</span>
+              <span class="col-status"><n-tag size="tiny" :type="taskStatusMeta[t.status]?.tone || 'default'">{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag></span>
+              <span class="col-overdue"><span v-if="calcOverdueDays(t.deadline) > 0" style="color:#d03050">{{ calcOverdueDays(t.deadline) }}天</span><span v-else style="color:#94a3b8">-</span></span>
+              <span class="col-progress"><span v-if="t.progress != null" :style="{fontSize:'14px',fontWeight:'700',color: t.progress >= 100 ? '#18a058' : '#6366f1'}">{{ t.progress }}%</span><span v-else style="color:#94a3b8">-</span></span>
+              <span class="col-actions">
+                <template v-if="transferringTaskId === t.id">
+                  <n-select v-model:value="t.assignee_id" :options="devOptions" size="tiny" style="width:110px" filterable />
+                  <n-button size="tiny" type="primary" @click="confirmTransfer(t)">确定</n-button>
+                  <n-button size="tiny" @click="cancelTransfer">取消</n-button>
+                </template>
+                <template v-else>
+                  <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="warning" @click="startTransfer(t)">转派</n-button>
+                  <n-button v-if="authStore.isPM || authStore.isDevLead" text size="tiny" type="error" @click="handleDeleteTask(t)">删除</n-button>
+                  <n-button text size="tiny" type="primary" @click="openProgressHistory(t)">进度明细</n-button>
+                  <n-button v-if="authStore.isPM && !t.iteration_id" text size="tiny" type="primary" @click="openTaskRelease(t)">发布</n-button>
+                  <n-button v-if="authStore.isPM && t.iteration_id" text size="tiny" type="error" @click="removeTaskRelease(t)">取消发布</n-button>
+                </template>
+              </span>
+            </div>
           </div>
         </div>
         <div v-else class="empty-state">暂无任务</div>
       </section>
 
       <!-- Progress History Modal -->
-      <n-modal v-model:show="showProgressHistory" preset="card" style="width:500px" title="进度历史" :mask-closable="false">
+      <n-modal v-model:show="showProgressHistory" preset="card" style="width: min(92vw, 500px)" title="进度历史" :mask-closable="false">
         <div v-if="progressHistoryTask" style="margin-bottom:12px;font-size:13px;color:#64748b">
           任务：{{ progressHistoryTask.title }}（{{ progressHistoryTask.assignee?.name || userNameMap[progressHistoryTask.assignee_id] || '-' }}）
         </div>
@@ -183,7 +185,7 @@
       </n-modal>
 
       <!-- Task Release Modal -->
-      <n-modal v-model:show="showTaskRelease" preset="card" style="width:400px" title="选择发布迭代">
+      <n-modal v-model:show="showTaskRelease" preset="card" style="width: min(92vw, 400px)" title="选择发布迭代">
         <n-select v-model:value="selectedIterationId" :options="iterationOptions" placeholder="选择迭代" filterable />
         <template #footer>
           <n-space justify="end">
@@ -1427,6 +1429,15 @@ onMounted(() => {
   gap: 6px;
 }
 
+.task-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.task-table-inner {
+  min-width: 760px;
+}
+
 
 
 .info-label {
@@ -1453,6 +1464,46 @@ onMounted(() => {
 
   .bug-stat-grid {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .header-tags {
+    flex-wrap: wrap;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bug-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .document-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .preview-row-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .dispatch-select-inner {
+    flex-direction: column;
+  }
+
+  .dispatch-divider {
+    width: 100%;
+    height: 1px;
+  }
+
+  .dispatch-right {
+    width: 100%;
   }
 }
 

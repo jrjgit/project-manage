@@ -1,5 +1,5 @@
 <template>
-  <n-drawer v-model:show="show" :width="780" placement="right">
+  <n-drawer v-model:show="show" :width="windowWidth <= 768 ? '100%' : 780" placement="right">
     <n-drawer-content v-if="bug" closable>
       <template #header>
         <div class="drawer-header">
@@ -105,7 +105,7 @@
     </n-drawer-content>
   </n-drawer>
 
-  <n-modal v-model:show="showCommentModal" title="操作备注" preset="dialog">
+  <n-modal v-model:show="showCommentModal" title="操作备注" preset="dialog" style="width: min(92vw, 420px)">
     <n-input v-model:value="pendingComment" type="textarea" placeholder="请输入操作备注（可选）" />
     <template #action>
       <n-button @click="showCommentModal = false">取消</n-button>
@@ -115,7 +115,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getBug, getBugHistory, changeBugStatus, uploadBugImage, getBugImages, deleteBugImageById } from '@/api/bugs'
 import { bugStatusMeta, severityMeta } from '@/constants/statusMeta'
@@ -137,6 +137,12 @@ const props = defineProps({ bugId: Number })
 const emit = defineEmits(['refresh'])
 
 const authStore = useAuthStore()
+
+const windowWidth = ref(window.innerWidth)
+function onResize() { windowWidth.value = window.innerWidth }
+onMounted(() => window.addEventListener('resize', onResize))
+onUnmounted(() => window.removeEventListener('resize', onResize))
+
 const bug = ref(null)
 const histories = ref([])
 const actionLoading = ref(false)

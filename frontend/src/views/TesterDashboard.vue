@@ -28,8 +28,8 @@
               <h3>待测试任务（{{ filteredTasks.length }}）</h3>
               <div class="filter-row">
                 <n-select v-model:value="filterTerminal" :options="terminalOptions" placeholder="全部端" clearable style="width:120px" />
+                <n-select v-model:value="filterSystem" :options="systemOptions" placeholder="全部系统" clearable style="width:140px" />
                 <n-input v-model:value="filterRequirement" placeholder="需求编号" clearable style="width:140px" />
-                <n-input v-model:value="filterSystem" placeholder="系统" clearable style="width:120px" />
               </div>
             </div>
             <div v-if="filteredTasks.length === 0" class="empty-state">暂无待测试任务</div>
@@ -125,6 +125,7 @@ import { getTesterDashboard } from '@/api/statistics'
 import { createBug, uploadBugImage } from '@/api/bugs'
 import { getRequirements } from '@/api/requirements'
 import { getDictionaries } from '@/api/dictionaries'
+import { getSystems } from '@/api/systems'
 import { getUsers } from '@/api/users'
 import { severityMeta } from '@/constants/statusMeta'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
@@ -136,6 +137,7 @@ const authStore = useAuthStore()
 
 const dashData = ref({})
 const skillsMap = ref({})
+const systems = ref([])
 const showTaskDetail = ref(false)
 const selectedTaskId = ref(null)
 const showBugDetail = ref(false)
@@ -162,6 +164,10 @@ const terminalOptions = computed(() => {
   const set = new Set(tasks.value.map(t => t.terminal).filter(Boolean))
   return [...set].map(v => ({ label: skillsMap.value[v] || v, value: v }))
 })
+
+const systemOptions = computed(() =>
+  systems.value.map(s => ({ label: s.name, value: s.name }))
+)
 
 const filteredTasks = computed(() => {
   return tasks.value.filter(t => {
@@ -266,6 +272,10 @@ async function submitBug() {
   bugSubmitting.value = false
 }
 
+async function loadSystems() {
+  try { systems.value = await getSystems() || [] } catch (e) { console.error(e) }
+}
+
 async function loadDictionaries() {
   try {
     const data = await getDictionaries() || []
@@ -287,7 +297,7 @@ function onBugClick(bug) {
   showBugDetail.value = true
 }
 
-onMounted(() => { loadData(); loadRequirements(); loadUsers(); loadDictionaries() })
+onMounted(() => { loadData(); loadRequirements(); loadUsers(); loadSystems(); loadDictionaries() })
 </script>
 
 <style scoped>
@@ -312,9 +322,9 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers(); loadDictionaries(
 .left-panel { flex: 1; display: flex; flex-direction: column; gap: 16px; min-width: 300px; }
 .right-panel { flex: 1; min-width: 300px; }
 .section-card { background:white;border-radius:16px;border:1px solid #e2e8f0;padding:16px; }
-.section-header { margin-bottom:12px; }
+.section-header { margin-bottom:12px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .section-header h3 { margin:0;font-size:15px;font-weight:700;color:#0f172a; }
-.task-list-scroll { max-height: calc(100vh - 320px); overflow-y: auto; }
+.task-list-scroll { max-height: calc(100vh - 340px); overflow-y: auto; }
 .task-item { padding:10px 12px;border:1px solid #f1f5f9;border-radius:10px;margin-bottom:6px;cursor:pointer;transition:background .12s; }
 .task-item:hover { background:#f1f5f9; }
 .task-item-top { display:flex;align-items:center;justify-content:space-between;gap:8px; }
@@ -331,7 +341,17 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers(); loadDictionaries(
 .preview-item { position: relative; width: 80px; height: 80px; }
 .preview-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
 .preview-remove { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0; font-size: 12px; border-radius: 50%; }
-.filter-row { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+.filter-row { display: flex; gap: 8px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+.filter-row .n-select, .filter-row .n-input { flex: 1; min-width: 100px; }
 .task-item-meta { display: flex; gap: 12px; margin-top: 4px; font-size: 11px; color: #94a3b8; }
 .task-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 768px) {
+  .hero-card { flex-direction: column; align-items: flex-start; }
+  .section-header { flex-direction: column; align-items: flex-start; }
+  .filter-row { margin-left: 0; width: 100%; }
+  .filter-row .n-select, .filter-row .n-input { width: auto !important; }
+}
+@media (max-width: 1024px) {
+  .left-panel, .right-panel { width: 100%; flex: none; }
+}
 </style>

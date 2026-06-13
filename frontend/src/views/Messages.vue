@@ -177,6 +177,7 @@ onMounted(loadMessages)
 .messages-page {
   max-width: 800px;
   margin: 0 auto;
+  padding: 0 24px;
 }
 
 .messages-header {
@@ -265,6 +266,7 @@ onMounted(loadMessages)
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
+  min-width: 0;
 }
 
 .msg-item:hover {
@@ -379,5 +381,31 @@ onMounted(loadMessages)
   display: flex;
   justify-content: center;
   margin-top: 24px;
+}
+
+@media (max-width: 640px) {
+  .messages-page {
+    padding: 0 12px;
+  }
+
+  .filter-tabs {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    flex: 1 1 auto;
+    padding: 6px 10px;
+  }
+
+  .mark-all-btn {
+    width: 100%;
+    margin-left: 0;
+    justify-content: center;
+  }
+
+  .msg-item {
+    padding: 12px 14px;
+  }
 }
 </style>

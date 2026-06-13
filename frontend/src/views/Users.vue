@@ -25,10 +25,11 @@
           :bordered="false"
           :single-line="false"
           striped
+          scroll-x="700"
         />
       </div>
 
-      <n-modal v-model:show="showModal" preset="card" :title="editingId ? '编辑用户' : '新增用户'" style="width: 460px;" :mask-closable="false">
+      <n-modal v-model:show="showModal" preset="card" :title="editingId ? '编辑用户' : '新增用户'" style="width: min(92vw, 460px);" :mask-closable="false">
         <n-form ref="formRef" :model="form" :rules="rules" label-placement="top">
           <n-form-item label="用户名" path="name">
             <n-input v-model:value="form.name" placeholder="输入用户名（显示用）" />
@@ -115,7 +116,7 @@ const columns = [
       return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
     }
   },
-  { title: '操作', key: 'actions', width: 210,
+  { title: '操作', key: 'actions', width: 220,
     render(row) {
       return h('div', { style: 'display:flex; align-items:center; gap:8px;' }, [
         h('a', { style: 'cursor:pointer;color:#6366f1;font-size:13px', onClick: () => openEdit(row) }, '编辑'),
@@ -217,6 +218,6 @@ onMounted(() => { loadUsers(); loadSkills() })
 .hero-stat { min-width: 80px; padding: 10px 14px; border-radius: 10px; background: #f1f5f9; border: 1px solid #e2e8f0; text-align: center; }
 .hero-stat-value { display: block; font-size: 22px; font-weight: 700; color: #0f172a; }
 .hero-stat-label { display: block; margin-top: 2px; font-size: 12px; color: #64748b; }
-.list-container { background: white; border-radius: 16px; padding: 0 8px 8px; border: 1px solid #e5e7eb; }
+.list-container { background: white; border-radius: 16px; padding: 0 8px 8px; border: 1px solid #e5e7eb; overflow-x: auto; }
 .toolbar { padding: 12px 8px; display: flex; justify-content: flex-end; }
 </style>

@@ -30,11 +30,12 @@
           :bordered="false"
           :single-line="false"
           striped
+          :scroll-x="1370"
         />
       </section>
     </div>
 
-    <n-modal v-model:show="showModal" preset="card" style="width: 640px" :title="editingId ? '编辑需求' : '新增需求'" :mask-closable="false">
+    <n-modal v-model:show="showModal" preset="card" style="width: min(92vw, 640px)" :title="editingId ? '编辑需求' : '新增需求'" :mask-closable="false">
       <n-form :model="form" label-placement="top">
         <n-grid :cols="2" :x-gap="16">
           <n-gi>
@@ -441,7 +442,15 @@ onMounted(() => loadData())
 <style scoped>
 .requirements-page { display: flex; flex-direction: column; gap: 20px; }
 
-.section-card { background: white; border-radius: 20px; border: 1px solid #e2e8f0; padding: 22px; }
+.section-card { background: white; border-radius: 20px; border: 1px solid #e2e8f0; padding: 22px; overflow-x: auto; }
 .filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .action-btn { border-radius: 10px; font-weight: 500; }
+
+@media (max-width: 768px) {
+  :deep(.filter-bar > .n-input),
+  :deep(.filter-bar > .n-select) {
+    flex: 1 1 45%;
+    width: auto !important;
+  }
+}
 </style>

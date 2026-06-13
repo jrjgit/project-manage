@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS requirements (
     description            TEXT                   COMMENT '详细描述',
     status                 VARCHAR(50)  NOT NULL DEFAULT 'planned' COMMENT 'planned/in_progress/integration_test/business_test/pending_release/released/closed',
     priority               VARCHAR(20)  DEFAULT 'medium' COMMENT 'low/medium/high/critical',
-    system                 VARCHAR(50)           COMMENT '所属系统: backend/iOS/Android/鸿蒙/小程序/H5',
+    `system`               VARCHAR(50)           COMMENT '所属系统: backend/iOS/Android/鸿蒙/小程序/H5',
     project_id             BIGINT                 COMMENT '关联项目ID',
     project_type           VARCHAR(50)           COMMENT 'ops=运维需求 / project=项目需求',
     person_id              BIGINT                 COMMENT '业务负责人ID',

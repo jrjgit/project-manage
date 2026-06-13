@@ -197,4 +197,30 @@ async function handleSubmit() {
   opacity: .55;
   cursor: not-allowed;
 }
+
+@media (max-width: 1024px) {
+  .login-panel {
+    width: 100%;
+    max-width: 480px;
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .panel-left {
+    display: none;
+  }
+
+  .panel-right {
+    padding: 32px 24px;
+  }
+
+  .brand {
+    text-align: center;
+  }
+
+  .brand-icon {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
 </style>

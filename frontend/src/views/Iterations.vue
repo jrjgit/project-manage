@@ -26,12 +26,13 @@
           :single-line="false"
           striped
           :row-key="row => row.id"
+          scroll-x="780"
         />
       </section>
     </div>
 
     <!-- Create / Edit Modal -->
-    <n-modal v-model:show="showModal" preset="card" style="width: 480px" :title="isEditing ? '编辑迭代' : '新建迭代'" :mask-closable="false">
+    <n-modal v-model:show="showModal" preset="card" style="width: min(92vw, 480px)" :title="isEditing ? '编辑迭代' : '新建迭代'" :mask-closable="false">
       <n-form :model="form" label-placement="top">
         <n-form-item label="迭代名称" path="name" :rule="{ required: true, message: '请输入迭代名称' }">
           <n-input v-model:value="form.name" placeholder="如：v2.3.0" />
@@ -55,7 +56,7 @@
     </n-modal>
 
     <!-- Delete Confirm Modal -->
-    <n-modal v-model:show="showDeleteConfirm" preset="dialog" type="warning" title="确认删除" content="确定要删除该迭代？关联的需求将被解除发布关联。" style="width: 400px">
+    <n-modal v-model:show="showDeleteConfirm" preset="dialog" type="warning" title="确认删除" content="确定要删除该迭代？关联的需求将被解除发布关联。" style="width: min(92vw, 400px)">
       <template #action>
         <n-button @click="showDeleteConfirm = false">取消</n-button>
         <n-button type="error" :loading="deleting" @click="handleDelete">删除</n-button>
@@ -272,6 +273,12 @@ onMounted(() => {
   border: 1px solid #e2e8f0;
 }
 
+@media (max-width: 768px) {
+  .hero-card {
+    flex-direction: column;
+  }
+}
+
 .section-kicker {
   font-size: 12px;
   font-weight: 700;
@@ -322,6 +329,7 @@ onMounted(() => {
   border-radius: 18px;
   padding: 16px;
   border: 1px solid #e2e8f0;
+  overflow-x: auto;
 }
 
 .list-header {

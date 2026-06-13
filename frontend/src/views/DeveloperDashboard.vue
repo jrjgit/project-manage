@@ -168,4 +168,12 @@ onMounted(loadData)
 .bug-task { font-size: 11px; color: #94a3b8; }
 .bug-expected { font-size: 11px; color: #6366f1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
 .empty-state { text-align: center; padding: 24px; color: #94a3b8; font-size: 13px; }
+@media (max-width: 768px) {
+  .hero-card { flex-direction: column; align-items: flex-start; }
+  .hero-stats { flex-wrap: wrap; }
+}
+@media (max-width: 1024px) {
+  .main-split { flex-direction: column; }
+  .task-section, .bug-section { width: 100%; }
+}
 </style>

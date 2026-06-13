@@ -1,5 +1,5 @@
 <template>
-  <n-drawer v-model:show="show" :width="920" placement="right">
+  <n-drawer v-model:show="show" :width="windowWidth <= 768 ? '100%' : 920" placement="right">
     <n-drawer-content v-if="task" closable>
       <template #header>
         <div class="drawer-header">
@@ -139,7 +139,7 @@
   </n-drawer>
 
   <!-- Create Bug Modal -->
-  <n-modal v-model:show="showCreateBugModal" preset="card" style="width:500px" title="创建 Bug" :mask-closable="false">
+  <n-modal v-model:show="showCreateBugModal" preset="card" style="width: min(92vw, 500px)" title="创建 Bug" :mask-closable="false">
     <n-form label-placement="top">
       <n-form-item label="标题" path="title">
         <n-input v-model:value="bugForm.title" placeholder="Bug标题" />
@@ -175,7 +175,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getTask, getTaskHistory, changeTaskStatus, updateTask } from '@/api/tasks'
 import { createBug, uploadBugImage, getBugs } from '@/api/bugs'
@@ -189,6 +189,12 @@ const props = defineProps({ taskId: Number, readonly: Boolean })
 const emit = defineEmits(['status-change', 'refresh'])
 
 const authStore = useAuthStore()
+
+const windowWidth = ref(window.innerWidth)
+function onResize() { windowWidth.value = window.innerWidth }
+onMounted(() => window.addEventListener('resize', onResize))
+onUnmounted(() => window.removeEventListener('resize', onResize))
+
 const task = ref(null)
 const histories = ref([])
 const users = ref([])

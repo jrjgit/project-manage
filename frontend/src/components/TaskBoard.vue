@@ -61,7 +61,7 @@ function onDrop(event, newStatus) {
 .task-board { display: flex; flex-direction: column; gap: 14px; }
 .board-row { display: flex; gap: 12px; }
 .board-column {
-  flex: 1; min-width: 0; background: #f8fafc; border-radius: 14px;
+  flex: 1; min-width: 240px; background: #f8fafc; border-radius: 14px;
   display: flex; flex-direction: column; max-height: calc(100vh - 200px);
   border: 1px solid #e2e8f0;
 }
@@ -80,4 +80,7 @@ function onDrop(event, newStatus) {
   border-radius: 10px; font-weight: 600; flex-shrink: 0; margin-left: 8px;
 }
 .column-body { padding: 10px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+@media (max-width: 1024px) {
+  .board-row { overflow-x: auto; }
+}
 </style>

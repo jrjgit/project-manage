@@ -21,7 +21,7 @@
           :class="['nav-item', { active: route.path === item.path }]"
         >
           <component :is="item.icon" class="nav-icon" />
-          <span>{{ item.label }}</span>
+          <span class="nav-label">{{ item.label }}</span>
           <span
             v-if="item.badge === 'unread' && messageStore.unreadCount > 0"
             class="nav-badge"
@@ -179,14 +179,24 @@ watch(() => messageStore.unreadCount, (newVal, oldVal) => {
   document.title = newVal > 0 ? `(${newVal}) ProjectOS` : 'ProjectOS'
 })
 
+function handleVisibility() {
+  if (!document.hidden) {
+    messageStore.refreshUnreadCount()
+    document.body.classList.remove('page-paused')
+  } else {
+    document.body.classList.add('page-paused')
+  }
+}
+
 onMounted(() => {
-  messageStore.startPolling()
+  messageStore.refreshUnreadCount()
   document.addEventListener('click', handleClickOutside)
+  document.addEventListener('visibilitychange', handleVisibility)
 })
 
 onUnmounted(() => {
-  messageStore.stopPolling()
   document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('visibilitychange', handleVisibility)
 })
 
 const roleLabelMap = {
@@ -389,13 +399,20 @@ function CodeIcon(props) {
 
 /* Sidebar */
 .sidebar {
-  width: 260px;
+  width: var(--sidebar-width);
   background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
   display: flex;
   flex-direction: column;
   position: fixed;
   height: 100vh;
   z-index: 100;
+  transition: width 0.2s ease;
+}
+
+@media (max-width: 1023px) {
+  .sidebar {
+    width: var(--sidebar-collapsed-width);
+  }
 }
 
 .sidebar-brand {
@@ -404,6 +421,13 @@ function CodeIcon(props) {
   gap: 12px;
   padding: 24px 20px;
   border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+@media (max-width: 1023px) {
+  .sidebar-brand {
+    justify-content: center;
+    padding: 20px 12px;
+  }
 }
 
 .brand-icon {
@@ -429,12 +453,25 @@ function CodeIcon(props) {
   letter-spacing: -0.5px;
 }
 
+@media (max-width: 1023px) {
+  .brand-text {
+    display: none;
+  }
+}
+
 .sidebar-nav {
   flex: 1;
   padding: 16px 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+@media (max-width: 1023px) {
+  .sidebar-nav {
+    padding: 12px 8px;
+    align-items: center;
+  }
 }
 
 .nav-item {
@@ -448,6 +485,14 @@ function CodeIcon(props) {
   font-size: 14px;
   font-weight: 500;
   transition: all 0.2s;
+}
+
+@media (max-width: 1023px) {
+  .nav-item {
+    justify-content: center;
+    padding: 12px;
+    overflow: hidden;
+  }
 }
 
 .nav-item:hover {
@@ -467,12 +512,25 @@ function CodeIcon(props) {
   flex-shrink: 0;
 }
 
+@media (max-width: 1023px) {
+  .nav-label {
+    display: none;
+  }
+}
+
 .sidebar-footer {
   padding: 16px;
   border-top: 1px solid rgba(255,255,255,0.06);
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+@media (max-width: 1023px) {
+  .sidebar-footer {
+    justify-content: center;
+    padding: 12px 8px;
+  }
 }
 
 .user-info {
@@ -497,6 +555,12 @@ function CodeIcon(props) {
 .user-meta {
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 1023px) {
+  .user-meta {
+    display: none;
+  }
 }
 
 .user-name {
@@ -537,9 +601,16 @@ function CodeIcon(props) {
 /* Main Content */
 .main-content {
   flex: 1;
-  margin-left: 260px;
+  margin-left: var(--sidebar-width);
   display: flex;
   flex-direction: column;
+  transition: margin-left 0.2s ease;
+}
+
+@media (max-width: 1023px) {
+  .main-content {
+    margin-left: var(--sidebar-collapsed-width);
+  }
 }
 
 .top-bar {
@@ -553,6 +624,23 @@ function CodeIcon(props) {
   position: sticky;
   top: 0;
   z-index: 50;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .top-bar {
+    min-height: auto;
+    padding: 12px 20px;
+  }
+
+  .page-kicker,
+  .page-subtitle {
+    display: none;
+  }
+
+  .page-title {
+    font-size: 20px;
+  }
 }
 
 .top-bar-copy {
@@ -585,11 +673,25 @@ function CodeIcon(props) {
 .top-actions {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .page-body {
-  padding: 28px 32px;
+  padding: 28px var(--content-padding);
   flex: 1;
+}
+
+@media (max-width: 768px) {
+  .page-body {
+    padding: 20px var(--content-padding-md);
+  }
+}
+
+@media (max-width: 640px) {
+  .page-body {
+    padding: 16px var(--content-padding-sm);
+  }
 }
 
 /* Nav Badge */
@@ -605,6 +707,12 @@ function CodeIcon(props) {
   text-align: center;
   border-radius: 10px;
   padding: 0 6px;
+}
+
+@media (max-width: 1023px) {
+  .nav-badge {
+    display: none;
+  }
 }
 
 /* Bell Wrapper */
@@ -633,7 +741,7 @@ function CodeIcon(props) {
 
 .bell-btn.has-new {
   border-color: #fca5a5;
-  animation: bellPulse 2s ease-in-out infinite;
+  animation: bellPulse 2s ease-in-out 3;
 }
 
 .bell-icon {
@@ -673,7 +781,8 @@ function CodeIcon(props) {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 360px;
+  width: min(360px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
   background: white;
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
