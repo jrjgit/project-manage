@@ -605,6 +605,7 @@ function CodeIcon(props) {
   display: flex;
   flex-direction: column;
   transition: margin-left 0.2s ease;
+  overflow: hidden;
 }
 
 @media (max-width: 1023px) {
@@ -680,6 +681,8 @@ function CodeIcon(props) {
 .page-body {
   padding: 28px var(--content-padding);
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 @media (max-width: 768px) {
