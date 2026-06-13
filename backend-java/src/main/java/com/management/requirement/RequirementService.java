@@ -504,7 +504,11 @@ public class RequirementService {
         Requirement r = requirementMapper.selectById(id);
         if (r == null) throw new BusinessException(404, "需求不存在");
         if (r.getDocumentPath() != null) {
-            try { Files.deleteIfExists(Paths.get(r.getDocumentPath())); } catch (IOException ignored) {}
+            java.nio.file.Path path = Paths.get(r.getDocumentPath());
+            try { Files.deleteIfExists(path); } catch (IOException ignored) {}
+            // 删除空目录
+            java.io.File dir = path.toFile().getParentFile();
+            if (dir != null && dir.isDirectory() && dir.list().length == 0) dir.delete();
         }
         r.setDocumentPath(null);
         r.setDocumentName(null);
