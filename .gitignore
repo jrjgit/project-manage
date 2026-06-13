@@ -31,3 +31,8 @@ frontend/dist/
 Thumbs.db
 
 deploy/
+
+# Config files
+frontend/postcss.config.js
+frontend/tailwind.config.js
+frontend/src/assets/
