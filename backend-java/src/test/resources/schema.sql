@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS projects (
 
 CREATE TABLE IF NOT EXISTS tasks (
     id               BIGINT AUTO_INCREMENT PRIMARY KEY,
-    title            VARCHAR(255) NOT NULL,
+    title            TEXT NOT NULL,
     description      TEXT,
     status           VARCHAR(50)  NOT NULL DEFAULT 'pending',
     priority         VARCHAR(20)  DEFAULT 'medium',
