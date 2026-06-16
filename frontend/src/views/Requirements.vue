@@ -12,6 +12,13 @@
     </template>
 
     <div class="requirements-page">
+      <!-- 系统板块展示 -->
+      <div v-if="systemStats.length" class="system-cards">
+        <div v-for="stat in systemStats" :key="stat.system" class="system-card">
+          <span class="system-card-count">{{ stat.count }}</span>
+          <span class="system-card-name">{{ stat.system }}</span>
+        </div>
+      </div>
       <section class="section-card">
         <div class="filter-bar">
           <n-input v-model:value="filters.number" placeholder="需求编号" clearable style="width:140px" size="small" />
@@ -173,7 +180,8 @@ import {
   createRequirement,
   updateRequirement,
   deleteRequirement,
-  uploadRequirementDocument
+  uploadRequirementDocument,
+  getRequirementSystemStats
 } from '@/api/requirements'
 import { requirementStatusMeta } from '@/constants/requirementMeta'
 import { priorityMeta } from '@/constants/statusMeta'
@@ -188,6 +196,7 @@ const projects = ref([])
 const systems = ref([])
 const users = ref([])
 const iterations = ref([])
+const systemStats = ref([])
 const showModal = ref(false)
 const editingId = ref(null)
 const submitting = ref(false)
@@ -429,10 +438,11 @@ async function handleDelete(row) {
 
 async function loadData() {
   try {
-    const [reqs, proj, sys, usr, iters] = await Promise.all([
-      getRequirements(), getProjects(), getSystems(), getUsers(), getIterations()
+    const [reqs, proj, sys, usr, iters, stats] = await Promise.all([
+      getRequirements(), getProjects(), getSystems(), getUsers(), getIterations(),
+      getRequirementSystemStats()
     ])
-    allData.value = reqs; projects.value = proj; systems.value = sys; users.value = usr; iterations.value = iters
+    allData.value = reqs; projects.value = proj; systems.value = sys; users.value = usr; iterations.value = iters; systemStats.value = stats || []
   } catch (e) { console.error(e) }
 }
 
@@ -442,6 +452,14 @@ onMounted(() => loadData())
 <style scoped>
 .requirements-page { display: flex; flex-direction: column; gap: 20px; }
 
+.system-cards { display: flex; gap: 12px; flex-wrap: wrap; }
+.system-card {
+  display: flex; align-items: center; gap: 10px; padding: 14px 20px;
+  border-radius: 14px; border: 1px solid #e2e8f0; background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%);
+  min-width: 140px;
+}
+.system-card-count { font-size: 26px; font-weight: 800; color: #6366f1; line-height: 1; }
+.system-card-name { font-size: 13px; color: #334155; font-weight: 500; }
 .section-card { background: white; border-radius: 20px; border: 1px solid #e2e8f0; padding: 22px; overflow-x: auto; }
 .filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .action-btn { border-radius: 10px; font-weight: 500; }

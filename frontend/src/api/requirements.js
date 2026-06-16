@@ -22,3 +22,5 @@ export const uploadRequirementDocument = (id, file) => {
 export const downloadRequirementDocument = (id) => request.get(`/requirements/${id}/document`, { responseType: 'blob' })
 export const deleteRequirementDocument = (id) => request.delete(`/requirements/${id}/document`)
 export const assignDevLead = (id, devLeadId) => request.put(`/requirements/${id}/assign-lead`, { dev_lead_id: devLeadId })
+export const getRequirementSystemStats = () => request.get('/requirements/system-stats')
+export const getRequirementProgress = (id) => request.get(`/requirements/${id}/progress`)

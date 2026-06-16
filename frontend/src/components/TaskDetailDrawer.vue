@@ -76,7 +76,7 @@
               <div class="info-item"><span>开发组长</span><strong>{{ task.dev_lead?.name || '-' }}</strong></div>
               <div class="info-item"><span>开发人员</span><strong>{{ task.assignee?.name || '-' }}</strong></div>
               <div class="info-item"><span>测试人员</span><strong>{{ task.tester?.name || '-' }}</strong></div>
-              <div class="info-item"><span>技能</span><strong>{{ skillsMap[task.terminal] || task.terminal || '-' }}</strong></div>
+               <div class="info-item"><span>终端</span><strong>{{ skillsMap[task.terminal] || task.terminal || '-' }}</strong></div>
               <div class="info-item"><span>所属系统</span><strong>{{ requirementData?.system || '-' }}</strong></div>
               <div class="info-item"><span>绩效工时</span><strong>{{ task.performance || '-' }}</strong></div>
               <div class="info-item"><span>截止日期</span><strong>{{ formatDate(task.deadline) || '-' }}</strong></div>

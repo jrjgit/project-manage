@@ -81,10 +81,28 @@ public class UserController {
         return Result.ok(userService.getUserWorkload());
     }
 
+    /**
+     * 修改用户密码
+     */
+    @Operation(summary = "修改用户密码")
+    @PutMapping("/{id}/password")
+    @PreAuthorize("hasRole('PM')")
+    public Result<Map<String, String>> changePassword(@PathVariable Long id,
+                                                       @RequestBody ChangePasswordRequest req) {
+        userService.changePassword(id, req.getPassword());
+        return Result.ok(Map.of("message", "password changed"));
+    }
+
     @Data
     static class UpdateRoleRequest {
         @NotBlank
         private String role;
+    }
+
+    @Data
+    static class ChangePasswordRequest {
+        @NotBlank(message = "密码不能为空")
+        private String password;
     }
 
     @Data

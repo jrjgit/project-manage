@@ -29,6 +29,21 @@
         />
       </div>
 
+      <!-- 修改密码弹窗 -->
+      <n-modal v-model:show="showPwdModal" preset="card" title="修改密码" style="width: min(92vw, 400px);" :mask-closable="false">
+        <n-form label-placement="top">
+          <n-form-item label="新密码" path="newPassword">
+            <n-input v-model:value="pwdForm.password" type="password" placeholder="至少 6 位字符" />
+          </n-form-item>
+        </n-form>
+        <template #footer>
+          <n-space justify="end">
+            <n-button @click="showPwdModal = false">取消</n-button>
+            <n-button type="primary" :loading="pwdSaving" @click="handleChangePwd">确定</n-button>
+          </n-space>
+        </template>
+      </n-modal>
+
       <n-modal v-model:show="showModal" preset="card" :title="editingId ? '编辑用户' : '新增用户'" style="width: min(92vw, 460px);" :mask-closable="false">
         <n-form ref="formRef" :model="form" :rules="rules" label-placement="top">
           <n-form-item label="用户名" path="name">
@@ -46,8 +61,8 @@
           <n-form-item label="邮箱">
             <n-input v-model:value="form.email" type="email" placeholder="可选" />
           </n-form-item>
-          <n-form-item label="技能">
-            <n-select v-model:value="form.skills" :options="skillOptions" multiple placeholder="选择技能" />
+          <n-form-item label="终端">
+            <n-select v-model:value="form.skills" :options="skillOptions" multiple placeholder="选择终端" />
           </n-form-item>
         </n-form>
         <template #footer>
@@ -63,7 +78,7 @@
 
 <script setup>
 import { ref, onMounted, h, computed } from 'vue'
-import { getUsers, updateUser, updateUserRole, createUser, deleteUser } from '@/api/users'
+import { getUsers, updateUser, updateUserRole, createUser, deleteUser, changeUserPassword } from '@/api/users'
 import { getDictionaries } from '@/api/dictionaries'
 import AppLayout from '@/components/AppLayout.vue'
 import {
@@ -74,9 +89,13 @@ import {
 const users = ref([])
 const skills = ref([])
 const showModal = ref(false)
+const showPwdModal = ref(false)
 const editingId = ref(null)
+const pwdTargetId = ref(null)
 const saving = ref(false)
+const pwdSaving = ref(false)
 const formRef = ref(null)
+const pwdForm = ref({ password: '' })
 
 const skillOptions = computed(() => skills.value.map(s => ({ label: s.dict_value, value: s.dict_key })))
 
@@ -103,7 +122,7 @@ const columns = [
   { title: 'ID', key: 'id', width: 60 },
   { title: '用户名', key: 'name', ellipsis: { tooltip: true } },
   { title: '账号', key: 'account', ellipsis: { tooltip: true } },
-  { title: '技能', key: 'skills', width: 160, render(row) { return row.skills ? row.skills.split(',').join('、') : '-' } },
+  { title: '终端', key: 'skills', width: 160, render(row) { return row.skills ? row.skills.split(',').join('、') : '-' } },
   { title: '角色', key: 'role', width: 120,
     render(row) {
       return h(NTag, { type: roleTagTypeMap[row.role], size: 'small', round: true }, { default: () => roleMap[row.role] || row.role })
@@ -116,21 +135,22 @@ const columns = [
       return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
     }
   },
-  { title: '操作', key: 'actions', width: 220,
+  { title: '操作', key: 'actions', width: 300,
     render(row) {
-      return h('div', { style: 'display:flex; align-items:center; gap:8px;' }, [
-        h('a', { style: 'cursor:pointer;color:#6366f1;font-size:13px', onClick: () => openEdit(row) }, '编辑'),
+      return h('div', { style: 'display:flex; align-items:center; gap:4px; flex-wrap:nowrap; white-space:nowrap;' }, [
+        h(NButton, { size: 'tiny', secondary: true, type: 'primary', onClick: () => openEdit(row) }, { default: () => '编辑' }),
+        h(NButton, { size: 'tiny', secondary: true, type: 'warning', onClick: () => openChangePwd(row) }, { default: () => '修改密码' }),
         h(NSelect, {
           value: row.role,
           options: roleOptions,
-          size: 'small',
-          style: 'width: 120px;',
+          size: 'tiny',
+          style: 'width: 100px;',
           onUpdateValue: (val) => handleRoleChange(row.id, val)
         }),
         h(NPopconfirm, {
           onPositiveClick: () => handleDelete(row.id)
         }, {
-          trigger: () => h(NButton, { size: 'small', type: 'error', secondary: true }, { default: () => '删除' }),
+          trigger: () => h(NButton, { size: 'tiny', type: 'error', secondary: true }, { default: () => '删除' }),
           default: () => `确定删除用户「${row.name}」吗？`
         })
       ])
@@ -191,6 +211,24 @@ async function handleRoleChange(id, role) {
   } catch (e) { console.error(e) }
 }
  
+function openChangePwd(row) {
+  pwdTargetId.value = row.id
+  pwdForm.value = { password: '' }
+  showPwdModal.value = true
+}
+
+async function handleChangePwd() {
+  const pwd = pwdForm.value.password
+  if (!pwd || pwd.length < 6) { window.$message?.warning('密码至少 6 位'); return }
+  pwdSaving.value = true
+  try {
+    await changeUserPassword(pwdTargetId.value, pwd)
+    window.$message.success('密码修改成功')
+    showPwdModal.value = false
+  } catch (e) { console.error(e) }
+  pwdSaving.value = false
+}
+
 async function handleDelete(id) {
   try {
     await deleteUser(id)

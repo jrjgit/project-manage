@@ -98,13 +98,13 @@ const deletingId = ref(null)
 const form = ref({ dictType: null, dictKey: '', dictValue: '', sortOrder: 0 })
 
 const typeOptions = [
-  { label: '技能', value: 'skill' },
+  { label: '终端', value: 'skill' },
   { label: '来源', value: 'source' },
   { label: '项目类型', value: 'project_type' }
 ]
 
 const typeTagMap = {
-  skill: { type: 'info', label: '技能' },
+  skill: { type: 'info', label: '终端' },
   source: { type: 'warning', label: '来源' },
   project_type: { type: 'success', label: '项目类型' }
 }

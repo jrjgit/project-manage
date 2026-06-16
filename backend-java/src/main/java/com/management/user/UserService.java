@@ -5,6 +5,7 @@ import com.management.bug.entity.Bug;
 import com.management.bug.mapper.BugMapper;
 import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import com.management.project.entity.Project;
 import com.management.project.mapper.ProjectMapper;
 import com.management.requirement.entity.Requirement;
@@ -30,6 +31,7 @@ public class UserService {
     private final TaskMapper taskMapper;
     private final BugMapper bugMapper;
     private final RequirementMapper requirementMapper;
+    private final PasswordEncoder passwordEncoder;
 
     public JwtUserDetails currentUser() {
         return (JwtUserDetails) SecurityContextHolder.getContext()
@@ -89,6 +91,16 @@ public class UserService {
                     "该用户存在以下关联数据，请先解除关联后再删除：\n " + String.join("\n ", refs));
         }
         userMapper.deleteById(id);
+    }
+
+    public void changePassword(Long id, String newPassword) {
+        User user = userMapper.selectById(id);
+        if (user == null) throw new BusinessException(404, "用户不存在");
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new BusinessException(400, "密码长度不能少于 6 位");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userMapper.updateById(user);
     }
 
     public List<Map<String, Object>> getUserWorkload() {

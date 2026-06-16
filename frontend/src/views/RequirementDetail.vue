@@ -25,6 +25,7 @@
             <n-tag :type="priorityMeta[req.priority]?.tone || 'default'" size="small" round>{{ priorityMeta[req.priority]?.label || req.priority }}</n-tag>
             <n-tag v-if="req.project?.name" size="small" round>{{ req.project.name }}</n-tag>
           </div>
+            <n-button size="small" type="primary" round class="progress-btn" @click="openProgressPanel">需求进度进展</n-button>
         </div>
       </section>
 
@@ -250,6 +251,62 @@
     <BugDetailDrawer v-model:show="showBugDetail" :bug-id="selectedBugId" @refresh="loadReq" />
     <TaskDetailDrawer v-model:show="showTaskDetail" :task-id="selectedTaskId" @refresh="loadTasks" />
 
+    <!-- 需求进度进展弹窗 -->
+    <n-modal v-model:show="showProgressPanel" preset="card" style="width: min(92vw, 900px)" title="需求进度进展" :mask-closable="false">
+      <div v-if="progressLoading" class="empty-state" style="padding:40px">加载中...</div>
+      <template v-else>
+        <div style="margin-bottom:20px">
+          <h4 style="margin:0 0 12px 0;font-size:15px;color:#0f172a">开发进度</h4>
+          <div class="progress-table-inner">
+            <div class="progress-table-header">
+              <span style="flex:1">人员</span>
+              <span style="flex:1">终端</span>
+              <span style="width:80px;text-align:center">任务数</span>
+              <span style="width:80px;text-align:center">已完成</span>
+              <span style="width:80px;text-align:center">进度</span>
+            </div>
+            <div v-for="item in progressData.devProgress || []" :key="item.person + item.terminal" class="progress-table-row">
+              <span style="flex:1">{{ item.person }}</span>
+              <span style="flex:1">{{ skillsMap[item.terminal] || item.terminal }}</span>
+              <span style="width:80px;text-align:center;color:#64748b">{{ item.tasks }}</span>
+              <span style="width:80px;text-align:center;color:#18a058">{{ item.done }}</span>
+              <span style="width:80px;text-align:center;font-weight:700;color:#6366f1">{{ item.progress }}%</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h4 style="margin:0 0 12px 0;font-size:15px;color:#0f172a">测试进度（累计）</h4>
+          <div class="progress-table-inner">
+            <div class="progress-table-header">
+              <span style="flex:1">统计项</span>
+              <span style="width:100px;text-align:center">数量</span>
+            </div>
+            <div class="progress-table-row">
+              <span style="flex:1;color:#64748b">BUG 总数</span>
+              <span style="width:100px;text-align:center;font-weight:700">{{ progressData.totalBugs }}</span>
+            </div>
+            <div class="progress-table-row">
+              <span style="flex:1;color:#64748b">已关闭</span>
+              <span style="width:100px;text-align:center;font-weight:700;color:#18a058">{{ progressData.closedBugs }}</span>
+            </div>
+            <div class="progress-table-row">
+              <span style="flex:1;color:#64748b">未修复</span>
+              <span style="width:100px;text-align:center;font-weight:700;color:#f59e0b">{{ progressData.unfixedBugs }}</span>
+            </div>
+            <div class="progress-table-row">
+              <span style="flex:1;color:#64748b">待验证</span>
+              <span style="width:100px;text-align:center;font-weight:700;color:#d03050">{{ progressData.pendingVerifyBugs }}</span>
+            </div>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showProgressPanel = false">关闭</n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
     <!-- Create Task Modal -->
     <n-modal v-model:show="showCreateTask" preset="card" style="width:90vw;max-width:1400px;height:90vh;overflow:auto" title="任务派发/修改" :mask-closable="false">
       <div class="dispatch-layout">
@@ -268,7 +325,7 @@
             <div class="dispatch-divider"></div>
             <div class="dispatch-right">
               <div v-if="createTaskForm.developer_ids.length > 0" class="skill-area">
-                <div class="dispatch-section-title">选择技能（点击技能以生成任务）</div>
+                <div class="dispatch-section-title">选择终端（点击终端以生成任务）</div>
                 <div v-for="uid in createTaskForm.developer_ids" :key="uid" class="skill-section">
                   <div class="skill-section-title">{{ userNameMap[uid] || '未知' }}</div>
                   <div class="skill-tag-group">
@@ -323,7 +380,7 @@
             </div>
           </div>
         </div>
-        <div v-else-if="createTaskForm.developer_ids.length > 0" class="empty-state" style="margin-top:16px">请在上方选择技能以生成任务</div>
+        <div v-else-if="createTaskForm.developer_ids.length > 0" class="empty-state" style="margin-top:16px">请在上方选择终端以生成任务</div>
       </div>
       <template #footer>
         <n-space justify="end">
@@ -347,7 +404,8 @@ import {
   uploadRequirementDocument,
   downloadRequirementDocument,
   deleteRequirementDocument,
-  assignDevLead
+  assignDevLead,
+  getRequirementProgress
 } from '@/api/requirements'
 import { getIterations } from '@/api/iterations'
 import { getDictionaries } from '@/api/dictionaries'
@@ -374,6 +432,9 @@ const tasks = ref([])
 const transferringTaskId = ref(null)
 const showCreateTask = ref(false)
 const creatingTask = ref(false)
+const showProgressPanel = ref(false)
+const progressLoading = ref(false)
+const progressData = ref({})
 const createTaskForm = ref({ developer_ids: [] })
 const taskPreview = ref([])
 const skillsMap = ref({})
@@ -439,6 +500,15 @@ function toggleDev(id) {
     if (!selectedSkills.value[id]) selectedSkills.value[id] = []
     rebuildTaskPreview()
   }
+}
+
+async function openProgressPanel() {
+  showProgressPanel.value = true
+  progressLoading.value = true
+  try {
+    progressData.value = await getRequirementProgress(route.params.id) || {}
+  } catch (e) { console.error(e) }
+  progressLoading.value = false
 }
 
 async function openTaskDispatch() {
@@ -1038,20 +1108,25 @@ onMounted(() => {
 
 .header-top {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
 }
-
 .header-number {
   font-size: 20px;
   font-weight: 700;
   color: #6366f1;
   letter-spacing: 0.02em;
+  flex-shrink: 0;
 }
-
 .header-tags {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
+}
+.progress-btn {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .header-actions {
@@ -1639,4 +1714,8 @@ onMounted(() => {
   background: #6366f1;
   color: white;
 }
+.progress-table-inner { border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+.progress-table-header { display: flex; padding: 10px 14px; background: #f8fafc; font-size: 12px; font-weight: 600; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+.progress-table-row { display: flex; padding: 10px 14px; font-size: 13px; color: #0f172a; border-bottom: 1px solid #f1f5f9; align-items: center; }
+.progress-table-row:last-child { border-bottom: none; }
 </style>

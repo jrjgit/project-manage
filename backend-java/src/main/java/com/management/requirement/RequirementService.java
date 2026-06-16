@@ -33,10 +33,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -309,6 +306,71 @@ public class RequirementService {
         if (r == null) throw new BusinessException(404, "需求不存在");
         r.setIterationId(null);
         requirementMapper.updateById(r);
+    }
+
+    /** 获取系统板块统计数据（按 system 分组统计非 released 需求数量） */
+    public List<Map<String, Object>> getSystemStats() {
+        List<Requirement> all = requirementMapper.selectList(
+                new LambdaQueryWrapper<Requirement>().ne(Requirement::getStatus, "released"));
+        Map<String, Long> stats = all.stream()
+                .filter(r -> r.getSystem() != null && !r.getSystem().isBlank())
+                .collect(Collectors.groupingBy(Requirement::getSystem, Collectors.counting()));
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (var entry : stats.entrySet()) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("system", entry.getKey());
+            m.put("count", entry.getValue());
+            result.add(m);
+        }
+        result.sort((a, b) -> Long.compare((Long) b.get("count"), (Long) a.get("count")));
+        return result;
+    }
+
+    /** 获取需求进度（开发进度 + 测试进度报表） */
+    public Map<String, Object> getRequirementProgress(Long id) {
+        Requirement r = requirementMapper.selectById(id);
+        if (r == null) throw new BusinessException(404, "需求不存在");
+
+        List<Task> tasks = taskMapper.selectList(
+                new LambdaQueryWrapper<Task>().eq(Task::getRequirementId, id));
+        for (Task t : tasks) {
+            if (t.getAssigneeId() != null) t.setAssignee(userMapper.selectById(t.getAssigneeId()));
+        }
+
+        // 开发进度：按人员+终端分组
+        List<Map<String, Object>> devProgress = new ArrayList<>();
+        Map<String, List<Task>> byPersonTerminal = tasks.stream()
+                .filter(t -> t.getAssigneeId() != null)
+                .collect(Collectors.groupingBy(
+                        t -> t.getAssigneeId() + "|" + (t.getTerminal() != null ? t.getTerminal() : "其他")));
+        for (var entry : byPersonTerminal.entrySet()) {
+            String[] parts = entry.getKey().split("\\|", 2);
+            Long userId = Long.parseLong(parts[0]);
+            String terminal = parts[1];
+            User user = userMapper.selectById(userId);
+            List<Task> tl = entry.getValue();
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("person", user != null ? user.getName() : "未知");
+            m.put("terminal", terminal);
+            m.put("tasks", tl.size());
+            int avgProgress = (int) Math.round(tl.stream().mapToInt(t -> t.getProgress() != null ? t.getProgress() : 0).average().orElse(0));
+            m.put("progress", avgProgress);
+            m.put("done", tl.stream().filter(t -> "closed".equals(t.getStatus())).count());
+            devProgress.add(m);
+        }
+
+        // 测试进度：累计BUG统计
+        List<Bug> bugs = bugMapper.selectList(
+                new LambdaQueryWrapper<Bug>().eq(Bug::getRequirementId, id));
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("devProgress", devProgress);
+        result.put("totalBugs", bugs.size());
+        result.put("closedBugs", bugs.stream().filter(b -> "closed".equals(b.getStatus())).count());
+        result.put("unfixedBugs", bugs.stream().filter(b -> "unfixed".equals(b.getStatus())).count());
+        result.put("pendingVerifyBugs", bugs.stream().filter(b ->
+                "fixed".equals(b.getStatus()) || "not_a_bug".equals(b.getStatus())).count());
+        return result;
     }
 
     private void applyProjectScopeFilter(LambdaQueryWrapper<Requirement> q) {

@@ -49,6 +49,18 @@ public class RequirementController {
         return Result.ok(requirementService.list(status, system, projectType));
     }
 
+    @Operation(summary = "获取系统板块统计（按系统分组统计进行中需求数）")
+    @GetMapping("/system-stats")
+    public Result<List<Map<String, Object>>> systemStats() {
+        return Result.ok(requirementService.getSystemStats());
+    }
+
+    @Operation(summary = "获取需求进度报表（开发进度+测试进度）")
+    @GetMapping("/{id}/progress")
+    public Result<Map<String, Object>> requirementProgress(@PathVariable Long id) {
+        return Result.ok(requirementService.getRequirementProgress(id));
+    }
+
     @Operation(summary = "获取运维需求列表")
     /**
      * 获取运维需求列表
