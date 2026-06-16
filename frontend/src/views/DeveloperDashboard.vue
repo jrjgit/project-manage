@@ -23,7 +23,7 @@
       <div class="main-split">
         <section class="section-card task-section">
           <div class="section-header"><h3>待处理任务</h3></div>
-          <TaskBoard :tasks="boardTasks" :column-keys="['pending', 'developing']" @status-change="onStatusChange" @task-click="onTaskClick" />
+          <TaskBoard :tasks="boardTasks" :column-keys="['pending', 'developing']" :skills-map="skillsMap" @status-change="onStatusChange" @task-click="onTaskClick" />
         </section>
 
         <section class="section-card bug-section">
@@ -54,6 +54,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getDeveloperDashboard } from '@/api/statistics'
+import { getDictionaries } from '@/api/dictionaries'
 import { taskStatusMeta, priorityMeta, bugStatusMeta, severityMeta } from '@/constants/statusMeta'
 import TaskBoard from '@/components/TaskBoard.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
@@ -65,6 +66,7 @@ const authStore = useAuthStore()
 const route = useRoute()
 
 const dashData = ref({})
+const skillsMap = ref({})
 const showTaskDetail = ref(false)
 const selectedTaskId = ref(null)
 const showBugDetail = ref(false)
@@ -87,6 +89,17 @@ const boardTasks = computed(() => {
 async function loadData() {
   try {
     dashData.value = await getDeveloperDashboard()
+  } catch (e) { console.error(e) }
+}
+
+async function loadDictionaries() {
+  try {
+    const data = await getDictionaries() || []
+    const map = {}
+    for (const d of data) {
+      if (d.dict_type === 'skill') map[d.dict_key] = d.dict_value
+    }
+    skillsMap.value = map
   } catch (e) { console.error(e) }
 }
 
@@ -122,7 +135,7 @@ watch(() => route.query.taskId, (id) => {
   }
 }, { immediate: true })
 
-onMounted(loadData)
+onMounted(() => { loadData(); loadDictionaries() })
 </script>
 
 <style scoped>

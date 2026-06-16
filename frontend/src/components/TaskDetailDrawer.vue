@@ -76,7 +76,8 @@
               <div class="info-item"><span>开发组长</span><strong>{{ task.dev_lead?.name || '-' }}</strong></div>
               <div class="info-item"><span>开发人员</span><strong>{{ task.assignee?.name || '-' }}</strong></div>
               <div class="info-item"><span>测试人员</span><strong>{{ task.tester?.name || '-' }}</strong></div>
-              <div class="info-item"><span>技能</span><strong>{{ task.terminal || '-' }}</strong></div>
+              <div class="info-item"><span>技能</span><strong>{{ skillsMap[task.terminal] || task.terminal || '-' }}</strong></div>
+              <div class="info-item"><span>所属系统</span><strong>{{ requirementData?.system || '-' }}</strong></div>
               <div class="info-item"><span>绩效工时</span><strong>{{ task.performance || '-' }}</strong></div>
               <div class="info-item"><span>截止日期</span><strong>{{ formatDate(task.deadline) || '-' }}</strong></div>
             </div>
@@ -181,6 +182,7 @@ import { getTask, getTaskHistory, changeTaskStatus, updateTask } from '@/api/tas
 import { createBug, uploadBugImage, getBugs } from '@/api/bugs'
 import { getRequirement, downloadRequirementDocument } from '@/api/requirements'
 import { getUsers } from '@/api/users'
+import { getDictionaries } from '@/api/dictionaries'
 import { priorityMeta, taskStatusMeta, bugStatusMeta, severityMeta } from '@/constants/statusMeta'
 import { NDrawer, NDrawerContent, NTag, NButton, NTimeline, NTimelineItem, NSelect, NSlider, NModal, NForm, NFormItem, NInput, NUpload, NSpace } from 'naive-ui'
 
@@ -202,7 +204,9 @@ const selectedTester = ref(null)
 const selectedDevLead = ref(null)
 const actionLoading = ref(false)
 const reqDoc = ref(null)
+const requirementData = ref(null)
 const taskBugs = ref([])
+const skillsMap = ref({})
 const reportProgress = ref(0)
 const progressComment = ref('')
 const submittingProgress = ref(false)
@@ -271,10 +275,20 @@ const canReportProgress = computed(() => {
 })
 
 watch([() => props.taskId, show], async ([id, visible]) => {
-  if (id && visible) { await loadDetail(); await loadHistory(); await loadUsers() }
+  if (id && visible) { await loadDetail(); await loadHistory(); await loadUsers(); await loadDictionaries() }
 })
 
 async function loadUsers() { try { users.value = await getUsers() } catch (e) { console.error(e) } }
+async function loadDictionaries() {
+  try {
+    const data = await getDictionaries() || []
+    const map = {}
+    for (const d of data) {
+      if (d.dict_type === 'skill') map[d.dict_key] = d.dict_value
+    }
+    skillsMap.value = map
+  } catch (e) { console.error(e) }
+}
 async function loadDetail() {
   taskNotFound.value = false
   try {
@@ -283,8 +297,8 @@ async function loadDetail() {
     if (task.value?.progress != null) reportProgress.value = task.value.progress
     if (task.value?.requirement_id) {
       const reqData = await getRequirement(task.value.requirement_id)
-      if (reqData.document_name) reqDoc.value = reqData
-      else reqDoc.value = null
+      requirementData.value = reqData
+      reqDoc.value = reqData.document_name ? reqData : null
     }
     taskBugs.value = await getBugs({ task_id: props.taskId }) || []
   } catch (e) {

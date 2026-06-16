@@ -15,6 +15,7 @@
             v-for="task in col.tasks"
             :key="task.id"
             :task="task"
+            :skills-map="skillsMap"
             draggable="true"
             @dragstart="onDragStart($event, task)"
             @click="$emit('task-click', task.id)"
@@ -32,7 +33,8 @@ import { taskStatusMeta } from '@/constants/statusMeta'
 
 const props = defineProps({ 
   tasks: Array,
-  columnKeys: { type: Array, default: () => ['pending', 'developing', 'testing'] }
+  columnKeys: { type: Array, default: () => ['pending', 'developing', 'testing'] },
+  skillsMap: { type: Object, default: () => ({}) }
 })
 const emit = defineEmits(['status-change', 'task-click'])
 

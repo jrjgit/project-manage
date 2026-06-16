@@ -22,6 +22,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         {{ formatDate(task.deadline) }}
       </div>
+      <div class="card-tags-row">
+        <n-tag v-if="task.terminal" size="tiny" round>{{ skillsMap[task.terminal] || task.terminal }}</n-tag>
+        <span v-if="task.system" class="card-system">{{ task.system }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -31,7 +35,7 @@ import { computed } from 'vue'
 import { NTag } from 'naive-ui'
 import { priorityMeta, taskStatusMeta } from '@/constants/statusMeta'
 
-const props = defineProps({ task: Object })
+const props = defineProps({ task: Object, skillsMap: { type: Object, default: () => ({}) } })
 
 const priorityMetaItem = computed(() => priorityMeta[props.task.priority] || { label: props.task.priority, tone: 'default', color: '#94a3b8' })
 const statusMetaItem = computed(() => taskStatusMeta[props.task.status] || { label: props.task.status, tone: 'default', color: '#94a3b8' })
@@ -61,4 +65,6 @@ function formatDate(value) {
 .unassigned { font-size: 11px; color: #cbd5e1; font-style: italic; }
 .card-deadline { font-size: 11px; color: #f43f5e; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
 .card-deadline svg { width: 12px; height: 12px; }
+.card-tags-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.card-system { font-size: 11px; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 8px; }
 </style>
