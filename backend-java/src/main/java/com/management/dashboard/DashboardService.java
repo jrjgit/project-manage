@@ -328,7 +328,8 @@ public class DashboardService {
         if (t.getRequirementId() != null) {
             Requirement r = requirementMapper.selectById(t.getRequirementId());
             if (r != null) {
-                m.put("reqNumber", r.getRequirementId());
+                m.put("reqNumber", r.getNumber() != null ? r.getNumber() : r.getRequirementId());
+                m.put("reqId", r.getRequirementId());
                 m.put("system", r.getSystem());
             }
         }

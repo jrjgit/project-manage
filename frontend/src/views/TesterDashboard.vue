@@ -188,7 +188,7 @@ const systemOptions = computed(() =>
 const filteredTasks = computed(() => {
   return tasks.value.filter(t => {
     if (filterTerminal.value && t.terminal !== filterTerminal.value) return false
-    if (filterRequirement.value && !(t.reqNumber || '').includes(filterRequirement.value)) return false
+    if (filterRequirement.value && !((t.reqNumber || '').includes(filterRequirement.value) || (t.reqId || '').includes(filterRequirement.value))) return false
     if (filterSystem.value && !(t.system || '').includes(filterSystem.value)) return false
     return true
   })
