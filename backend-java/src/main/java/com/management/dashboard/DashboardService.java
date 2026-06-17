@@ -229,6 +229,9 @@ public class DashboardService {
             if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
         }
 
+        // 缓存 Bug 关联任务的需求信息，用于前端按需求编号筛选
+        java.util.Map<Long, Requirement> bugReqCache = new java.util.HashMap<>();
+
         List<Map<String, Object>> board = List.of(
                 Map.of("status", "pending", "label", "待受理", "tasks", pendingTasks.stream().map(this::taskToMap).collect(Collectors.toList())),
                 Map.of("status", "developing", "label", "开发中", "tasks", developingTasks.stream().map(this::taskToMap).collect(Collectors.toList())),
@@ -246,6 +249,10 @@ public class DashboardService {
             m.put("status", b.getStatus());
             m.put("taskId", b.getTaskId());
             m.put("taskTitle", b.getTask() != null ? b.getTask().getTitle() : null);
+            if (b.getTask() != null && b.getTask().getRequirementId() != null) {
+                Requirement r = bugReqCache.computeIfAbsent(b.getTask().getRequirementId(), id -> requirementMapper.selectById(id));
+                if (r != null) m.put("reqNumber", r.getNumber() != null ? r.getNumber() : r.getRequirementId());
+            }
             return m;
         }).collect(Collectors.toList()));
         return result;

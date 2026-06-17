@@ -24,7 +24,7 @@ public class Task {
     private String title;
     /** 任务描述 */
     private String description;
-    /** 任务状态（todo=待办, developing=开发中, testing=测试中, done=已完成, rejected=已驳回） */
+    /** 任务状态（pending=待受理, developing=开发中, testing=综合测试中, closed=已完成） */
     private String status;
     /** 优先级（high=高, medium=中, low=低） */
     private String priority;

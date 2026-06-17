@@ -14,7 +14,7 @@
     <div class="requirements-page">
       <!-- 系统板块展示 -->
       <div v-if="systemStats.length" class="system-cards">
-        <div v-for="stat in systemStats" :key="stat.system" class="system-card">
+        <div v-for="stat in systemStats" :key="stat.system" class="system-card" :class="{ active: filters.system === stat.system }" @click="selectSystem(stat.system)">
           <span class="system-card-count">{{ stat.count }}</span>
           <span class="system-card-name">{{ stat.system }}</span>
         </div>
@@ -41,6 +41,17 @@
         />
       </section>
     </div>
+
+    <!-- 设置需求迭代 -->
+    <n-modal v-model:show="showIterationModal" preset="card" style="width: min(92vw, 400px)" title="设置需求迭代" :mask-closable="false">
+      <n-select v-model:value="editingIterationId" :options="publishableIterationOptions" placeholder="选择迭代" clearable filterable />
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showIterationModal = false">取消</n-button>
+          <n-button type="primary" :loading="savingIteration" @click="confirmSetIteration">确定</n-button>
+        </n-space>
+      </template>
+    </n-modal>
 
     <n-modal v-model:show="showModal" preset="card" style="width: min(92vw, 640px)" :title="editingId ? '编辑需求' : '新增需求'" :mask-closable="false">
       <n-form :model="form" label-placement="top">
@@ -79,7 +90,7 @@
           </n-gi>
           <n-gi>
             <n-form-item label="所属迭代">
-              <n-select v-model:value="form.iteration_id" :options="iterationOptions" placeholder="选择迭代" clearable filterable />
+              <n-select v-model:value="form.iteration_id" :options="publishableIterationOptions" placeholder="选择迭代" clearable filterable />
             </n-form-item>
           </n-gi>
         </n-grid>
@@ -176,7 +187,9 @@ import {
   updateRequirement,
   deleteRequirement,
   uploadRequirementDocument,
-  getRequirementSystemStats
+  getRequirementSystemStats,
+  addToRelease,
+  removeFromRelease
 } from '@/api/requirements'
 import { requirementStatusMeta } from '@/constants/requirementMeta'
 import { priorityMeta } from '@/constants/statusMeta'
@@ -200,6 +213,11 @@ const attachFileName = ref('')
 const attachUploading = ref(false)
 const form = ref(emptyForm())
 
+const showIterationModal = ref(false)
+const editingRequirementId = ref(null)
+const editingIterationId = ref(null)
+const savingIteration = ref(false)
+
 const filters = ref({ number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null, system: null })
 
 function emptyForm() {
@@ -214,6 +232,11 @@ function emptyForm() {
 const projectOptions = computed(() => projects.value.map(p => ({ label: p.name, value: p.id })))
 const userOptions = computed(() => users.value.map(u => ({ label: u.name, value: u.id })))
 const iterationOptions = computed(() => iterations.value.map(i => ({ label: i.name, value: String(i.id) })))
+const publishableIterationOptions = computed(() =>
+  iterations.value
+    .filter(i => i.status === 'pending_publish')
+    .map(i => ({ label: i.name, value: String(i.id) }))
+)
 const systemOptions = computed(() => {
   if (form.value.project_id) {
     const p = projects.value.find(x => x.id === form.value.project_id)
@@ -304,7 +327,13 @@ const columns = [
   },
   {
     title: '需求迭代', key: 'iteration', width: 120,
-    render(row) { return row.iteration_name || (row.iteration_id ? `迭代 #${row.iteration_id}` : '-') }
+    render(row) {
+      const label = row.iteration_name || (row.iteration_id ? `迭代 #${row.iteration_id}` : '设置迭代')
+      return h('a', {
+        style: 'cursor:pointer;color:#6366f1;',
+        onClick: () => openSetIteration(row)
+      }, label)
+    }
   },
   {
     title: '项目名称', key: 'project', width: 120,
@@ -328,6 +357,36 @@ const columns = [
 
 function resetFilters() {
   filters.value = { number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null, system: null }
+}
+
+function selectSystem(system) {
+  if (filters.value.system === system) {
+    filters.value.system = null
+  } else {
+    filters.value.system = system
+  }
+}
+
+function openSetIteration(row) {
+  editingRequirementId.value = row.id
+  editingIterationId.value = row.iteration_id || null
+  showIterationModal.value = true
+}
+
+async function confirmSetIteration() {
+  if (!editingRequirementId.value) return
+  savingIteration.value = true
+  try {
+    if (editingIterationId.value) {
+      await addToRelease(editingRequirementId.value, editingIterationId.value)
+    } else {
+      await removeFromRelease(editingRequirementId.value)
+    }
+    window.$message?.success('迭代设置已更新')
+    showIterationModal.value = false
+    await loadData()
+  } catch (e) { console.error(e) }
+  savingIteration.value = false
 }
 
 function onProjectChange() {
@@ -437,6 +496,15 @@ onMounted(() => loadData())
   display: flex; align-items: center; gap: 10px; padding: 14px 20px;
   border-radius: 14px; border: 1px solid #e2e8f0; background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%);
   min-width: 140px;
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.system-card:hover {
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12);
+}
+.system-card.active {
+  border-color: #6366f1;
+  background: linear-gradient(135deg, #e0e7ff 0%, #ffffff 100%);
 }
 .system-card-count { font-size: 26px; font-weight: 800; color: #6366f1; line-height: 1; }
 .system-card-name { font-size: 13px; color: #334155; font-weight: 500; }

@@ -7,6 +7,7 @@ import com.management.bug.mapper.BugMapper;
 import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
 import com.management.common.notification.NotificationService;
+import com.management.iteration.entity.Iteration;
 import com.management.iteration.mapper.IterationMapper;
 import com.management.project.mapper.ProjectMapper;
 import com.management.requirement.dto.CreateRequirementRequest;
@@ -126,7 +127,12 @@ public class RequirementService {
 
     public List<Requirement> list(String status, String system, String projectType) {
         LambdaQueryWrapper<Requirement> q = new LambdaQueryWrapper<>();
-        if (status != null && !status.isBlank()) q.eq(Requirement::getStatus, status);
+        if (status != null && !status.isBlank()) {
+            q.eq(Requirement::getStatus, status);
+        } else {
+            // 默认排除已发布和已关闭的需求
+            q.notIn(Requirement::getStatus, Arrays.asList("released", "closed"));
+        }
         if (system != null && !system.isBlank()) q.eq(Requirement::getSystem, system);
         if (projectType != null && !projectType.isBlank()) q.eq(Requirement::getProjectType, projectType);
         applyProjectScopeFilter(q);
@@ -296,6 +302,17 @@ public class RequirementService {
     public void addToRelease(Long id, String iterationId) {
         Requirement r = requirementMapper.selectById(id);
         if (r == null) throw new BusinessException(404, "需求不存在");
+        if (iterationId != null && !iterationId.isBlank()) {
+            try {
+                Iteration it = iterationMapper.selectById(Long.parseLong(iterationId));
+                if (it == null) throw new BusinessException(400, "迭代不存在");
+                if (!"pending_publish".equals(it.getStatus())) {
+                    throw new BusinessException(400, "只能关联待发布状态的迭代");
+                }
+            } catch (NumberFormatException e) {
+                throw new BusinessException(400, "迭代ID格式错误");
+            }
+        }
         r.setIterationId(iterationId);
         requirementMapper.updateById(r);
     }
@@ -308,10 +325,12 @@ public class RequirementService {
         requirementMapper.updateById(r);
     }
 
-    /** 获取系统板块统计数据（按 system 分组统计非 released 需求数量） */
+    /** 获取系统板块统计数据（按 system 分组统计非 released、非 closed 需求数量） */
     public List<Map<String, Object>> getSystemStats() {
         List<Requirement> all = requirementMapper.selectList(
-                new LambdaQueryWrapper<Requirement>().ne(Requirement::getStatus, "released"));
+                new LambdaQueryWrapper<Requirement>()
+                        .ne(Requirement::getStatus, "released")
+                        .ne(Requirement::getStatus, "closed"));
         Map<String, Long> stats = all.stream()
                 .filter(r -> r.getSystem() != null && !r.getSystem().isBlank())
                 .collect(Collectors.groupingBy(Requirement::getSystem, Collectors.counting()));

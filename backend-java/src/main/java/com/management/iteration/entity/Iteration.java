@@ -20,6 +20,8 @@ public class Iteration {
     private Long id;
     /** 迭代名称 */
     private String name;
+    /** 迭代状态（pending_publish=待发布, published=已发布） */
+    private String status;
     /** 发布时间 */
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
     private LocalDateTime releaseTime;

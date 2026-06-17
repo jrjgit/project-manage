@@ -22,14 +22,17 @@
       <!-- Main split: Tasks left, Bugs right -->
       <div class="main-split">
         <section class="section-card task-section">
-          <div class="section-header"><h3>待处理任务</h3></div>
-          <TaskBoard :tasks="boardTasks" :column-keys="['pending', 'developing']" :skills-map="skillsMap" @status-change="onStatusChange" @task-click="onTaskClick" />
+          <div class="section-header">
+            <h3>待处理任务</h3>
+            <n-input v-model:value="reqFilter" placeholder="输入需求编号筛选任务 / Bug" clearable size="small" style="width: 220px;" />
+          </div>
+          <TaskBoard :tasks="filteredBoardTasks" :column-keys="['pending', 'developing']" :skills-map="skillsMap" @status-change="onStatusChange" @task-click="onTaskClick" />
         </section>
 
         <section class="section-card bug-section">
           <div class="section-header"><h3>待处理 BUG</h3></div>
-          <div v-if="bugs.length === 0" class="empty-state">暂无待处理Bug</div>
-          <div v-for="bug in bugs" :key="bug.id" class="bug-item" @click="onBugClick(bug)">
+          <div v-if="filteredBugs.length === 0" class="empty-state">{{ reqFilter.trim() ? '没有匹配的 Bug' : '暂无待处理Bug' }}</div>
+          <div v-for="bug in filteredBugs" :key="bug.id" class="bug-item" @click="onBugClick(bug)">
             <div class="bug-item-top">
               <span class="bug-title">{{ bug.title }}</span>
               <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
@@ -60,7 +63,7 @@ import TaskBoard from '@/components/TaskBoard.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import BugDetailDrawer from '@/components/BugDetailDrawer.vue'
 import AppLayout from '@/components/AppLayout.vue'
-import { NTag } from 'naive-ui'
+import { NTag, NInput } from 'naive-ui'
 
 const authStore = useAuthStore()
 const route = useRoute()
@@ -71,6 +74,7 @@ const showTaskDetail = ref(false)
 const selectedTaskId = ref(null)
 const showBugDetail = ref(false)
 const selectedBugId = ref(null)
+const reqFilter = ref('')
 
 const roleLabel = computed(() => ({ dev_lead: '开发组长', dev: '开发' })[authStore.userInfo?.role] || '')
 
@@ -84,6 +88,24 @@ const boardTasks = computed(() => {
     if (col.tasks) result.push(...col.tasks)
   }
   return result
+})
+
+const filteredBoardTasks = computed(() => {
+  if (!reqFilter.value.trim()) return boardTasks.value
+  const kw = reqFilter.value.trim().toLowerCase()
+  return boardTasks.value.filter(t => {
+    const reqNum = (t.reqNumber || '').toString().toLowerCase()
+    return reqNum.includes(kw)
+  })
+})
+
+const filteredBugs = computed(() => {
+  if (!reqFilter.value.trim()) return bugs.value
+  const kw = reqFilter.value.trim().toLowerCase()
+  return bugs.value.filter(b => {
+    const reqNum = (b.reqNumber || '').toString().toLowerCase()
+    return reqNum.includes(kw)
+  })
 })
 
 async function loadData() {
@@ -183,7 +205,7 @@ onMounted(() => { loadData(); loadDictionaries() })
 .task-section { flex: 1; min-width: 0; }
 .bug-section { flex: 1; min-width: 0; }
 .section-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 16px; }
-.section-header { margin-bottom: 12px; }
+.section-header { margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .section-header h3 { margin: 0; font-size: 15px; font-weight: 700; color: #0f172a; }
 
 .bug-item {

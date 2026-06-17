@@ -11,9 +11,30 @@
       <div class="drawer-body">
         <section class="hero-card">
           <div class="hero-main">
+            <div class="task-overview-row">
+              <div class="overview-item">
+                <span class="overview-label">需求编号</span>
+                <span class="overview-value">{{ requirementData?.number || task.requirement_name || '-' }}</span>
+              </div>
+              <div class="overview-item">
+                <span class="overview-label">所属系统</span>
+                <span class="overview-value">{{ requirementData?.system || '-' }}</span>
+              </div>
+              <div class="overview-item">
+                <span class="overview-label">平台</span>
+                <span class="overview-value">{{ skillsMap[task.terminal] || task.terminal || '-' }}</span>
+              </div>
+            </div>
             <div class="chip-row">
               <n-tag :type="statusMeta.tone" round>{{ statusMeta.label }}</n-tag>
               <n-tag :type="priorityMetaItem.tone" round>{{ priorityMetaItem.label }}</n-tag>
+            </div>
+            <div class="deadline-row">
+              <span class="deadline-item">
+                <span class="deadline-label">截止日期</span>
+                <span class="deadline-value">{{ formatDate(task.deadline) || '-' }}</span>
+              </span>
+              <span v-if="overdueDays > 0" class="deadline-overdue">延期天数：{{ overdueDays }} 天</span>
             </div>
             <div class="next-action-title">当前状态</div>
             <div class="next-action-copy">{{ nextActionText }}</div>
@@ -85,7 +106,7 @@
           <div style="display:flex;flex-direction:column;gap:16px">
             <div class="section-card">
               <div class="section-title">项目经理备注</div>
-              <div class="description-block">{{ task.requirement_desc || task.description || '暂无描述' }}</div>
+              <div class="description-block">{{ requirementData?.notes || '暂无备注' }}</div>
             </div>
             <div class="section-card">
             <div class="section-title">技术经理备注</div>
@@ -228,6 +249,13 @@ const severityOptions = [
 
 const statusMeta = computed(() => taskStatusMeta[task.value?.status] || { label: task.value?.status || '-', tone: 'default' })
 const priorityMetaItem = computed(() => priorityMeta[task.value?.priority] || { label: task.value?.priority || '-', tone: 'default' })
+const overdueDays = computed(() => {
+  if (!task.value?.deadline || task.value?.status === 'closed') return 0
+  const now = new Date()
+  const end = new Date(task.value.deadline)
+  const diff = Math.floor((now - end) / (1000 * 60 * 60 * 24))
+  return diff > 0 ? diff : 0
+})
 
 const testerOptions = computed(() => users.value.filter(u => u.role === 'tester').map(u => ({ label: u.name, value: u.id })))
 const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
@@ -465,6 +493,15 @@ function formatDate(value) {
 .hero-card { padding: 18px; background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%); }
 .section-card { padding: 18px; }
 .chip-row { display: flex; gap: 10px; margin-bottom: 14px; }
+.task-overview-row { display: flex; gap: 24px; margin-bottom: 14px; flex-wrap: wrap; }
+.overview-item { display: flex; flex-direction: column; gap: 2px; }
+.overview-label { font-size: 11px; color: #94a3b8; }
+.overview-value { font-size: 14px; font-weight: 700; color: #0f172a; }
+.deadline-row { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+.deadline-item { display: flex; align-items: center; gap: 6px; }
+.deadline-label { font-size: 12px; color: #94a3b8; }
+.deadline-value { font-size: 13px; font-weight: 600; color: #0f172a; }
+.deadline-overdue { font-size: 13px; font-weight: 700; color: #d03050; }
 .next-action-title { font-size: 15px; font-weight: 700; color: #0f172a; }
 .next-action-copy { margin-top: 6px; font-size: 13px; line-height: 1.7; color: #64748b; }
 .section-title { font-size: 15px; font-weight: 700; color: #0f172a; }

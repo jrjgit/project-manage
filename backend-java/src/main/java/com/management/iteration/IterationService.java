@@ -35,6 +35,9 @@ public class IterationService {
     public Iteration create(Iteration iteration) {
         Long userId = currentUser().getUserId();
         iteration.setCreatedBy(userId);
+        if (iteration.getStatus() == null || iteration.getStatus().isBlank()) {
+            iteration.setStatus("pending_publish");
+        }
         iterationMapper.insert(iteration);
         if (iteration.getCreatedBy() != null) iteration.setCreator(userMapper.selectById(iteration.getCreatedBy()));
         return iteration;
@@ -44,6 +47,7 @@ public class IterationService {
         Iteration it = iterationMapper.selectById(id);
         if (it == null) throw new BusinessException(404, "迭代不存在");
         if (req.getName() != null) it.setName(req.getName());
+        if (req.getStatus() != null) it.setStatus(req.getStatus());
         if (req.getReleaseTime() != null) it.setReleaseTime(req.getReleaseTime());
         if (req.getNotes() != null) it.setNotes(req.getNotes());
         if (req.getReleaseNotes() != null) it.setReleaseNotes(req.getReleaseNotes());

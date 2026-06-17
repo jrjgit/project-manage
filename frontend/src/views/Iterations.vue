@@ -37,6 +37,12 @@
         <n-form-item label="迭代名称" path="name" :rule="{ required: true, message: '请输入迭代名称' }">
           <n-input v-model:value="form.name" placeholder="如：v2.3.0" />
         </n-form-item>
+        <n-form-item label="状态" path="status">
+          <n-select v-model:value="form.status" :options="[
+            { label: '待发布', value: 'pending_publish' },
+            { label: '已发布', value: 'published' }
+          ]" />
+        </n-form-item>
         <n-form-item label="发布日期" path="releaseTime">
           <n-date-picker v-model:value="form.releaseTime" type="date" placeholder="选择发布日期" clearable style="width: 100%" />
         </n-form-item>
@@ -72,9 +78,14 @@ import { getIterations, createIteration, updateIteration, deleteIteration } from
 import { getTasks } from '@/api/tasks'
 import { taskStatusMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
-import { NButton, NDataTable, NModal, NForm, NFormItem, NInput, NDatePicker, NSpace, NTag } from 'naive-ui'
+import { NButton, NDataTable, NModal, NForm, NFormItem, NInput, NSelect, NDatePicker, NSpace, NTag } from 'naive-ui'
 
 const authStore = useAuthStore()
+
+const iterationStatusMeta = {
+  pending_publish: { label: '待发布', tone: 'warning' },
+  published: { label: '已发布', tone: 'success' }
+}
 
 const iterations = ref([])
 const showModal = ref(false)
@@ -84,7 +95,7 @@ const saving = ref(false)
 const showDeleteConfirm = ref(false)
 const deleting = ref(false)
 const deletingId = ref(null)
-const form = ref({ name: '', releaseTime: null, notes: '', release_notes: '' })
+const form = ref({ name: '', status: 'pending_publish', releaseTime: null, notes: '', release_notes: '' })
 const expandedTasks = ref({})
 
 function formatDate(ts) {
@@ -99,14 +110,14 @@ function formatDate(ts) {
 function openCreate() {
   isEditing.value = false
   editingId.value = null
-  form.value = { name: '', releaseTime: null, notes: '', release_notes: '' }
+  form.value = { name: '', status: 'pending_publish', releaseTime: null, notes: '', release_notes: '' }
   showModal.value = true
 }
 
 function openEdit(row) {
   isEditing.value = true
   editingId.value = row.id
-  form.value = { name: row.name, releaseTime: row.release_time ? new Date(row.release_time).getTime() : null, notes: row.notes || '', release_notes: row.release_notes || '' }
+  form.value = { name: row.name, status: row.status || 'pending_publish', releaseTime: row.release_time ? new Date(row.release_time).getTime() : null, notes: row.notes || '', release_notes: row.release_notes || '' }
   showModal.value = true
 }
 
@@ -120,6 +131,7 @@ async function handleSave() {
   try {
     const payload = {
       name: form.value.name,
+      status: form.value.status,
       release_time: form.value.releaseTime ? new Date(form.value.releaseTime).toISOString() : null,
       notes: form.value.notes || null,
       release_notes: form.value.release_notes || null
@@ -209,6 +221,15 @@ const columns = computed(() => [
     title: '迭代名称',
     key: 'name',
     width: 200
+  },
+  {
+    title: '状态',
+    key: 'status',
+    width: 100,
+    render(row) {
+      const meta = iterationStatusMeta[row.status] || { label: row.status || '-', tone: 'default' }
+      return h(NTag, { size: 'small', round: true, type: meta.tone }, { default: () => meta.label })
+    }
   },
   {
     title: '发布日期',

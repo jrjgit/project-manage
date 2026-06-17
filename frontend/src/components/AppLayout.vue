@@ -209,13 +209,13 @@ const avatarLetter = computed(() => authStore.userInfo?.name?.charAt(0)?.toUpper
 const allMenus = [
   { key: 'dashboard', label: '仪表盘', path: '/dashboard', icon: LayoutDashboardIcon, roles: ['pm'] },
   { key: 'developer', label: '开发工作台', path: '/developer', icon: CodeIcon, roles: ['dev_lead', 'dev'] },
-  { key: 'tester', label: '测试工作台', path: '/tester', icon: BugIcon, roles: ['tester'] },
+  { key: 'tester', label: '测试工作台', path: '/tester', icon: BugIcon, roles: ['pm', 'tester'] },
   { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon, roles: ['pm'] },
   { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon, roles: [] },
   { key: 'messages', label: '消息中心', path: '/messages', icon: BellIcon, badge: 'unread', roles: ['pm', 'dev_lead', 'dev', 'tester'] },
   { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon, roles: ['pm', 'dev_lead'] },
   { key: 'iterations', label: '发布迭代', path: '/iterations', icon: MilestoneIcon, roles: ['pm', 'dev_lead', 'dev', 'tester'] },
-  { key: 'revenue', label: '营收统计', path: '/revenue', icon: ChartBarIcon, roles: ['pm'] },
+  { key: 'revenue', label: '运维营收统计', path: '/revenue', icon: ChartBarIcon, roles: ['pm'] },
   { key: 'performance', label: '人员绩效', path: '/performance', icon: TrendingUpIcon, roles: ['pm'] },
   { key: 'users', label: '用户管理', path: '/users', icon: UsersIcon, roles: ['pm'] },
   { key: 'systems', label: '系统管理', path: '/systems', icon: BookOpenIcon, roles: ['pm'] },
@@ -253,8 +253,8 @@ const pageMeta = computed(() => {
       subtitle: '查看系统通知和消息提醒'
     },
     revenue: {
-      title: '营收统计看板',
-      subtitle: '年度需求产值统计'
+      title: '运维营收统计',
+      subtitle: '年度运维需求产值统计'
     },
     performance: {
       title: '人员绩效统计',

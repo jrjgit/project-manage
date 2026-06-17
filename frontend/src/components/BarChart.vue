@@ -1,6 +1,6 @@
 <template>
   <div v-if="data.length === 0" class="empty-chart">暂无数据</div>
-  <v-chart v-else class="chart" :option="option" autoresize />
+  <v-chart v-else class="chart" :option="option" autoresize @click="onChartClick" />
 </template>
 
 <script setup>
@@ -17,6 +17,13 @@ const props = defineProps({
   data: { type: Array, default: () => [] },
   color: { type: String, default: '#6366f1' }
 })
+
+const emit = defineEmits(['click'])
+
+function onChartClick(params) {
+  const item = props.data[params.dataIndex]
+  if (item) emit('click', item)
+}
 
 const option = computed(() => {
   const labels = props.data.map(d => d.label || d.month || '')

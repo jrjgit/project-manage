@@ -158,6 +158,7 @@ CREATE TABLE IF NOT EXISTS requirements (
 CREATE TABLE IF NOT EXISTS iterations (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY,
     name         VARCHAR(255) NOT NULL,
+    status       VARCHAR(32)  NOT NULL DEFAULT 'pending_publish',
     release_time TIMESTAMP,
     notes        TEXT,
     release_notes TEXT,

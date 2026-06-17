@@ -15,13 +15,15 @@ import java.util.Map;
 public class StatisticsController {
     private final StatisticsService statisticsService;
 
-    @Operation(summary = "收入统计")
+    @Operation(summary = "运维营收统计")
     /**
-     * 获取营收统计
+     * 获取运维营收统计
      */
     @GetMapping("/revenue")
-    public Result<Map<String, Object>> revenue(@RequestParam(defaultValue = "2026") int year) {
-        return Result.ok(statisticsService.revenueStats(year));
+    public Result<Map<String, Object>> revenue(
+            @RequestParam(defaultValue = "2026") int year,
+            @RequestParam(required = false) Long projectId) {
+        return Result.ok(statisticsService.revenueStats(year, projectId));
     }
 
     @Operation(summary = "绩效统计")
@@ -29,7 +31,12 @@ public class StatisticsController {
      * 获取绩效统计
      */
     @GetMapping("/performance")
-    public Result<Map<String, Object>> performance(@RequestParam int year, @RequestParam int month) {
-        return Result.ok(statisticsService.performanceStats(year, month));
+    public Result<Map<String, Object>> performance(
+            @RequestParam(defaultValue = "year") String filterType,
+            @RequestParam(defaultValue = "2026") int year,
+            @RequestParam(defaultValue = "0") int month,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        return Result.ok(statisticsService.performanceStats(filterType, year, month, startDate, endDate));
     }
 }

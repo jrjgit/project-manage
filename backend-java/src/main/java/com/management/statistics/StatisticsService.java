@@ -10,7 +10,10 @@ import com.management.user.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -19,37 +22,33 @@ public class StatisticsService {
     private final TaskMapper taskMapper;
     private final UserMapper userMapper;
 
-    /** 年度营收统计 — 使用需求的 total_price（总金额） */
-    public Map<String, Object> revenueStats(int year) {
-        List<Requirement> all = requirementMapper.selectList(
-                new LambdaQueryWrapper<Requirement>()
-                        .ge(Requirement::getCreatedAt, year + "-01-01")
-                        .lt(Requirement::getCreatedAt, (year + 1) + "-01-01"));
+    /** 运维营收统计 — 只统计 project_type = ops 的需求 */
+    public Map<String, Object> revenueStats(int year, Long projectId) {
+        LambdaQueryWrapper<Requirement> q = new LambdaQueryWrapper<Requirement>()
+                .eq(Requirement::getProjectType, "ops")
+                .ge(Requirement::getCreatedAt, year + "-01-01")
+                .lt(Requirement::getCreatedAt, (year + 1) + "-01-01");
+        if (projectId != null) q.eq(Requirement::getProjectId, projectId);
 
-        double totalAmount = 0;
-        double pendingAmount = 0;
-        double doneAmount = 0;
-        double testingAmount = 0;
+        List<Requirement> all = requirementMapper.selectList(q);
+
+        double totalCreatedAmount = 0;
+        double totalDoneAmount = 0;
 
         double[] monthlyCreatedAmount = new double[12];
         double[] monthlyDoneAmount = new double[12];
 
         for (Requirement r : all) {
             double amt = parseDoubleSafe(r.getTotalPrice());
-            totalAmount += amt;
+            totalCreatedAmount += amt;
 
             int m = r.getCreatedAt().getMonthValue() - 1;
             monthlyCreatedAmount[m] += amt;
 
-            if ("planned".equals(r.getStatus())) pendingAmount += amt;
-            else if ("released".equals(r.getStatus())) {
-                doneAmount += amt;
-                if (r.getReleaseTime() != null) {
-                    int rm = r.getReleaseTime().getMonthValue() - 1;
-                    monthlyDoneAmount[rm] += amt;
-                }
-            } else if ("integration_test".equals(r.getStatus()) || "business_test".equals(r.getStatus())) {
-                testingAmount += amt;
+            if ("released".equals(r.getStatus()) && r.getUpdatedAt() != null) {
+                totalDoneAmount += amt;
+                int rm = r.getUpdatedAt().getMonthValue() - 1;
+                monthlyDoneAmount[rm] += amt;
             }
         }
 
@@ -68,56 +67,96 @@ public class StatisticsService {
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("total_created", totalAmount);
-        result.put("pending_count", pendingAmount);
-        result.put("done_count", doneAmount);
-        result.put("testing_count", testingAmount);
+        result.put("total_created", totalCreatedAmount);
+        result.put("total_done", totalDoneAmount);
         result.put("monthly_created", monthlyCreatedList);
         result.put("monthly_done", monthlyDoneList);
         return result;
     }
 
-    /** 人员绩效统计 — 绩效金额 = 任务绩效 × 需求单价 */
-    public Map<String, Object> performanceStats(int year, int month) {
+    /** 人员绩效统计 */
+    public Map<String, Object> performanceStats(String filterType, int year, int month, String startDate, String endDate) {
         List<User> users = userMapper.selectList(
                 new LambdaQueryWrapper<User>()
                         .in(User::getRole, "dev", "dev_lead"));
-        List<Map<String, Object>> stats = new ArrayList<>();
-        // 缓存需求单价
+        if (users.isEmpty()) {
+            return Map.of("users", Collections.emptyList());
+        }
+
+        Map<Long, User> userMap = users.stream().collect(Collectors.toMap(User::getId, u -> u));
+        List<Long> userIds = new ArrayList<>(userMap.keySet());
+
+        // 绩效产值按任务最后更新时间筛选
+        LocalDateTime rangeStart = null;
+        LocalDateTime rangeEnd = null;
+        if ("range".equals(filterType) && startDate != null && !startDate.isBlank() && endDate != null && !endDate.isBlank()) {
+            rangeStart = LocalDate.parse(startDate).atStartOfDay();
+            rangeEnd = LocalDate.parse(endDate).plusDays(1).atStartOfDay(); // 不包含结束日次日
+        } else if ("month".equals(filterType)) {
+            rangeStart = LocalDateTime.of(year, month, 1, 0, 0);
+            rangeEnd = rangeStart.plusMonths(1);
+        } else {
+            // 按年
+            rangeStart = LocalDateTime.of(year, 1, 1, 0, 0);
+            rangeEnd = rangeStart.plusYears(1);
+        }
+
+        // 一次性查询所有开发人员的任务
+        List<Task> allTasks = taskMapper.selectList(
+                new LambdaQueryWrapper<Task>().in(Task::getAssigneeId, userIds));
+        Map<Long, List<Task>> tasksByUser = allTasks.stream().collect(Collectors.groupingBy(Task::getAssigneeId));
+
+        // 缓存需求信息
+        java.util.Map<Long, Requirement> reqCache = new java.util.HashMap<>();
         java.util.Map<Long, Double> priceCache = new java.util.HashMap<>();
 
+        List<Map<String, Object>> stats = new ArrayList<>();
         for (User u : users) {
-            List<Task> tasks = taskMapper.selectList(
-                    new LambdaQueryWrapper<Task>()
-                            .eq(Task::getAssigneeId, u.getId()));
-            long inProgress = tasks.stream()
-                    .filter(t -> "developing".equals(t.getStatus()) || "testing".equals(t.getStatus())).count();
-            long overdue = tasks.stream()
-                    .filter(t -> !"closed".equals(t.getStatus())
-                            && t.getDeadline() != null
-                            && t.getDeadline().isBefore(java.time.LocalDateTime.now()))
-                    .count();
-            long done = tasks.stream()
-                    .filter(t -> "closed".equals(t.getStatus()))
-                    .count();
+            List<Task> tasks = tasksByUser.getOrDefault(u.getId(), Collections.emptyList());
+            if (tasks.isEmpty()) continue;
 
-            double perfAmount = 0;
+            double inProgressLoad = 0;
+            double performanceValue = 0;
+            List<Map<String, Object>> taskDetails = new ArrayList<>();
+
             for (Task t : tasks) {
                 double perf = parseDoubleSafe(t.getPerformance());
-                if (perf <= 0) continue;
-                double price = getDevPrice(t.getRequirementId(), priceCache);
-                perfAmount += perf * price;
-            }
+                double progress = t.getProgress() != null ? t.getProgress() : 0;
+                String status = t.getStatus();
 
-            if (tasks.isEmpty()) continue;
+                // 进行中任务负载：状态不等于 closed
+                if (!"closed".equals(status)) {
+                    inProgressLoad += perf * (1 - progress / 100.0);
+                }
+
+                // 绩效产值：状态为 closed，且按任务最后更新时间落在筛选范围内
+                if ("closed".equals(status)) {
+                    LocalDateTime updatedAt = t.getUpdatedAt();
+                    if (updatedAt != null && !updatedAt.isBefore(rangeStart) && updatedAt.isBefore(rangeEnd)) {
+                        double price = getDevPrice(t.getRequirementId(), priceCache);
+                        performanceValue += perf * price;
+                    }
+                }
+
+                Requirement req = getRequirement(t.getRequirementId(), reqCache);
+                Map<String, Object> taskInfo = new LinkedHashMap<>();
+                taskInfo.put("id", t.getId());
+                taskInfo.put("requirement_number", req != null ? req.getNumber() : "-");
+                taskInfo.put("system", req != null ? req.getSystem() : "-");
+                taskInfo.put("terminal", t.getTerminal());
+                taskInfo.put("description", t.getTitle());
+                taskInfo.put("assignee_name", u.getName());
+                taskInfo.put("progress", progress);
+                taskInfo.put("status", status);
+                taskDetails.add(taskInfo);
+            }
 
             Map<String, Object> userStat = new LinkedHashMap<>();
             userStat.put("user_id", u.getId());
             userStat.put("user_name", u.getName());
-            userStat.put("in_progress", inProgress);
-            userStat.put("overdue", overdue);
-            userStat.put("done", done);
-            userStat.put("performance", perfAmount);
+            userStat.put("in_progress_load", round2(inProgressLoad));
+            userStat.put("performance_value", round2(performanceValue));
+            userStat.put("tasks", taskDetails);
             stats.add(userStat);
         }
         return Map.of("users", stats);
@@ -126,6 +165,15 @@ public class StatisticsService {
     private double parseDoubleSafe(String value) {
         if (value == null || value.isBlank()) return 0;
         try { return Double.parseDouble(value); } catch (Exception e) { return 0; }
+    }
+
+    private double round2(double value) {
+        return Math.round(value * 100.0) / 100.0;
+    }
+
+    private Requirement getRequirement(Long requirementId, java.util.Map<Long, Requirement> cache) {
+        if (requirementId == null) return null;
+        return cache.computeIfAbsent(requirementId, id -> requirementMapper.selectById(id));
     }
 
     private double getDevPrice(Long requirementId, java.util.Map<Long, Double> cache) {

@@ -299,6 +299,7 @@ public class TaskService {
         Long oldDevLeadId = task.getDevLeadId();
         Long oldAssigneeId = task.getAssigneeId();
         Long oldTesterId = task.getTesterId();
+        String oldStatus = task.getStatus();
 
         if (req.getTitle() != null && !req.getTitle().isBlank()) task.setTitle(req.getTitle());
         if (req.getDescription() != null) task.setDescription(req.getDescription());
@@ -313,10 +314,14 @@ public class TaskService {
                 throw new BusinessException(400, "开发组长不存在");
             task.setDevLeadId(req.getDevLeadId());
         }
+        boolean assigneeChanged = false;
         if (req.getAssigneeId() != null) {
             if (userMapper.selectById(req.getAssigneeId()) == null)
                 throw new BusinessException(400, "指派人不存在");
-            task.setAssigneeId(req.getAssigneeId());
+            if (!req.getAssigneeId().equals(oldAssigneeId)) {
+                task.setAssigneeId(req.getAssigneeId());
+                assigneeChanged = true;
+            }
         }
         if (req.getTesterId() != null) {
             if (userMapper.selectById(req.getTesterId()) == null)
@@ -351,7 +356,30 @@ public class TaskService {
                 progressHistoryMapper.insert(ph);
             }
         }
+
+        // 任务转派时重置状态和进度
+        if (assigneeChanged) {
+            task.setStatus("pending");
+            task.setProgress(0);
+        }
+
         taskMapper.updateById(task);
+
+        // 记录转派历史并同步重置任务指派记录状态
+        if (assigneeChanged) {
+            TaskStatusHistory history = new TaskStatusHistory();
+            history.setTaskId(id);
+            history.setFromStatus(oldStatus);
+            history.setToStatus("pending");
+            history.setChangedBy(currentUser().getUserId());
+            history.setComment("任务转派，状态重置为待受理");
+            historyMapper.insert(history);
+
+            taskAssigneeMapper.update(null, new LambdaUpdateWrapper<TaskAssignee>()
+                    .eq(TaskAssignee::getTaskId, id)
+                    .eq(TaskAssignee::getUserId, req.getAssigneeId())
+                    .set(TaskAssignee::getStatus, "pending"));
+        }
 
         if (req.getIterationId() != null) {
             if (req.getIterationId().isBlank()) {

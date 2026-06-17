@@ -149,6 +149,7 @@ public class BugService {
         Bug bug = bugMapper.selectById(id);
         if (bug == null) throw new BusinessException(404, "bug not found");
         Long oldAssigneeId = bug.getAssigneeId();
+        String oldStatus = bug.getStatus();
         if (req.getTitle() != null && !req.getTitle().isBlank()) bug.setTitle(req.getTitle());
         if (req.getDescription() != null) bug.setDescription(req.getDescription());
         if (req.getSeverity() != null && !req.getSeverity().isBlank()) bug.setSeverity(req.getSeverity());
@@ -159,15 +160,36 @@ public class BugService {
             Task t = taskMapper.selectById(req.getTaskId());
             if (t != null) bug.setRequirementId(t.getRequirementId());
         }
+        boolean assigneeChanged = false;
         if (req.getAssigneeId() != null) {
             if (userMapper.selectById(req.getAssigneeId()) == null)
                 throw new BusinessException(400, "指派人不存在");
-            bug.setAssigneeId(req.getAssigneeId());
+            if (!req.getAssigneeId().equals(oldAssigneeId)) {
+                bug.setAssigneeId(req.getAssigneeId());
+                assigneeChanged = true;
+            }
         }
         if (req.getRemark() != null) bug.setRemark(req.getRemark());
         if (req.getTestType() != null) bug.setTestType(req.getTestType());
         if (req.getExpectedResult() != null) bug.setExpectedResult(req.getExpectedResult());
+
+        // Bug 转派时重置为未修复状态
+        if (assigneeChanged) {
+            bug.setStatus("unfixed");
+        }
+
         bugMapper.updateById(bug);
+
+        // 记录 Bug 转派历史
+        if (assigneeChanged) {
+            BugStatusHistory history = new BugStatusHistory();
+            history.setBugId(id);
+            history.setFromStatus(oldStatus);
+            history.setToStatus("unfixed");
+            history.setChangedBy(currentUser().getUserId());
+            history.setComment("Bug 转派，状态重置为未修复");
+            historyMapper.insert(history);
+        }
 
         // assignee_id 变化时通知新指派人
         if (req.getAssigneeId() != null && (oldAssigneeId == null || !req.getAssigneeId().equals(oldAssigneeId))) {
