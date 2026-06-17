@@ -37,11 +37,11 @@
               <span class="bug-title">{{ bug.title }}</span>
               <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
             </div>
-            <div class="bug-item-meta">
-              <n-tag size="tiny" :type="bugStatusMeta[bug.status]?.tone || 'default'">{{ bugStatusMeta[bug.status]?.label || bug.status }}</n-tag>
-              <span v-if="bug.taskTitle" class="bug-task">关联: {{ bug.taskTitle }}</span>
-              <span v-if="bug.expected_result" class="bug-expected">预期: {{ bug.expected_result.substring(0, 30) }}{{ bug.expected_result.length > 30 ? '...' : '' }}</span>
-            </div>
+             <div class="bug-item-meta">
+               <n-tag size="tiny" :type="bugStatusMeta[bug.status]?.tone || 'default'">{{ bugStatusMeta[bug.status]?.label || bug.status }}</n-tag>
+               <span v-if="bug.taskTitle" class="bug-task">关联: {{ bug.taskTitle }}</span>
+               <span v-if="bug.expected_result" class="bug-expected">预期: {{ bug.expected_result.substring(0, 30) }}{{ bug.expected_result.length > 30 ? '...' : '' }}</span>
+             </div>
           </div>
         </section>
       </div>

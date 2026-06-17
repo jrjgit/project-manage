@@ -42,7 +42,7 @@
         </section>
 
         <template v-if="!readonly">
-          <section v-if="actionGroups.length || canEditDevLead || canEditTester" class="section-card">
+          <section v-if="actionGroups.length || canEditDevLead" class="section-card">
             <div class="section-title">可执行操作</div>
 
             <div v-if="canEditDevLead" class="action-block">
@@ -51,15 +51,6 @@
               <div class="action-row">
                 <n-select v-model:value="selectedDevLead" :options="devLeadOptions" placeholder="选择开发组长" style="width: 220px;" />
                 <n-button :loading="actionLoading" @click="saveDevLead">确认</n-button>
-              </div>
-            </div>
-
-            <div v-if="canEditTester" class="action-block">
-              <div class="action-block-title">指派测试人员</div>
-              <div class="action-block-copy">为任务指定测试负责人。</div>
-              <div class="action-row">
-                <n-select v-model:value="selectedTester" :options="testerOptions" placeholder="选择测试人员" style="width: 220px;" />
-                <n-button :loading="actionLoading" @click="saveTester">确认指派</n-button>
               </div>
             </div>
 
@@ -208,7 +199,7 @@ import { priorityMeta, taskStatusMeta, bugStatusMeta, severityMeta } from '@/con
 import { NDrawer, NDrawerContent, NTag, NButton, NTimeline, NTimelineItem, NSelect, NSlider, NModal, NForm, NFormItem, NInput, NUpload, NSpace } from 'naive-ui'
 
 const show = defineModel('show', { type: Boolean, default: false })
-const props = defineProps({ taskId: Number, readonly: Boolean })
+const props = defineProps({ taskId: Number, readonly: Boolean, testerMode: { type: Boolean, default: false } })
 const emit = defineEmits(['status-change', 'refresh'])
 
 const authStore = useAuthStore()
@@ -221,7 +212,6 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
 const task = ref(null)
 const histories = ref([])
 const users = ref([])
-const selectedTester = ref(null)
 const selectedDevLead = ref(null)
 const actionLoading = ref(false)
 const reqDoc = ref(null)
@@ -257,11 +247,12 @@ const overdueDays = computed(() => {
   return diff > 0 ? diff : 0
 })
 
-const testerOptions = computed(() => users.value.filter(u => u.role === 'tester').map(u => ({ label: u.name, value: u.id })))
 const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
 
-const canEditDevLead = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'developing'].includes(task.value?.status))
-const canEditTester = computed(() => authStore.userInfo?.role === 'pm' && ['pending', 'developing', 'testing'].includes(task.value?.status))
+// 在测试工作台打开时，项目经理按测试人员权限处理
+const effectiveRole = computed(() => props.testerMode && authStore.userInfo?.role === 'pm' ? 'tester' : authStore.userInfo?.role)
+
+const canEditDevLead = computed(() => effectiveRole.value === 'pm' && ['pending', 'developing'].includes(task.value?.status))
 
 const nextActionText = computed(() => ({
   pending: '等待分配开发人员进行开发。',
@@ -272,7 +263,7 @@ const nextActionText = computed(() => ({
 
 const availableActions = computed(() => {
   const status = task.value?.status
-  const role = authStore.userInfo?.role
+  const role = effectiveRole.value
   const actions = []
   const myId = authStore.userInfo?.id
   const isMyLead = task.value?.dev_lead_id === myId
@@ -296,7 +287,7 @@ const actionGroups = computed(() => {
 
 const canReportProgress = computed(() => {
   const status = task.value?.status
-  const role = authStore.userInfo?.role
+  const role = effectiveRole.value
   const myId = authStore.userInfo?.id
   const isMyTask = task.value?.assignee_id === myId
   return status === 'developing' && (['dev', 'dev_lead'].includes(role) && isMyTask || role === 'pm')
@@ -357,18 +348,6 @@ async function saveDevLead() {
     await updateTask(props.taskId, { dev_lead_id: selectedDevLead.value })
     window.$message?.success('开发组长已更新')
     selectedDevLead.value = null
-    await loadDetail(); emit('refresh')
-  } catch (e) { console.error(e) }
-  actionLoading.value = false
-}
-
-async function saveTester() {
-  if (!selectedTester.value) { window.$message?.warning('请选择测试人员'); return }
-  actionLoading.value = true
-  try {
-    await updateTask(props.taskId, { tester_id: selectedTester.value })
-    window.$message?.success('指派成功')
-    selectedTester.value = null
     await loadDetail(); emit('refresh')
   } catch (e) { console.error(e) }
   actionLoading.value = false

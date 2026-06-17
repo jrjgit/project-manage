@@ -52,31 +52,35 @@
 
         <div class="right-panel">
           <section class="section-card">
-            <div class="section-header"><h3>未修复 BUG（{{ unfixedBugs.length }}）</h3></div>
-            <div v-if="unfixedBugs.length === 0" class="empty-state">暂无未修复 Bug</div>
+            <div class="section-header"><h3>未修复 BUG（{{ filteredUnfixedBugs.length }}）</h3></div>
+            <div v-if="filteredUnfixedBugs.length === 0" class="empty-state">暂无未修复 Bug</div>
             <div class="task-list-scroll">
-              <div v-for="bug in unfixedBugs" :key="bug.id" class="bug-item" @click="onBugClick(bug)">
+              <div v-for="bug in filteredUnfixedBugs" :key="bug.id" class="bug-item" @click="onBugClick(bug)">
                 <div class="bug-item-top">
                   <span class="bug-title">{{ bug.title }}</span>
                   <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
                 </div>
-                <div v-if="bug.taskTitle" class="bug-item-meta">
-                  <span class="bug-task">关联: {{ bug.taskTitle }}</span>
+                <div class="bug-item-meta">
+                  <span class="bug-task">{{ bug.reqNumber || '-' }}</span>
+                  <span class="bug-task">{{ bug.system || '-' }}</span>
+                  <span class="bug-task">{{ bug.assigneeName || '-' }}</span>
                 </div>
               </div>
             </div>
           </section>
           <section class="section-card">
-            <div class="section-header"><h3>待验证 BUG（{{ pendingVerifyBugs.length }}）</h3></div>
-            <div v-if="pendingVerifyBugs.length === 0" class="empty-state">暂无待验证 Bug</div>
+            <div class="section-header"><h3>待验证 BUG（{{ filteredPendingVerifyBugs.length }}）</h3></div>
+            <div v-if="filteredPendingVerifyBugs.length === 0" class="empty-state">暂无待验证 Bug</div>
             <div class="task-list-scroll">
-              <div v-for="bug in pendingVerifyBugs" :key="bug.id" class="bug-item" @click="onBugClick(bug)">
+              <div v-for="bug in filteredPendingVerifyBugs" :key="bug.id" class="bug-item" @click="onBugClick(bug)">
                 <div class="bug-item-top">
                   <span class="bug-title">{{ bug.title }}</span>
                   <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
                 </div>
-                <div v-if="bug.taskTitle" class="bug-item-meta">
-                  <span class="bug-task">关联: {{ bug.taskTitle }}</span>
+                <div class="bug-item-meta">
+                  <span class="bug-task">{{ bug.reqNumber || '-' }}</span>
+                  <span class="bug-task">{{ bug.system || '-' }}</span>
+                  <span class="bug-task">{{ bug.assigneeName || '-' }}</span>
                 </div>
               </div>
             </div>
@@ -129,7 +133,7 @@
       </n-modal>
     </div>
 
-    <TaskDetailDrawer v-model:show="showTaskDetail" :task-id="selectedTaskId" @refresh="loadData" />
+    <TaskDetailDrawer v-model:show="showTaskDetail" :task-id="selectedTaskId" :tester-mode="true" @refresh="loadData" />
     <BugDetailDrawer v-model:show="showBugDetail" :bug-id="selectedBugId" @refresh="loadData" />
   </AppLayout>
 </template>
@@ -177,13 +181,23 @@ const filterRequirement = ref('')
 const filterSystem = ref('')
 
 const terminalOptions = computed(() => {
-  const set = new Set(tasks.value.map(t => t.terminal).filter(Boolean))
+  const set = new Set([
+    ...tasks.value.map(t => t.terminal).filter(Boolean),
+    ...unfixedBugs.value.map(b => b.terminal).filter(Boolean),
+    ...pendingVerifyBugs.value.map(b => b.terminal).filter(Boolean)
+  ])
   return [...set].map(v => ({ label: skillsMap.value[v] || v, value: v }))
 })
 
-const systemOptions = computed(() =>
-  systems.value.map(s => ({ label: s.name, value: s.name }))
-)
+const systemOptions = computed(() => {
+  const set = new Set([
+    ...tasks.value.map(t => t.system).filter(Boolean),
+    ...unfixedBugs.value.map(b => b.system).filter(Boolean),
+    ...pendingVerifyBugs.value.map(b => b.system).filter(Boolean),
+    ...systems.value.map(s => s.name)
+  ])
+  return [...set].map(v => ({ label: v, value: v }))
+})
 
 const filteredTasks = computed(() => {
   return tasks.value.filter(t => {
@@ -193,6 +207,21 @@ const filteredTasks = computed(() => {
     return true
   })
 })
+
+const filteredUnfixedBugs = computed(() => {
+  return unfixedBugs.value.filter(b => matchesBugFilter(b))
+})
+
+const filteredPendingVerifyBugs = computed(() => {
+  return pendingVerifyBugs.value.filter(b => matchesBugFilter(b))
+})
+
+function matchesBugFilter(b) {
+  if (filterTerminal.value && b.terminal !== filterTerminal.value) return false
+  if (filterRequirement.value && !((b.reqNumber || '').includes(filterRequirement.value) || (b.reqId || '').includes(filterRequirement.value))) return false
+  if (filterSystem.value && !(b.system || '').includes(filterSystem.value)) return false
+  return true
+}
 
 const testTypeOptions = [
   { label: '综合测试', value: 'integration' },
@@ -351,8 +380,8 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers(); loadSystems(); lo
 .bug-item:hover { background:#f1f5f9; }
 .bug-item-top { display:flex;align-items:center;justify-content:space-between;gap:8px; }
 .bug-title { font-size:13px;font-weight:500;color:#0f172a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-.bug-item-meta { margin-top:6px; }
-.bug-task { font-size:11px;color:#94a3b8; }
+.bug-item-meta { display: flex; gap: 12px; margin-top: 6px; font-size: 11px; color: #94a3b8; flex-wrap: wrap; }
+.bug-task { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .empty-state { text-align:center;padding:24px;color:#94a3b8;font-size:13px; }
 .preview-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .preview-item { position: relative; width: 80px; height: 80px; }

@@ -9,6 +9,8 @@ import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
 import com.management.common.notification.NotificationService;
 import com.management.common.workflow.WorkflowService;
+import com.management.requirement.entity.Requirement;
+import com.management.requirement.mapper.RequirementMapper;
 import com.management.task.entity.Task;
 import com.management.task.mapper.TaskMapper;
 import com.management.user.entity.User;
@@ -37,6 +39,7 @@ public class BugService {
     private final BugStatusHistoryMapper historyMapper;
     private final UserMapper userMapper;
     private final TaskMapper taskMapper;
+    private final RequirementMapper requirementMapper;
     private final WorkflowService workflowService;
     private final NotificationService notificationService;
 
@@ -293,6 +296,7 @@ public class BugService {
         if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
         if (b.getCreatorId() != null) b.setCreator(userMapper.selectById(b.getCreatorId()));
         if (b.getAssigneeId() != null) b.setAssignee(userMapper.selectById(b.getAssigneeId()));
+        if (b.getRequirementId() != null) b.setRequirement(requirementMapper.selectById(b.getRequirementId()));
     }
 
     public void uploadImage(Long id, MultipartFile file) throws IOException {

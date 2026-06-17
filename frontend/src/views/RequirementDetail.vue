@@ -257,45 +257,37 @@
       <template v-else>
         <div style="margin-bottom:20px">
           <h4 style="margin:0 0 12px 0;font-size:15px;color:#0f172a">开发进度</h4>
-          <div class="progress-table-inner">
-            <div class="progress-table-header">
-              <span style="flex:1">人员</span>
-              <span style="flex:1">终端</span>
-              <span style="width:80px;text-align:center">任务数</span>
-              <span style="width:80px;text-align:center">已完成</span>
-              <span style="width:80px;text-align:center">进度</span>
-            </div>
-            <div v-for="item in progressData.devProgress || []" :key="item.person + item.terminal" class="progress-table-row">
-              <span style="flex:1">{{ item.person }}</span>
-              <span style="flex:1">{{ skillsMap[item.terminal] || item.terminal }}</span>
-              <span style="width:80px;text-align:center;color:#64748b">{{ item.tasks }}</span>
-              <span style="width:80px;text-align:center;color:#18a058">{{ item.done }}</span>
-              <span style="width:80px;text-align:center;font-weight:700;color:#6366f1">{{ item.progress }}%</span>
+          <div class="progress-table-scroll">
+            <div class="progress-table-inner">
+              <div class="progress-table-header">
+                <span style="min-width:100px">人员</span>
+                <span style="min-width:100px">终端</span>
+                <span style="min-width:70px;text-align:center">任务数</span>
+                <span style="min-width:70px;text-align:center">已完成</span>
+                <span v-for="(w, idx) in progressData.weeks" :key="'devh-' + idx" style="min-width:70px;text-align:center">{{ w }}</span>
+              </div>
+              <div v-for="item in progressData.devProgress || []" :key="item.person + item.terminal" class="progress-table-row">
+                <span style="min-width:100px">{{ item.person }}</span>
+                <span style="min-width:100px">{{ skillsMap[item.terminal] || item.terminal }}</span>
+                <span style="min-width:70px;text-align:center;color:#64748b">{{ item.tasks }}</span>
+                <span style="min-width:70px;text-align:center;color:#18a058">{{ item.done }}</span>
+                <span v-for="(p, idx) in item.progressByWeek" :key="'devp-' + idx" style="min-width:70px;text-align:center;font-weight:700;color:#6366f1">{{ p }}%</span>
+              </div>
             </div>
           </div>
         </div>
         <div>
           <h4 style="margin:0 0 12px 0;font-size:15px;color:#0f172a">测试进度（累计）</h4>
-          <div class="progress-table-inner">
-            <div class="progress-table-header">
-              <span style="flex:1">统计项</span>
-              <span style="width:100px;text-align:center">数量</span>
-            </div>
-            <div class="progress-table-row">
-              <span style="flex:1;color:#64748b">BUG 总数</span>
-              <span style="width:100px;text-align:center;font-weight:700">{{ progressData.totalBugs }}</span>
-            </div>
-            <div class="progress-table-row">
-              <span style="flex:1;color:#64748b">已关闭</span>
-              <span style="width:100px;text-align:center;font-weight:700;color:#18a058">{{ progressData.closedBugs }}</span>
-            </div>
-            <div class="progress-table-row">
-              <span style="flex:1;color:#64748b">未修复</span>
-              <span style="width:100px;text-align:center;font-weight:700;color:#f59e0b">{{ progressData.unfixedBugs }}</span>
-            </div>
-            <div class="progress-table-row">
-              <span style="flex:1;color:#64748b">待验证</span>
-              <span style="width:100px;text-align:center;font-weight:700;color:#d03050">{{ progressData.pendingVerifyBugs }}</span>
+          <div class="progress-table-scroll">
+            <div class="progress-table-inner">
+              <div class="progress-table-header">
+                <span style="min-width:120px">统计项</span>
+                <span v-for="(w, idx) in progressData.weeks" :key="'testh-' + idx" style="min-width:70px;text-align:center">{{ w }}</span>
+              </div>
+              <div v-for="item in progressData.testProgress || []" :key="item.label" class="progress-table-row">
+                <span style="min-width:120px;color:#64748b">{{ item.label }}</span>
+                <span v-for="(v, idx) in item.values" :key="'testv-' + idx" style="min-width:70px;text-align:center;font-weight:700" :style="{ color: testProgressColor(item.label) }">{{ v }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -509,6 +501,15 @@ async function openProgressPanel() {
     progressData.value = await getRequirementProgress(route.params.id) || {}
   } catch (e) { console.error(e) }
   progressLoading.value = false
+}
+
+function testProgressColor(label) {
+  switch (label) {
+    case '已关闭': return '#18a058'
+    case '未修复': return '#f59e0b'
+    case '待验证': return '#d03050'
+    default: return '#0f172a'
+  }
 }
 
 async function openTaskDispatch() {
@@ -1714,7 +1715,8 @@ onMounted(() => {
   background: #6366f1;
   color: white;
 }
-.progress-table-inner { border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+.progress-table-scroll { overflow-x: auto; }
+.progress-table-inner { border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; min-width: fit-content; }
 .progress-table-header { display: flex; padding: 10px 14px; background: #f8fafc; font-size: 12px; font-weight: 600; color: #64748b; border-bottom: 1px solid #e2e8f0; }
 .progress-table-row { display: flex; padding: 10px 14px; font-size: 13px; color: #0f172a; border-bottom: 1px solid #f1f5f9; align-items: center; }
 .progress-table-row:last-child { border-bottom: none; }

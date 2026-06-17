@@ -40,7 +40,7 @@ public class BugController {
      */
     @Operation(summary = "创建Bug")
     @PostMapping
-    @PreAuthorize("hasRole('TESTER')")
+    @PreAuthorize("hasAnyRole('TESTER','PM')")
     @ResponseStatus(HttpStatus.CREATED)
     public Result<Bug> create(@Valid @RequestBody CreateBugRequest req) {
         return Result.ok(bugService.createBug(req));

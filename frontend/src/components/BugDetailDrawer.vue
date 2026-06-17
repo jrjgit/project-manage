@@ -39,13 +39,18 @@
           </div>
         </section>
 
-        <section class="detail-grid">
+          <section class="detail-grid">
           <div class="section-card">
             <div class="section-title">Bug 摘要</div>
             <div class="info-list">
+              <div class="info-item"><span>状态</span><strong><n-tag size="small" :type="statusMeta.tone" round>{{ statusMeta.label }}</n-tag></strong></div>
+              <div class="info-item"><span>严重程度</span><strong><n-tag size="small" :type="severityMetaItem.tone" round>{{ severityMetaItem.label }}</n-tag></strong></div>
               <div class="info-item"><span>所属任务</span><strong>{{ bug.task?.title || '-' }}</strong></div>
+              <div class="info-item"><span>所属需求</span><strong>{{ bug.requirement?.number || bug.requirement?.requirementId || '-' }}</strong></div>
+              <div class="info-item"><span>所属系统</span><strong>{{ bug.requirement?.system || '-' }}</strong></div>
               <div class="info-item"><span>创建人</span><strong>{{ bug.creator?.name || '-' }}</strong></div>
               <div class="info-item"><span>当前处理人</span><strong>{{ bug.assignee?.name || '-' }}</strong></div>
+              <div class="info-item"><span>创建时间</span><strong>{{ formatTime(bug.created_at) }}</strong></div>
             </div>
           </div>
 

@@ -229,6 +229,20 @@ public class DashboardService {
             if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
         }
 
+        // 批量加载 Bug 相关人员
+        java.util.Set<Long> bugUserIds = new java.util.HashSet<>();
+        for (Bug b : bugs) {
+            if (b.getCreatorId() != null) bugUserIds.add(b.getCreatorId());
+            if (b.getAssigneeId() != null) bugUserIds.add(b.getAssigneeId());
+        }
+        java.util.Map<Long, User> bugUserMap = new java.util.HashMap<>();
+        if (!bugUserIds.isEmpty()) {
+            for (Long uid : bugUserIds) {
+                User user = userMapper.selectById(uid);
+                if (user != null) bugUserMap.put(uid, user);
+            }
+        }
+
         // 缓存 Bug 关联任务的需求信息，用于前端按需求编号筛选
         java.util.Map<Long, Requirement> bugReqCache = new java.util.HashMap<>();
 
@@ -241,20 +255,7 @@ public class DashboardService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("stats", Map.of("total", total, "developing", developing, "done", done, "overdue", overdue, "pendingBugs", (long) bugs.size()));
         result.put("board", board);
-        result.put("bugs", bugs.stream().map(b -> {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", b.getId());
-            m.put("title", b.getTitle());
-            m.put("severity", b.getSeverity());
-            m.put("status", b.getStatus());
-            m.put("taskId", b.getTaskId());
-            m.put("taskTitle", b.getTask() != null ? b.getTask().getTitle() : null);
-            if (b.getTask() != null && b.getTask().getRequirementId() != null) {
-                Requirement r = bugReqCache.computeIfAbsent(b.getTask().getRequirementId(), id -> requirementMapper.selectById(id));
-                if (r != null) m.put("reqNumber", r.getNumber() != null ? r.getNumber() : r.getRequirementId());
-            }
-            return m;
-        }).collect(Collectors.toList()));
+        result.put("bugs", bugs.stream().map(b -> bugToMap(b, bugUserMap, bugReqCache)).collect(Collectors.toList()));
         return result;
     }
 
@@ -267,12 +268,11 @@ public class DashboardService {
                 new LambdaQueryWrapper<Task>().eq(Task::getStatus, "testing"));
         for (Task t : allTestingTasks) fillTaskUser(t);
 
-        // 待验证Bug：fixed/not_a_bug（需验证的）+ 当前用户创建的非unfixed/closed的Bug
+        // 待验证Bug：当前用户创建的非unfixed/closed的Bug
         List<Bug> pendingVerifyBugs = bugMapper.selectList(
                 new LambdaQueryWrapper<Bug>()
-                        .and(w -> w.in(Bug::getStatus, "fixed", "not_a_bug")
-                                .or(x -> x.eq(Bug::getCreatorId, userId)
-                                        .notIn(Bug::getStatus, "unfixed", "closed")))
+                        .eq(Bug::getCreatorId, userId)
+                        .notIn(Bug::getStatus, "unfixed", "closed")
                         .orderByDesc(Bug::getUpdatedAt));
         for (Bug b : pendingVerifyBugs) {
             if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
@@ -288,6 +288,27 @@ public class DashboardService {
             if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
         }
 
+        // 批量加载 Bug 相关人员，避免 N+1
+        java.util.Set<Long> bugUserIds = new java.util.HashSet<>();
+        for (Bug b : pendingVerifyBugs) {
+            if (b.getCreatorId() != null) bugUserIds.add(b.getCreatorId());
+            if (b.getAssigneeId() != null) bugUserIds.add(b.getAssigneeId());
+        }
+        for (Bug b : unfixedBugs) {
+            if (b.getCreatorId() != null) bugUserIds.add(b.getCreatorId());
+            if (b.getAssigneeId() != null) bugUserIds.add(b.getAssigneeId());
+        }
+        java.util.Map<Long, User> bugUserMap = new java.util.HashMap<>();
+        if (!bugUserIds.isEmpty()) {
+            for (Long uid : bugUserIds) {
+                User user = userMapper.selectById(uid);
+                if (user != null) bugUserMap.put(uid, user);
+            }
+        }
+
+        // 缓存 Bug 关联任务的需求信息
+        java.util.Map<Long, Requirement> bugReqCache = new java.util.HashMap<>();
+
         long totalTesting = allTestingTasks.size();
         long pendingVerify = pendingVerifyBugs.size();
         long unfixedCount = unfixedBugs.size();
@@ -295,30 +316,45 @@ public class DashboardService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("stats", Map.of("totalTesting", totalTesting, "pendingVerify", pendingVerify, "unfixed", unfixedCount));
         result.put("tasks", allTestingTasks.stream().map(this::taskToMap).collect(Collectors.toList()));
-        result.put("pendingVerifyBugs", pendingVerifyBugs.stream().map(b -> {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", b.getId());
-            m.put("title", b.getTitle());
-            m.put("severity", b.getSeverity());
-            if (b.getTaskId() != null) {
-                Task t = taskMapper.selectById(b.getTaskId());
-                m.put("taskTitle", t != null ? t.getTitle() : null);
-            }
-            return m;
-        }).collect(Collectors.toList()));
-        result.put("unfixedBugs", unfixedBugs.stream().map(b -> {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", b.getId());
-            m.put("title", b.getTitle());
-            m.put("severity", b.getSeverity());
-            m.put("status", b.getStatus());
-            if (b.getTaskId() != null) {
-                Task t = taskMapper.selectById(b.getTaskId());
-                m.put("taskTitle", t != null ? t.getTitle() : null);
-            }
-            return m;
-        }).collect(Collectors.toList()));
+        result.put("pendingVerifyBugs", pendingVerifyBugs.stream().map(b -> bugToMap(b, bugUserMap, bugReqCache)).collect(Collectors.toList()));
+        result.put("unfixedBugs", unfixedBugs.stream().map(b -> bugToMap(b, bugUserMap, bugReqCache)).collect(Collectors.toList()));
         return result;
+    }
+
+    private Map<String, Object> bugToMap(Bug b, java.util.Map<Long, User> userMap, java.util.Map<Long, Requirement> reqCache) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", b.getId());
+        m.put("title", b.getTitle());
+        m.put("severity", b.getSeverity());
+        m.put("status", b.getStatus());
+        m.put("createdAt", b.getCreatedAt() != null ? b.getCreatedAt().toString() : null);
+        if (b.getCreatorId() != null) {
+            User creator = userMap.get(b.getCreatorId());
+            m.put("creatorId", b.getCreatorId());
+            m.put("creatorName", creator != null ? creator.getName() : null);
+        }
+        if (b.getAssigneeId() != null) {
+            User assignee = userMap.get(b.getAssigneeId());
+            m.put("assigneeId", b.getAssigneeId());
+            m.put("assigneeName", assignee != null ? assignee.getName() : null);
+        }
+        if (b.getTaskId() != null) {
+            Task t = b.getTask();
+            m.put("taskId", b.getTaskId());
+            m.put("taskTitle", t != null ? t.getTitle() : null);
+            if (t != null && t.getTerminal() != null) {
+                m.put("terminal", t.getTerminal());
+            }
+            if (t != null && t.getRequirementId() != null) {
+                Requirement r = reqCache.computeIfAbsent(t.getRequirementId(), id -> requirementMapper.selectById(id));
+                if (r != null) {
+                    m.put("reqNumber", r.getNumber() != null ? r.getNumber() : r.getRequirementId());
+                    m.put("reqId", r.getRequirementId());
+                    m.put("system", r.getSystem());
+                }
+            }
+        }
+        return m;
     }
 
     private Map<String, Object> taskToMap(Task t) {

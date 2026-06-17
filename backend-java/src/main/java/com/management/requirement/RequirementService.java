@@ -15,8 +15,12 @@ import com.management.requirement.dto.RequirementDetailDTO;
 import com.management.requirement.dto.UpdateRequirementRequest;
 import com.management.requirement.entity.Requirement;
 import com.management.requirement.mapper.RequirementMapper;
+import com.management.bug.entity.BugStatusHistory;
+import com.management.bug.mapper.BugStatusHistoryMapper;
 import com.management.task.entity.Task;
+import com.management.task.entity.TaskProgressHistory;
 import com.management.task.mapper.TaskMapper;
+import com.management.task.mapper.TaskProgressHistoryMapper;
 import com.management.user.entity.User;
 import com.management.user.mapper.UserMapper;
 import jakarta.servlet.http.HttpServletResponse;
@@ -34,6 +38,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -46,7 +51,9 @@ public class RequirementService {
     private final ProjectMapper projectMapper;
     private final IterationMapper iterationMapper;
     private final TaskMapper taskMapper;
+    private final TaskProgressHistoryMapper taskProgressHistoryMapper;
     private final BugMapper bugMapper;
+    private final BugStatusHistoryMapper bugStatusHistoryMapper;
     private final BugService bugService;
     private final NotificationService notificationService;
 
@@ -345,51 +352,158 @@ public class RequirementService {
         return result;
     }
 
-    /** 获取需求进度（开发进度 + 测试进度报表） */
+    /** 获取需求进度（按自然周统计开发进度 + 测试进度） */
     public Map<String, Object> getRequirementProgress(Long id) {
         Requirement r = requirementMapper.selectById(id);
         if (r == null) throw new BusinessException(404, "需求不存在");
 
         List<Task> tasks = taskMapper.selectList(
                 new LambdaQueryWrapper<Task>().eq(Task::getRequirementId, id));
-        for (Task t : tasks) {
-            if (t.getAssigneeId() != null) t.setAssignee(userMapper.selectById(t.getAssigneeId()));
+        List<Bug> bugs = bugMapper.selectList(
+                new LambdaQueryWrapper<Bug>().eq(Bug::getRequirementId, id));
+
+        // 预加载任务进度历史
+        List<Long> taskIds = tasks.stream().map(Task::getId).collect(Collectors.toList());
+        Map<Long, List<TaskProgressHistory>> progressHistoryByTask = new HashMap<>();
+        if (!taskIds.isEmpty()) {
+            List<TaskProgressHistory> histories = taskProgressHistoryMapper.selectList(
+                    new LambdaQueryWrapper<TaskProgressHistory>().in(TaskProgressHistory::getTaskId, taskIds));
+            for (TaskProgressHistory h : histories) {
+                progressHistoryByTask.computeIfAbsent(h.getTaskId(), k -> new ArrayList<>()).add(h);
+            }
         }
 
+        // 预加载 Bug 状态历史
+        List<Long> bugIds = bugs.stream().map(Bug::getId).collect(Collectors.toList());
+        Map<Long, List<BugStatusHistory>> statusHistoryByBug = new HashMap<>();
+        if (!bugIds.isEmpty()) {
+            List<BugStatusHistory> histories = bugStatusHistoryMapper.selectList(
+                    new LambdaQueryWrapper<BugStatusHistory>().in(BugStatusHistory::getBugId, bugIds));
+            for (BugStatusHistory h : histories) {
+                statusHistoryByBug.computeIfAbsent(h.getBugId(), k -> new ArrayList<>()).add(h);
+            }
+        }
+
+        // 确定周范围
+        LocalDateTime startTime = r.getCreatedAt() != null ? r.getCreatedAt() : LocalDateTime.now();
+        LocalDateTime endTime = calculateRequirementEndTime(r);
+
+        List<LocalDateTime> weekStarts = generateWeekStarts(startTime, endTime);
+
         // 开发进度：按人员+终端分组
-        List<Map<String, Object>> devProgress = new ArrayList<>();
         Map<String, List<Task>> byPersonTerminal = tasks.stream()
                 .filter(t -> t.getAssigneeId() != null)
                 .collect(Collectors.groupingBy(
                         t -> t.getAssigneeId() + "|" + (t.getTerminal() != null ? t.getTerminal() : "其他")));
+
+        List<Map<String, Object>> devProgress = new ArrayList<>();
         for (var entry : byPersonTerminal.entrySet()) {
             String[] parts = entry.getKey().split("\\|", 2);
             Long userId = Long.parseLong(parts[0]);
             String terminal = parts[1];
             User user = userMapper.selectById(userId);
             List<Task> tl = entry.getValue();
+            List<Integer> weeklyProgress = new ArrayList<>();
+            for (LocalDateTime weekStart : weekStarts) {
+                LocalDateTime weekEnd = weekStart.plusDays(7).minusSeconds(1);
+                int avg = (int) Math.round(tl.stream()
+                        .mapToInt(t -> getTaskProgressAt(t, weekEnd, progressHistoryByTask.getOrDefault(t.getId(), List.of())))
+                        .average().orElse(0));
+                weeklyProgress.add(avg);
+            }
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("person", user != null ? user.getName() : "未知");
             m.put("terminal", terminal);
             m.put("tasks", tl.size());
-            int avgProgress = (int) Math.round(tl.stream().mapToInt(t -> t.getProgress() != null ? t.getProgress() : 0).average().orElse(0));
-            m.put("progress", avgProgress);
             m.put("done", tl.stream().filter(t -> "closed".equals(t.getStatus())).count());
+            m.put("progressByWeek", weeklyProgress);
             devProgress.add(m);
         }
 
-        // 测试进度：累计BUG统计
-        List<Bug> bugs = bugMapper.selectList(
-                new LambdaQueryWrapper<Bug>().eq(Bug::getRequirementId, id));
+        // 测试进度：每周累计 Bug 统计
+        List<Integer> totalBugs = new ArrayList<>();
+        List<Integer> closedBugs = new ArrayList<>();
+        List<Integer> unfixedBugs = new ArrayList<>();
+        List<Integer> pendingVerifyBugs = new ArrayList<>();
+        for (LocalDateTime weekStart : weekStarts) {
+            LocalDateTime weekEnd = weekStart.plusDays(7).minusSeconds(1);
+            int total = 0, closed = 0, unfixed = 0, pendingVerify = 0;
+            for (Bug b : bugs) {
+                if (b.getCreatedAt() != null && b.getCreatedAt().isAfter(weekEnd)) continue;
+                total++;
+                String status = getBugStatusAt(b, weekEnd, statusHistoryByBug.getOrDefault(b.getId(), List.of()));
+                if ("closed".equals(status)) closed++;
+                else if ("unfixed".equals(status)) unfixed++;
+                else if ("fixed".equals(status) || "not_a_bug".equals(status) || "pending_verify".equals(status)) pendingVerify++;
+            }
+            totalBugs.add(total);
+            closedBugs.add(closed);
+            unfixedBugs.add(unfixed);
+            pendingVerifyBugs.add(pendingVerify);
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
+        result.put("weeks", weekStarts.stream()
+                .map(ws -> String.format("%02d-%02d", ws.getMonthValue(), ws.getDayOfMonth()))
+                .collect(Collectors.toList()));
         result.put("devProgress", devProgress);
-        result.put("totalBugs", bugs.size());
-        result.put("closedBugs", bugs.stream().filter(b -> "closed".equals(b.getStatus())).count());
-        result.put("unfixedBugs", bugs.stream().filter(b -> "unfixed".equals(b.getStatus())).count());
-        result.put("pendingVerifyBugs", bugs.stream().filter(b ->
-                "fixed".equals(b.getStatus()) || "not_a_bug".equals(b.getStatus())).count());
+        result.put("testProgress", List.of(
+                Map.of("label", "BUG总数", "values", totalBugs),
+                Map.of("label", "已关闭", "values", closedBugs),
+                Map.of("label", "未修复", "values", unfixedBugs),
+                Map.of("label", "待验证", "values", pendingVerifyBugs)
+        ));
         return result;
+    }
+
+    private LocalDateTime calculateRequirementEndTime(Requirement r) {
+        if ("released".equals(r.getStatus()) && r.getReleaseTime() != null) {
+            return r.getReleaseTime();
+        }
+        if ("closed".equals(r.getStatus()) && r.getUpdatedAt() != null) {
+            return r.getUpdatedAt();
+        }
+        return LocalDateTime.now();
+    }
+
+    private List<LocalDateTime> generateWeekStarts(LocalDateTime start, LocalDateTime end) {
+        java.time.LocalDate startDate = start.toLocalDate();
+        java.time.DayOfWeek dow = startDate.getDayOfWeek();
+        java.time.LocalDate weekStart = startDate.minusDays(dow.getValue() - 1); // Monday
+        java.time.LocalDate endDate = end.toLocalDate();
+        java.time.DayOfWeek endDow = endDate.getDayOfWeek();
+        java.time.LocalDate endWeekStart = endDate.minusDays(endDow.getValue() - 1);
+
+        List<LocalDateTime> result = new ArrayList<>();
+        java.time.LocalDate current = weekStart;
+        while (!current.isAfter(endWeekStart)) {
+            result.add(current.atStartOfDay());
+            current = current.plusWeeks(1);
+        }
+        return result;
+    }
+
+    private int getTaskProgressAt(Task task, LocalDateTime at, List<TaskProgressHistory> histories) {
+        Integer currentProgress = task.getProgress() != null ? task.getProgress() : 0;
+        if (histories.isEmpty()) {
+            return task.getCreatedAt() != null && !task.getCreatedAt().isAfter(at) ? currentProgress : 0;
+        }
+        return histories.stream()
+                .filter(h -> h.getCreatedAt() != null && !h.getCreatedAt().isAfter(at))
+                .max(Comparator.comparing(TaskProgressHistory::getCreatedAt))
+                .map(TaskProgressHistory::getProgress)
+                .orElse(task.getCreatedAt() != null && !task.getCreatedAt().isAfter(at) ? currentProgress : 0);
+    }
+
+    private String getBugStatusAt(Bug bug, LocalDateTime at, List<BugStatusHistory> histories) {
+        if (histories.isEmpty()) {
+            return bug.getStatus();
+        }
+        return histories.stream()
+                .filter(h -> h.getChangedAt() != null && !h.getChangedAt().isAfter(at))
+                .max(Comparator.comparing(BugStatusHistory::getChangedAt))
+                .map(BugStatusHistory::getToStatus)
+                .orElse(bug.getStatus());
     }
 
     private void applyProjectScopeFilter(LambdaQueryWrapper<Requirement> q) {

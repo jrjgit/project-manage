@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.management.requirement.entity.Requirement;
 import com.management.task.entity.Task;
 import com.management.user.entity.User;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -45,6 +46,9 @@ public class Bug {
     private String remark;
     /** 关联需求ID */
     private Long requirementId;
+    /** 关联需求对象（非数据库字段） */
+    @TableField(exist = false)
+    private Requirement requirement;
     /** 测试类型（integration=集成测试, system=系统测试, acceptance=验收测试） */
     private String testType;
     /** 预期结果（描述测试用例预期的正常行为或输出） */
