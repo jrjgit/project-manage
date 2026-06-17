@@ -400,7 +400,15 @@ function executeAction(action) {
   if (action.action === 'createBug') {
     handleCreateBug()
   } else {
-    doChangeStatus(action.status, '')
+    window.$dialog?.warning({
+      title: '确认操作',
+      content: `确定将任务「${task.value?.title || props.taskId}」状态变更为「${action.label}」吗？`,
+      positiveText: '确定',
+      negativeText: '取消',
+      onPositiveClick: () => { doChangeStatus(action.status, '') },
+      onNegativeClick: () => {},
+      onClose: () => {}
+    })
   }
 }
 
