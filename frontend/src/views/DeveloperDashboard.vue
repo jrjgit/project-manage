@@ -104,8 +104,24 @@ async function loadDictionaries() {
 }
 
 async function onStatusChange({ taskId, newStatus }) {
-  const { changeTaskStatus } = await import('@/api/tasks')
+  const task = boardTasks.value.find(t => t.id === taskId)
+  if (!task) return
+  const oldLabel = taskStatusMeta[task.status]?.label || task.status
+  const newLabel = taskStatusMeta[newStatus]?.label || newStatus
   try {
+    const confirmed = await new Promise((resolve) => {
+      window.$dialog?.warning({
+        title: '确认变更任务状态',
+        content: `将任务「${task.title || taskId}」从「${oldLabel}」变更为「${newLabel}」？`,
+        positiveText: '确定',
+        negativeText: '取消',
+        onPositiveClick: () => resolve(true),
+        onNegativeClick: () => resolve(false),
+        onClose: () => resolve(false)
+      })
+    })
+    if (!confirmed) return
+    const { changeTaskStatus } = await import('@/api/tasks')
     await changeTaskStatus(taskId, { new_status: newStatus, comment: '' })
     await loadData()
   } catch (e) { console.error(e) }
