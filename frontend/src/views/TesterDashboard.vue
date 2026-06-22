@@ -45,6 +45,10 @@
                   <span class="task-meta">{{ t.system || '-' }}</span>
                   <span class="task-meta">{{ t.assignee || '-' }}</span>
                 </div>
+                <div v-if="t.bugCreators" class="task-item-bug-creators">
+                  <span class="bug-creators-label">Bug 创建人：</span>
+                  <span class="bug-creators-names">{{ t.bugCreators }}</span>
+                </div>
               </div>
             </div>
           </section>
@@ -392,6 +396,9 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers(); loadSystems(); lo
 .filter-row .n-select, .filter-row .n-input { flex: 1; min-width: 100px; }
 .task-item-meta { display: flex; gap: 12px; margin-top: 4px; font-size: 11px; color: #94a3b8; }
 .task-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-item-bug-creators { margin-top: 6px; font-size: 12px; }
+.bug-creators-label { color: #6366f1; font-weight: 600; }
+.bug-creators-names { color: #0f172a; font-weight: 500; }
 @media (max-width: 768px) {
   .hero-card { flex-direction: column; align-items: flex-start; }
   .section-header { flex-direction: column; align-items: flex-start; }

@@ -1,6 +1,7 @@
 package com.management.statistics;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.management.bug.mapper.BugMapper;
 import com.management.requirement.entity.Requirement;
 import com.management.requirement.mapper.RequirementMapper;
 import com.management.task.entity.Task;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 public class StatisticsService {
     private final RequirementMapper requirementMapper;
     private final TaskMapper taskMapper;
+    private final BugMapper bugMapper;
     private final UserMapper userMapper;
 
     /** 运维营收统计 — 只统计 project_type = ops 的需求 */
@@ -106,6 +108,21 @@ public class StatisticsService {
                 new LambdaQueryWrapper<Task>().in(Task::getAssigneeId, userIds));
         Map<Long, List<Task>> tasksByUser = allTasks.stream().collect(Collectors.groupingBy(Task::getAssigneeId));
 
+        // 批量加载任务关联的未修复 Bug 数量
+        List<Long> allTaskIds = allTasks.stream().map(Task::getId).collect(Collectors.toList());
+        java.util.Map<Long, Long> pendingBugsByTask = new java.util.HashMap<>();
+        if (!allTaskIds.isEmpty()) {
+            List<com.management.bug.entity.Bug> taskBugs = bugMapper.selectList(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.management.bug.entity.Bug>()
+                            .in(com.management.bug.entity.Bug::getTaskId, allTaskIds)
+                            .eq(com.management.bug.entity.Bug::getStatus, "unfixed"));
+            for (com.management.bug.entity.Bug b : taskBugs) {
+                if (b.getTaskId() != null) {
+                    pendingBugsByTask.merge(b.getTaskId(), 1L, Long::sum);
+                }
+            }
+        }
+
         // 缓存需求信息
         java.util.Map<Long, Requirement> reqCache = new java.util.HashMap<>();
         java.util.Map<Long, Double> priceCache = new java.util.HashMap<>();
@@ -148,6 +165,7 @@ public class StatisticsService {
                 taskInfo.put("assignee_name", u.getName());
                 taskInfo.put("progress", progress);
                 taskInfo.put("status", status);
+                taskInfo.put("pending_bugs", pendingBugsByTask.getOrDefault(t.getId(), 0L));
                 taskDetails.add(taskInfo);
             }
 

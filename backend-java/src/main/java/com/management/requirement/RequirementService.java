@@ -258,6 +258,7 @@ public class RequirementService {
         if (req.getNumber() != null) r.setNumber(req.getNumber());
         if (req.getProjectType() != null) r.setProjectType(req.getProjectType());
         if (req.getStatus() != null) r.setStatus(req.getStatus());
+        if (req.getProgressNotes() != null) r.setProgressNotes(req.getProgressNotes());
         if (req.getPlannedCompletionTime() != null)
             r.setPlannedCompletionTime(java.time.OffsetDateTime.parse(req.getPlannedCompletionTime()).toLocalDateTime());
         requirementMapper.updateById(r);

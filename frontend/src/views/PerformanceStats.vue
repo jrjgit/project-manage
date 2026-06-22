@@ -56,7 +56,7 @@
     </div>
 
     <!-- User tasks detail modal -->
-    <n-modal v-model:show="showTaskModal" preset="card" style="width: min(92vw, 900px)" :title="`${selectedUserName} - 进行中任务明细`" :mask-closable="false">
+    <n-modal v-model:show="showTaskModal" preset="card" style="width: min(95vw, 1200px)" :title="`${selectedUserName} - 进行中任务明细`" :mask-closable="false">
       <n-data-table
         :columns="taskColumns"
         :data="selectedUserTasks"
@@ -64,7 +64,6 @@
         :bordered="false"
         :single-line="false"
         striped
-        :scroll-x="760"
       />
       <template #footer>
         <n-space justify="end">
@@ -183,6 +182,14 @@ const taskColumns = [
     render(row) {
       const color = (row.progress || 0) >= 100 ? '#18a058' : '#6366f1'
       return h('span', { style: `font-weight:700;color:${color}` }, `${row.progress || 0}%`)
+    }
+  },
+  {
+    title: '待处理BUG', key: 'pending_bugs', width: 100,
+    render(row) {
+      const count = row.pending_bugs || 0
+      const color = count > 0 ? '#d03050' : '#18a058'
+      return h('span', { style: `font-weight:700;color:${color}` }, count)
     }
   }
 ]

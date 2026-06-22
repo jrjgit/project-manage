@@ -375,10 +375,14 @@ public class TaskService {
             history.setComment("任务转派，状态重置为待受理");
             historyMapper.insert(history);
 
-            taskAssigneeMapper.update(null, new LambdaUpdateWrapper<TaskAssignee>()
-                    .eq(TaskAssignee::getTaskId, id)
-                    .eq(TaskAssignee::getUserId, req.getAssigneeId())
-                    .set(TaskAssignee::getStatus, "pending"));
+            // 将 task_assignees 中旧指派人记录更新为新指派人
+            if (oldAssigneeId != null) {
+                taskAssigneeMapper.update(null, new LambdaUpdateWrapper<TaskAssignee>()
+                        .eq(TaskAssignee::getTaskId, id)
+                        .eq(TaskAssignee::getUserId, oldAssigneeId)
+                        .set(TaskAssignee::getUserId, req.getAssigneeId())
+                        .set(TaskAssignee::getStatus, "pending"));
+            }
         }
 
         if (req.getIterationId() != null) {

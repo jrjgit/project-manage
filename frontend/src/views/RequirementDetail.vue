@@ -94,6 +94,13 @@
         <n-input v-model:value="localNotes" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" placeholder="添加备注..." @blur="saveNotes" />
       </section>
 
+      <!-- Progress Notes -->
+      <section class="section-card">
+        <div class="section-header"><h3>进度备注</h3></div>
+        <n-input v-if="authStore.isPM" v-model:value="localProgressNotes" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" placeholder="添加进度备注..." @blur="saveProgressNotes" />
+        <div v-else class="progress-notes-display">{{ req.progress_notes || '暂无进度备注' }}</div>
+      </section>
+
       <!-- Document -->
       <section class="section-card">
         <div class="section-header"><h3>需求文档</h3></div>
@@ -418,6 +425,7 @@ const iterations = ref([])
 const editingField = ref(null)
 const localDescription = ref('')
 const localNotes = ref('')
+const localProgressNotes = ref('')
 const localPlannedTime = ref(null)
 
 const tasks = ref([])
@@ -677,6 +685,16 @@ async function saveNotes() {
   try {
     await updateRequirement(req.value.id, { notes: localNotes.value })
     req.value.notes = localNotes.value
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+async function saveProgressNotes() {
+  if (localProgressNotes.value === req.value.progress_notes) return
+  try {
+    await updateRequirement(req.value.id, { progress_notes: localProgressNotes.value })
+    req.value.progress_notes = localProgressNotes.value
   } catch (e) {
     console.error(e)
   }
@@ -1056,6 +1074,7 @@ async function loadReq() {
     req.value = data
     localDescription.value = data.description || ''
     localNotes.value = data.notes || ''
+    localProgressNotes.value = data.progress_notes || ''
     localPlannedTime.value = data.planned_completion_time ? new Date(data.planned_completion_time).getTime() : null
     await loadTasks()
   } catch (e) {
@@ -1414,6 +1433,15 @@ onMounted(() => {
   text-align: center;
   font-size: 13px;
   color: #94a3b8;
+}
+.progress-notes-display {
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0f172a;
+  line-height: 1.6;
+  white-space: pre-wrap;
 }
 
 .document-row {

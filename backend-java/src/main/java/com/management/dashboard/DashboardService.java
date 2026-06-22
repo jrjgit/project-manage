@@ -206,8 +206,11 @@ public class DashboardService {
         Long userId = u.getUserId();
 
         List<Task> allTasks = taskMapper.selectList(
-                new LambdaQueryWrapper<Task>().inSql(Task::getId,
-                        "SELECT task_id FROM task_assignees WHERE user_id = " + userId));
+                new LambdaQueryWrapper<Task>()
+                        .eq(Task::getAssigneeId, userId)
+                        .or()
+                        .inSql(Task::getId,
+                                "SELECT task_id FROM task_assignees WHERE user_id = " + userId));
         for (Task t : allTasks) fillTaskUser(t);
 
         List<Task> pendingTasks = allTasks.stream().filter(t -> "pending".equals(t.getStatus())).collect(Collectors.toList());
@@ -268,6 +271,26 @@ public class DashboardService {
                 new LambdaQueryWrapper<Task>().eq(Task::getStatus, "testing"));
         for (Task t : allTestingTasks) fillTaskUser(t);
 
+        // 批量加载待测试任务的 Bug 创建人
+        List<Long> testingTaskIds = allTestingTasks.stream().map(Task::getId).collect(Collectors.toList());
+        java.util.Map<Long, java.util.List<String>> bugCreatorsByTask = new java.util.HashMap<>();
+        if (!testingTaskIds.isEmpty()) {
+            List<Bug> taskBugs = bugMapper.selectList(
+                    new LambdaQueryWrapper<Bug>().in(Bug::getTaskId, testingTaskIds));
+            java.util.Map<Long, java.util.Set<String>> creatorsSet = new java.util.HashMap<>();
+            for (Bug b : taskBugs) {
+                if (b.getCreatorId() != null && b.getTaskId() != null) {
+                    User creator = userMapper.selectById(b.getCreatorId());
+                    if (creator != null) {
+                        creatorsSet.computeIfAbsent(b.getTaskId(), k -> new java.util.LinkedHashSet<>()).add(creator.getName());
+                    }
+                }
+            }
+            for (java.util.Map.Entry<Long, java.util.Set<String>> entry : creatorsSet.entrySet()) {
+                bugCreatorsByTask.put(entry.getKey(), new java.util.ArrayList<>(entry.getValue()));
+            }
+        }
+
         // 待验证Bug：当前用户创建的非unfixed/closed的Bug
         List<Bug> pendingVerifyBugs = bugMapper.selectList(
                 new LambdaQueryWrapper<Bug>()
@@ -315,7 +338,12 @@ public class DashboardService {
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("stats", Map.of("totalTesting", totalTesting, "pendingVerify", pendingVerify, "unfixed", unfixedCount));
-        result.put("tasks", allTestingTasks.stream().map(this::taskToMap).collect(Collectors.toList()));
+        result.put("tasks", allTestingTasks.stream().map(t -> {
+            Map<String, Object> m = taskToMap(t);
+            List<String> creators = bugCreatorsByTask.get(t.getId());
+            m.put("bugCreators", creators != null && !creators.isEmpty() ? String.join(" | ", creators) : null);
+            return m;
+        }).collect(Collectors.toList()));
         result.put("pendingVerifyBugs", pendingVerifyBugs.stream().map(b -> bugToMap(b, bugUserMap, bugReqCache)).collect(Collectors.toList()));
         result.put("unfixedBugs", unfixedBugs.stream().map(b -> bugToMap(b, bugUserMap, bugReqCache)).collect(Collectors.toList()));
         return result;

@@ -46,4 +46,6 @@ public class UpdateRequirementRequest {
     private String plannedCompletionTime;
     /** 业务状态 */
     private String businessStatus;
+    /** 进度备注 */
+    private String progressNotes;
 }

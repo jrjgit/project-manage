@@ -78,6 +78,8 @@ public class Requirement {
     private String documentName;
     /** 需求文档大小（字节） */
     private Long documentSize;
+    /** 进度备注 */
+    private String progressNotes;
     /** 创建时间 */
     private LocalDateTime createdAt;
     /** 更新时间 */

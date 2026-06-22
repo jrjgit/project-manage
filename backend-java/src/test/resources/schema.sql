@@ -151,6 +151,7 @@ CREATE TABLE IF NOT EXISTS requirements (
     document_path           VARCHAR(500),
     document_name           VARCHAR(255),
     document_size           BIGINT,
+    progress_notes          TEXT,
     created_at              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at              TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
