@@ -608,6 +608,7 @@ public class RequirementService {
         dto.setDocumentPath(r.getDocumentPath());
         dto.setDocumentName(r.getDocumentName());
         dto.setDocumentSize(r.getDocumentSize());
+        dto.setProgressNotes(r.getProgressNotes());
         dto.setCreatedAt(r.getCreatedAt() != null ? r.getCreatedAt().toString() : null);
         dto.setUpdatedAt(r.getUpdatedAt() != null ? r.getUpdatedAt().toString() : null);
         return dto;

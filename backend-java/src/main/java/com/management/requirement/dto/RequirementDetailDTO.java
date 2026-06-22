@@ -67,6 +67,8 @@ public class RequirementDetailDTO {
     private String documentName;
     /** 文档大小 */
     private Long documentSize;
+    /** 进度备注 */
+    private String progressNotes;
     /** 创建时间 */
     private String createdAt;
     /** 更新时间 */
