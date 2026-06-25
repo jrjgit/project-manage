@@ -40,7 +40,7 @@ public class BugController {
      */
     @Operation(summary = "创建Bug")
     @PostMapping
-    @PreAuthorize("hasAnyRole('TESTER','PM')")
+    @PreAuthorize("hasAnyRole('TESTER','PM','DEV','DEV_LEAD')")
     @ResponseStatus(HttpStatus.CREATED)
     public Result<Bug> create(@Valid @RequestBody CreateBugRequest req) {
         return Result.ok(bugService.createBug(req));
@@ -89,7 +89,7 @@ public class BugController {
      */
     @Operation(summary = "上传Bug图片")
     @PostMapping("/{id}/image")
-    @PreAuthorize("hasAnyRole('TESTER','PM')")
+    @PreAuthorize("hasAnyRole('TESTER','PM','DEV','DEV_LEAD')")
     public Result<Map<String, String>> uploadImage(@PathVariable Long id,
                                                     @RequestParam("file") MultipartFile file) throws IOException {
         bugService.uploadImage(id, file);
@@ -120,7 +120,7 @@ public class BugController {
      */
     @Operation(summary = "删除指定Bug截图")
     @DeleteMapping("/{id}/images/{imageId}")
-    @PreAuthorize("hasAnyRole('TESTER','PM')")
+    @PreAuthorize("hasAnyRole('TESTER','PM','DEV','DEV_LEAD')")
     public Result<Map<String, String>> deleteImage(@PathVariable Long id, @PathVariable Long imageId) {
         bugService.deleteImageById(id, imageId);
         return Result.ok(Map.of("message", "image deleted"));
