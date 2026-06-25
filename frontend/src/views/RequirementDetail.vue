@@ -3,7 +3,7 @@
     <div class="detail-page">
       <!-- Back button -->
       <div class="back-row">
-        <n-button text @click="$router.push('/requirements')">
+        <n-button text @click="$router.push({ path: '/requirements', query: $route.query })">
           <template #icon>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px">
               <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
@@ -136,6 +136,7 @@
           <div class="task-table-inner">
             <div class="task-table-header">
               <span class="col-person">人员</span>
+              <span class="col-tester">测试负责人</span>
               <span class="col-terminal">终端</span>
               <span class="col-title">任务描述</span>
               <span class="col-status">任务状态</span>
@@ -145,6 +146,7 @@
             </div>
             <div v-for="t in tasks" :key="t.id" class="task-table-row">
               <span class="col-person">{{ t.assignee?.name || userNameMap[t.assignee_id] || '-' }}</span>
+              <span class="col-tester">{{ t.tester?.name || userNameMap[t.tester_id] || '-' }}</span>
               <span class="col-terminal">{{ skillsMap[t.terminal] || t.terminal || '-' }}</span>
               <span class="col-title" :title="t.title">{{ t.title }}</span>
               <span class="col-status"><n-tag size="tiny" :type="taskStatusMeta[t.status]?.tone || 'default'">{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag></span>
@@ -1480,7 +1482,7 @@ onMounted(() => {
 /* Task Table */
 .task-table-header {
   display: grid;
-  grid-template-columns: 60px 80px 1fr 90px 80px 100px 1fr;
+  grid-template-columns: 60px 90px 80px 1fr 90px 80px 100px 1fr;
   gap: 8px;
   padding: 8px 12px;
   font-size: 11px;
@@ -1493,7 +1495,7 @@ onMounted(() => {
 }
 .task-table-row {
   display: grid;
-  grid-template-columns: 60px 80px 1fr 90px 80px 100px 1fr;
+  grid-template-columns: 60px 90px 80px 1fr 90px 80px 100px 1fr;
   gap: 8px;
   align-items: center;
   padding: 10px 12px;
@@ -1507,6 +1509,14 @@ onMounted(() => {
   font-size: 12px;
   font-weight: 600;
   color: #6366f1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.task-table-row .col-tester {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

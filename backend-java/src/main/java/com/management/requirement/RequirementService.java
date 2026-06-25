@@ -132,7 +132,7 @@ public class RequirementService {
         return r;
     }
 
-    public List<Requirement> list(String status, String system, String projectType) {
+    public List<Requirement> list(String status, String system, String projectType, Boolean overdue) {
         LambdaQueryWrapper<Requirement> q = new LambdaQueryWrapper<>();
         if (status != null && !status.isBlank()) {
             q.eq(Requirement::getStatus, status);
@@ -143,9 +143,13 @@ public class RequirementService {
         if (system != null && !system.isBlank()) q.eq(Requirement::getSystem, system);
         if (projectType != null && !projectType.isBlank()) q.eq(Requirement::getProjectType, projectType);
         applyProjectScopeFilter(q);
-        q.orderByDesc(Requirement::getUpdatedAt);
+        applyStatusAndCreatedAtOrder(q);
         List<Requirement> list = requirementMapper.selectList(q);
         for (Requirement r : list) { fillAssociations(r); fillProgress(r); }
+        if (Boolean.TRUE.equals(overdue)) {
+            List<Long> overdueReqIds = getOverdueRequirementIds();
+            list = list.stream().filter(r -> overdueReqIds.contains(r.getId())).collect(Collectors.toList());
+        }
         return list;
     }
 
@@ -154,7 +158,7 @@ public class RequirementService {
                 .eq(Requirement::getProjectType, "ops")
                 .ne(Requirement::getStatus, "released");
         applyProjectScopeFilter(q);
-        q.orderByDesc(Requirement::getUpdatedAt);
+        applyStatusAndCreatedAtOrder(q);
         List<Requirement> list = requirementMapper.selectList(q);
         for (Requirement r : list) { fillAssociations(r); fillProgress(r); }
         return list;
@@ -165,7 +169,7 @@ public class RequirementService {
                 .eq(Requirement::getProjectType, "project")
                 .ne(Requirement::getStatus, "released");
         applyProjectScopeFilter(q);
-        q.orderByDesc(Requirement::getUpdatedAt);
+        applyStatusAndCreatedAtOrder(q);
         List<Requirement> list = requirementMapper.selectList(q);
         for (Requirement r : list) { fillAssociations(r); fillProgress(r); }
         return list;
@@ -534,6 +538,34 @@ public class RequirementService {
                 .collect(Collectors.toList());
     }
 
+    /** 获取包含逾期任务的需求 ID 列表 */
+    private List<Long> getOverdueRequirementIds() {
+        List<Task> overdueTasks = taskMapper.selectList(
+                new LambdaQueryWrapper<Task>()
+                        .ne(Task::getStatus, "closed")
+                        .isNotNull(Task::getDeadline)
+                        .lt(Task::getDeadline, LocalDateTime.now()));
+        return overdueTasks.stream()
+                .map(Task::getRequirementId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    /** 统一需求列表排序：先按状态升序，再按创建时间降序 */
+    private void applyStatusAndCreatedAtOrder(LambdaQueryWrapper<Requirement> q) {
+        q.last("ORDER BY CASE status " +
+                "WHEN 'planned' THEN 0 " +
+                "WHEN 'pending_task' THEN 1 " +
+                "WHEN 'in_progress' THEN 2 " +
+                "WHEN 'integration_test' THEN 3 " +
+                "WHEN 'business_test' THEN 4 " +
+                "WHEN 'pending_release' THEN 5 " +
+                "WHEN 'released' THEN 6 " +
+                "WHEN 'closed' THEN 7 " +
+                "ELSE 8 END ASC, created_at DESC");
+    }
+
     private void fillProgress(Requirement r) {
         List<Task> tasks = taskMapper.selectList(
                 new LambdaQueryWrapper<Task>().eq(Task::getRequirementId, r.getId()));
@@ -546,6 +578,10 @@ public class RequirementService {
                 double perf = 1;
                 if (t.getPerformance() != null) {
                     try { perf = Double.parseDouble(t.getPerformance()); } catch (NumberFormatException e) { perf = 1; }
+                }
+                // 绩效工时为空或解析为 0 时，使用默认权重 1，避免任务进度被忽略
+                if (perf <= 0) {
+                    perf = 1;
                 }
                 double prog = t.getProgress() != null ? t.getProgress() : 0;
                 weightedSum += perf * prog;

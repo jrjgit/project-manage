@@ -45,8 +45,9 @@ public class RequirementController {
     @GetMapping
     public Result<List<Requirement>> list(@RequestParam(required = false) String status,
                                            @RequestParam(required = false) String system,
-                                           @RequestParam(required = false) String projectType) {
-        return Result.ok(requirementService.list(status, system, projectType));
+                                           @RequestParam(required = false) String projectType,
+                                           @RequestParam(required = false) Boolean overdue) {
+        return Result.ok(requirementService.list(status, system, projectType, overdue));
     }
 
     @Operation(summary = "获取系统板块统计（按系统分组统计进行中需求数）")

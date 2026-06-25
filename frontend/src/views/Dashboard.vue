@@ -10,7 +10,7 @@
             <p class="hero-subtitle">{{ roleHint }}</p>
           </div>
         </div>
-        <div class="hero-stats">
+        <div v-if="!authStore.isPM" class="hero-stats">
           <div v-for="s in statItems" :key="s.label" class="stat-pill">
             <span class="stat-value" :style="{color:s.color}">{{ s.value }}</span>
             <span class="stat-label">{{ s.label }}</span>
@@ -25,30 +25,18 @@
           <div class="todo-list">
             <div v-if="stats.pendingTask > 0" class="todo-item">
               <span class="todo-icon">📋</span>
-              <span>{{ stats.pendingTask }} 个需求任务待分配，<a @click="$router.push('/requirements')" style="color:#6366f1">前往处理</a></span>
+              <span>{{ stats.pendingTask }} 个需求任务待分配，<a @click="$router.push({ path: '/requirements', query: { status: 'pending_task' } })" style="color:#6366f1;cursor:pointer">前往处理</a></span>
             </div>
             <div v-if="stats.pendingRelease > 0" class="todo-item">
               <span class="todo-icon">🚀</span>
-              <span>{{ stats.pendingRelease }} 个需求待发布，<a @click="$router.push('/requirements')" style="color:#6366f1">前往处理</a></span>
+              <span>{{ stats.pendingRelease }} 个需求待发布，<a @click="$router.push({ path: '/requirements', query: { status: 'pending_release' } })" style="color:#6366f1;cursor:pointer">前往处理</a></span>
             </div>
             <div v-if="stats.overdueTasks > 0" class="todo-item">
               <span class="todo-icon">⚠️</span>
-              <span>{{ stats.overdueTasks }} 个任务已逾期</span>
+              <span>{{ stats.overdueTasks }} 个任务已逾期，<a @click="$router.push({ path: '/requirements', query: { overdue: 'true' } })" style="color:#6366f1;cursor:pointer">前往处理</a></span>
             </div>
             <div v-if="!stats.pendingTask && !stats.pendingRelease && !stats.overdueTasks" class="empty-state">暂无待办事项</div>
           </div>
-        </section>
-
-        <section class="section-card">
-          <div class="section-header"><h3>逾期任务</h3></div>
-          <div v-if="overdueTasks.length" class="compact-list">
-            <div v-for="t in overdueTasks" :key="t.id" class="compact-item" @click="openTaskDetail(t.id)">
-              <span class="compact-title">{{ t.title }}</span>
-              <span class="compact-meta" style="color:#ef4444">逾期{{ t.overdueDays }}天</span>
-              <span class="compact-meta">{{ t.assignee }}</span>
-            </div>
-          </div>
-          <div v-else class="empty-state">暂无逾期任务</div>
         </section>
 
         <section class="section-card">
@@ -62,6 +50,18 @@
             <div class="pipe-arrow">→</div>
             <div class="pipe-item"><span class="pipe-label">待发布</span><span class="pipe-value">{{ pipeline.pendingRelease || 0 }}</span></div>
           </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-header"><h3>进度异常</h3></div>
+          <div v-if="anomalies.length" class="compact-list">
+            <div v-for="item in anomalies" :key="item.requirementNumber + item.taskTitle" class="compact-item">
+              <span class="compact-title">{{ item.requirementNumber }} {{ item.description || item.taskTitle }}</span>
+              <span class="compact-meta">{{ item.system || '-' }}</span>
+              <span class="compact-meta" style="color:#f59e0b">进度 {{ item.progress }}%</span>
+            </div>
+          </div>
+          <div v-else class="empty-state">暂无进度异常任务</div>
         </section>
       </template>
 
@@ -153,7 +153,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
-import { getDashboard } from '@/api/statistics'
+import { getDashboard, getProgressAnomalies } from '@/api/statistics'
 import { taskStatusMeta, bugStatusMeta } from '@/constants/statusMeta'
 import AppLayout from '@/components/AppLayout.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
@@ -164,6 +164,7 @@ const dashData = ref({})
 const d = dashData
 const showTaskDetail = ref(false)
 const selectedTaskId = ref(null)
+const anomalies = ref([])
 
 const roleLabel = computed(() => {
   const map = { pm: '项目经理', dev_lead: '开发组长', dev: '开发', tester: '测试' }
@@ -243,7 +244,18 @@ async function loadData() {
   }
 }
 
-onMounted(loadData)
+async function loadAnomalies() {
+  try {
+    anomalies.value = await getProgressAnomalies() || []
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+onMounted(() => {
+  loadData()
+  loadAnomalies()
+})
 </script>
 
 <style scoped>

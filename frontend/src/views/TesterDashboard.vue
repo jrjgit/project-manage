@@ -38,12 +38,26 @@
               <div v-for="t in filteredTasks" :key="t.id" class="task-item" @click="onTaskClick(t.id)">
                 <div class="task-item-top">
                   <span class="task-item-title">{{ t.title }}</span>
-                  <n-tag v-if="t.terminal" size="tiny" round>{{ skillsMap[t.terminal] || t.terminal }}</n-tag>
+                  <div class="task-item-tags">
+                    <n-tag v-if="t.terminal" size="tiny" round>{{ skillsMap[t.terminal] || t.terminal }}</n-tag>
+                    <n-tag v-if="t.status === 'pending_test'" size="tiny" type="warning" round>待受理</n-tag>
+                    <n-tag v-else-if="t.status === 'testing'" size="tiny" type="info" round>测试中</n-tag>
+                  </div>
                 </div>
                 <div class="task-item-meta">
                   <span class="task-meta">{{ t.reqNumber || '-' }}</span>
                   <span class="task-meta">{{ t.system || '-' }}</span>
-                  <span class="task-meta">{{ t.assignee || '-' }}</span>
+                  <span class="task-meta">开发：{{ t.assignee || '-' }}</span>
+                  <span class="task-meta">测试：{{ t.tester || '-' }}</span>
+                </div>
+                <div class="task-item-actions">
+                  <n-button
+                    v-if="t.status === 'pending_test' || (t.status === 'testing' && !t.testerId)"
+                    size="tiny"
+                    type="primary"
+                    :loading="acceptingId === t.id"
+                    @click.stop="onAcceptTask(t)"
+                  >受理</n-button>
                 </div>
                 <div v-if="t.bugCreators" class="task-item-bug-creators">
                   <span class="bug-creators-label">Bug 创建人：</span>
@@ -146,6 +160,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getTesterDashboard } from '@/api/statistics'
+import { acceptTask } from '@/api/tasks'
 import { createBug, uploadBugImage } from '@/api/bugs'
 import { getRequirements } from '@/api/requirements'
 import { getDictionaries } from '@/api/dictionaries'
@@ -166,6 +181,7 @@ const showTaskDetail = ref(false)
 const selectedTaskId = ref(null)
 const showBugDetail = ref(false)
 const selectedBugId = ref(null)
+const acceptingId = ref(null)
 
 const requirements = ref([])
 const users = ref([])
@@ -342,6 +358,16 @@ function onTaskClick(taskId) {
   showTaskDetail.value = true
 }
 
+async function onAcceptTask(t) {
+  acceptingId.value = t.id
+  try {
+    await acceptTask(t.id)
+    window.$message?.success('任务受理成功')
+    await loadData()
+  } catch (e) { console.error(e) }
+  acceptingId.value = null
+}
+
 function onBugClick(bug) {
   selectedBugId.value = bug.id
   showBugDetail.value = true
@@ -379,6 +405,8 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers(); loadSystems(); lo
 .task-item:hover { background:#f1f5f9; }
 .task-item-top { display:flex;align-items:center;justify-content:space-between;gap:8px; }
 .task-item-title { font-size:13px;font-weight:500;color:#0f172a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.task-item-tags { display:flex;align-items:center;gap:6px;flex-shrink:0; }
+.task-item-actions { display:flex;justify-content:flex-end;margin-top:6px; }
 .task-item-assignee { font-size:11px;color:#94a3b8;white-space:nowrap; }
 .bug-item { padding:10px 12px;border:1px solid #f1f5f9;border-radius:10px;cursor:pointer;transition:background .12s;margin-bottom:6px; }
 .bug-item:hover { background:#f1f5f9; }

@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @Tag(name = "仪表盘", description = "首页综合仪表盘数据")
@@ -43,5 +44,14 @@ public class DashboardController {
     @PreAuthorize("hasAnyRole('TESTER','PM')")
     public Result<Map<String, Object>> testerDashboard() {
         return Result.ok(dashboardService.testerDashboardV2());
+    }
+
+    @Operation(summary = "获取进度异常任务列表")
+    /**
+     * 获取进度异常任务列表（近两周进度无变化且未100%）
+     */
+    @GetMapping("/progress-anomalies")
+    public Result<List<Map<String, Object>>> progressAnomalies() {
+        return Result.ok(dashboardService.getProgressAnomalies());
     }
 }

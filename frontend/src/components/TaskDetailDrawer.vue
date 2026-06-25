@@ -190,7 +190,7 @@
 <script setup>
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/store/useAuthStore'
-import { getTask, getTaskHistory, changeTaskStatus, updateTask } from '@/api/tasks'
+import { getTask, getTaskHistory, changeTaskStatus, updateTask, acceptTask } from '@/api/tasks'
 import { createBug, uploadBugImage, getBugs } from '@/api/bugs'
 import { getRequirement, downloadRequirementDocument } from '@/api/requirements'
 import { getUsers } from '@/api/users'
@@ -257,6 +257,7 @@ const canEditDevLead = computed(() => effectiveRole.value === 'pm' && ['pending'
 const nextActionText = computed(() => ({
   pending: '等待分配开发人员进行开发。',
   developing: '开发中，完成后将进入测试。',
+  pending_test: '开发已完成，等待测试人员受理并验证。',
   testing: '测试人员执行验证，通过后即可完成。',
   closed: '任务流程已完成。'
 }[task.value?.status] || '查看当前状态并继续推进。'))
@@ -274,7 +275,10 @@ const availableActions = computed(() => {
   if (role === 'pm' && status === 'testing') actions.push({ label: '打回开发', status: 'developing', type: 'error' })
   if (['dev', 'dev_lead'].includes(role) && isMyTask && status === 'pending') actions.push({ label: '开始开发', status: 'developing', type: 'primary' })
   if (['dev', 'dev_lead'].includes(role) && isMyTask && status === 'developing') actions.push({ label: '完成开发', status: 'testing', type: 'primary' })
-  if (role === 'tester' && status === 'testing') {
+  if (role === 'tester' && (status === 'pending_test' || (status === 'testing' && !task.value?.tester_id))) {
+    actions.push({ label: '受理测试', status: null, type: 'primary', action: 'accept' })
+  }
+  if (role === 'tester' && status === 'testing' && task.value?.tester_id) {
     actions.push({ label: '创建Bug', status: null, type: 'warning', action: 'createBug' })
     actions.push({ label: '关闭任务', status: 'closed', type: 'success' })
   }
@@ -406,6 +410,8 @@ async function submitBug() {
 function executeAction(action) {
   if (action.action === 'createBug') {
     handleCreateBug()
+  } else if (action.action === 'accept') {
+    handleAcceptTask()
   } else {
     window.$dialog?.warning({
       title: '确认操作',
@@ -417,6 +423,18 @@ function executeAction(action) {
       onClose: () => {}
     })
   }
+}
+
+async function handleAcceptTask() {
+  actionLoading.value = true
+  try {
+    await acceptTask(props.taskId)
+    window.$message?.success('任务受理成功')
+    emit('refresh')
+    await loadDetail()
+    await loadHistory()
+  } catch (e) { console.error(e) }
+  actionLoading.value = false
 }
 
 async function doChangeStatus(newStatus, comment) {

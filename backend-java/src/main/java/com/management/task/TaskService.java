@@ -51,6 +51,43 @@ public class TaskService {
                 .getAuthentication().getPrincipal();
     }
 
+    /**
+     * 测试人员受理任务：将当前用户设为 tester_id。
+     * 允许 pending_test → testing，或 testing（未指派测试人员）→ 更新 tester_id。
+     */
+    @Transactional
+    public Task acceptTask(Long taskId) {
+        JwtUserDetails operator = currentUser();
+        if (!"tester".equals(operator.getRole()) && !"pm".equals(operator.getRole())) {
+            throw new BusinessException("只有测试人员或项目经理可以受理任务");
+        }
+
+        Task task = taskMapper.selectById(taskId);
+        if (task == null) throw new BusinessException(404, "任务不存在");
+        if (!"pending_test".equals(task.getStatus())
+                && !("testing".equals(task.getStatus()) && task.getTesterId() == null)) {
+            throw new BusinessException("只有待测试或未指派测试人员的任务可以受理");
+        }
+
+        String oldStatus = task.getStatus();
+        boolean statusChanged = !"testing".equals(task.getStatus());
+        task.setTesterId(operator.getUserId());
+        task.setStatus("testing");
+        taskMapper.updateById(task);
+
+        TaskStatusHistory history = new TaskStatusHistory();
+        history.setTaskId(taskId);
+        history.setFromStatus(statusChanged ? oldStatus : "unassigned");
+        history.setToStatus("testing");
+        history.setChangedBy(operator.getUserId());
+        history.setComment("测试人员受理任务");
+        historyMapper.insert(history);
+
+        fillAssociations(task);
+        log.info("Task {} accepted by tester {} ({})", taskId, operator.getUserId(), operator.getName());
+        return task;
+    }
+
     /** 按角色过滤查询任务列表 */
     public List<Task> listTasks(String projectId, String status, String priority, String requirementId, String iterationId) {
         JwtUserDetails u = currentUser();

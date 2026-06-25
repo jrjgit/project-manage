@@ -175,7 +175,7 @@
 
 <script setup>
 import { computed, h, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getProjects } from '@/api/projects'
 import { getSystems } from '@/api/systems'
@@ -198,6 +198,7 @@ import { NButton, NModal, NForm, NFormItem, NInput, NSelect, NSpace, NDataTable,
 
 const authStore = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 
 const allData = ref([])
 const projects = ref([])
@@ -218,7 +219,7 @@ const editingRequirementId = ref(null)
 const editingIterationId = ref(null)
 const savingIteration = ref(false)
 
-const filters = ref({ number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null, system: null })
+const filters = ref({ number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null, system: null, overdue: false })
 
 function emptyForm() {
   return {
@@ -284,7 +285,7 @@ const columns = [
     render(row) {
       return h('a', {
         style: { color: '#6366f1', cursor: 'pointer', fontWeight: '600', textDecoration: 'none' },
-        onClick: () => router.push(`/requirements/${row.id}`)
+        onClick: () => router.push({ path: `/requirements/${row.id}`, query: buildFilterQuery() })
       }, row.number || `REQ-${String(row.id).padStart(4, '0')}`)
     }
   },
@@ -356,7 +357,35 @@ const columns = [
 ]
 
 function resetFilters() {
-  filters.value = { number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null, system: null }
+  filters.value = { number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null, system: null, overdue: false }
+}
+
+function buildFilterQuery() {
+  const q = {}
+  const f = filters.value
+  if (f.number) q.number = f.number
+  if (f.description) q.description = f.description
+  if (f.status) q.status = f.status
+  if (f.project_type) q.project_type = f.project_type
+  if (f.project_id) q.project_id = f.project_id
+  if (f.iteration_id) q.iteration_id = f.iteration_id
+  if (f.system) q.system = f.system
+  if (f.overdue) q.overdue = 'true'
+  return q
+}
+
+function restoreFiltersFromQuery() {
+  const q = route.query
+  filters.value = {
+    number: q.number || '',
+    description: q.description || '',
+    status: q.status || null,
+    project_type: q.project_type || null,
+    project_id: q.project_id ? Number(q.project_id) : null,
+    iteration_id: q.iteration_id || null,
+    system: q.system || null,
+    overdue: q.overdue === 'true'
+  }
 }
 
 function selectSystem(system) {
@@ -477,15 +506,19 @@ async function handleDelete(row) {
 
 async function loadData() {
   try {
+    const params = filters.value.overdue ? { overdue: true } : undefined
     const [reqs, proj, sys, usr, iters, stats] = await Promise.all([
-      getRequirements(), getProjects(), getSystems(), getUsers(), getIterations(),
+      getRequirements(params), getProjects(), getSystems(), getUsers(), getIterations(),
       getRequirementSystemStats()
     ])
     allData.value = reqs; projects.value = proj; systems.value = sys; users.value = usr; iterations.value = iters; systemStats.value = stats || []
   } catch (e) { console.error(e) }
 }
 
-onMounted(() => loadData())
+onMounted(() => {
+  restoreFiltersFromQuery()
+  loadData()
+})
 </script>
 
 <style scoped>

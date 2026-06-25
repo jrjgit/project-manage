@@ -70,6 +70,15 @@ public class TaskController {
     }
 
     /**
+     * 测试人员受理任务
+     */
+    @Operation(summary = "测试人员受理任务")
+    @PostMapping("/{id}/accept")
+    public Result<Task> accept(@PathVariable Long id) {
+        return Result.ok(taskService.acceptTask(id));
+    }
+
+    /**
      * 变更任务状态
      */
     @Operation(summary = "变更任务状态")

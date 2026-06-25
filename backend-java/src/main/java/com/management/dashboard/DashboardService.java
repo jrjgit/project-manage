@@ -11,7 +11,9 @@ import com.management.project.mapper.ProjectMapper;
 import com.management.requirement.entity.Requirement;
 import com.management.requirement.mapper.RequirementMapper;
 import com.management.task.entity.Task;
+import com.management.task.entity.TaskProgressHistory;
 import com.management.task.mapper.TaskMapper;
+import com.management.task.mapper.TaskProgressHistoryMapper;
 import com.management.user.entity.User;
 import com.management.user.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,7 @@ public class DashboardService {
     private final ProjectMapper projectMapper;
     private final UserMapper userMapper;
     private final IterationMapper iterationMapper;
+    private final TaskProgressHistoryMapper taskProgressHistoryMapper;
 
     private JwtUserDetails currentUser() {
         return (JwtUserDetails) SecurityContextHolder.getContext()
@@ -268,7 +271,7 @@ public class DashboardService {
         Long userId = u.getUserId();
 
         List<Task> allTestingTasks = taskMapper.selectList(
-                new LambdaQueryWrapper<Task>().eq(Task::getStatus, "testing"));
+                new LambdaQueryWrapper<Task>().in(Task::getStatus, "pending_test", "testing"));
         for (Task t : allTestingTasks) fillTaskUser(t);
 
         // 批量加载待测试任务的 Bug 创建人
@@ -349,6 +352,60 @@ public class DashboardService {
         return result;
     }
 
+    /** 进度异常任务：近两周进度无变化且当前进度未达 100% */
+    public List<Map<String, Object>> getProgressAnomalies() {
+        List<Task> tasks = taskMapper.selectList(
+                new LambdaQueryWrapper<Task>()
+                        .ne(Task::getStatus, "closed")
+                        .lt(Task::getProgress, 100)
+                        .isNotNull(Task::getProgress));
+        if (tasks.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> taskIds = tasks.stream().map(Task::getId).collect(Collectors.toList());
+        List<TaskProgressHistory> histories = taskProgressHistoryMapper.selectList(
+                new LambdaQueryWrapper<TaskProgressHistory>()
+                        .in(TaskProgressHistory::getTaskId, taskIds)
+                        .orderByDesc(TaskProgressHistory::getCreatedAt));
+        Map<Long, List<TaskProgressHistory>> historyByTask = histories.stream()
+                .collect(Collectors.groupingBy(TaskProgressHistory::getTaskId));
+
+        Set<Long> reqIds = tasks.stream()
+                .map(Task::getRequirementId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, Requirement> reqMap = new HashMap<>();
+        for (Long reqId : reqIds) {
+            Requirement r = requirementMapper.selectById(reqId);
+            if (r != null) reqMap.put(reqId, r);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        List<Map<String, Object>> anomalies = new ArrayList<>();
+        for (Task t : tasks) {
+            List<TaskProgressHistory> hlist = historyByTask.getOrDefault(t.getId(), Collections.emptyList());
+            if (hlist.isEmpty()) continue;
+            TaskProgressHistory latest = hlist.get(0);
+            TaskProgressHistory previous = hlist.stream()
+                    .filter(h -> h.getCreatedAt() != null && h.getCreatedAt().isBefore(now.minusDays(7)))
+                    .findFirst()
+                    .orElse(null);
+            if (previous == null) continue;
+            if (latest.getProgress() != null && latest.getProgress().equals(previous.getProgress())) {
+                Requirement r = reqMap.get(t.getRequirementId());
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("requirementNumber", r != null ? (r.getNumber() != null ? r.getNumber() : r.getRequirementId()) : "-");
+                m.put("system", r != null ? r.getSystem() : "-");
+                m.put("description", r != null ? r.getDescription() : "-");
+                m.put("taskTitle", t.getTitle());
+                m.put("progress", latest.getProgress());
+                anomalies.add(m);
+            }
+        }
+        return anomalies;
+    }
+
     private Map<String, Object> bugToMap(Bug b, java.util.Map<Long, User> userMap, java.util.Map<Long, Requirement> reqCache) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", b.getId());
@@ -392,9 +449,10 @@ public class DashboardService {
         m.put("title", t.getTitle());
         m.put("status", t.getStatus());
         m.put("assignee", t.getAssignee() != null ? t.getAssignee().getName() : "-");
+        m.put("tester", t.getTester() != null ? t.getTester().getName() : "-");
+        m.put("testerId", t.getTesterId());
         m.put("deadline", t.getDeadline() != null ? t.getDeadline().toString() : null);
         m.put("progress", t.getProgress());
-        m.put("testerId", t.getTesterId());
         m.put("terminal", t.getTerminal());
         if (t.getRequirementId() != null) {
             Requirement r = requirementMapper.selectById(t.getRequirementId());
@@ -423,5 +481,6 @@ public class DashboardService {
 
     private void fillTaskUser(Task t) {
         if (t.getAssigneeId() != null) t.setAssignee(userMapper.selectById(t.getAssigneeId()));
+        if (t.getTesterId() != null) t.setTester(userMapper.selectById(t.getTesterId()));
     }
 }
