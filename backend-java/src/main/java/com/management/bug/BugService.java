@@ -218,9 +218,11 @@ public class BugService {
         Bug bug = bugMapper.selectById(bugId);
         if (bug == null) throw new BusinessException("Bug 不存在");
 
+        // dev/dev_lead 修复操作需要是自己的 Bug，验证操作不受限
         if (("dev".equals(role) || "dev_lead".equals(role))
+                && ("unfixed".equals(bug.getStatus()))
                 && !operatorId.equals(bug.getAssigneeId())) {
-            throw new BusinessException("只能操作指派给自己的 Bug");
+            throw new BusinessException("只能修复指派给自己的 Bug");
         }
 
         String oldStatus = bug.getStatus();

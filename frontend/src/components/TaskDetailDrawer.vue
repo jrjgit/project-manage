@@ -249,8 +249,8 @@ const overdueDays = computed(() => {
 
 const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
 
-// 在测试工作台打开时，项目经理按测试人员权限处理
-const effectiveRole = computed(() => props.testerMode && authStore.userInfo?.role === 'pm' ? 'tester' : authStore.userInfo?.role)
+// 在测试工作台打开时，所有角色按测试人员权限处理
+const effectiveRole = computed(() => props.testerMode ? 'tester' : authStore.userInfo?.role)
 
 const canEditDevLead = computed(() => effectiveRole.value === 'pm' && ['pending', 'developing'].includes(task.value?.status))
 

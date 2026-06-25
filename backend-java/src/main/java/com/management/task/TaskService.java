@@ -58,7 +58,8 @@ public class TaskService {
     @Transactional
     public Task acceptTask(Long taskId) {
         JwtUserDetails operator = currentUser();
-        if (!"tester".equals(operator.getRole()) && !"pm".equals(operator.getRole())) {
+        if (!"tester".equals(operator.getRole()) && !"pm".equals(operator.getRole())
+                && !"dev".equals(operator.getRole()) && !"dev_lead".equals(operator.getRole())) {
             throw new BusinessException("只有测试人员或项目经理可以受理任务");
         }
 

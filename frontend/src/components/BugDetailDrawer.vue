@@ -205,7 +205,7 @@ const availableActions = computed(() => {
     actions.push({ label: '已修复', status: 'fixed', type: 'primary' })
     actions.push({ label: '确认为非Bug', status: 'not_a_bug', type: 'info' })
   }
-  if (['tester', 'pm'].includes(role) && ['fixed', 'not_a_bug', 'pending_verify'].includes(status)) {
+  if (['tester', 'pm', 'dev', 'dev_lead'].includes(role) && ['fixed', 'not_a_bug', 'pending_verify'].includes(status)) {
     actions.push({ label: '验证通过', status: 'closed', type: 'success' })
     actions.push({ label: '未修复', status: 'unfixed', type: 'error' })
   }

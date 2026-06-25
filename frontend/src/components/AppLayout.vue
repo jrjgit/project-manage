@@ -209,7 +209,7 @@ const avatarLetter = computed(() => authStore.userInfo?.name?.charAt(0)?.toUpper
 const allMenus = [
   { key: 'dashboard', label: '仪表盘', path: '/dashboard', icon: LayoutDashboardIcon, roles: ['pm'] },
   { key: 'developer', label: '开发工作台', path: '/developer', icon: CodeIcon, roles: ['dev_lead', 'dev'] },
-  { key: 'tester', label: '测试工作台', path: '/tester', icon: BugIcon, roles: ['pm', 'tester'] },
+  { key: 'tester', label: '测试工作台', path: '/tester', icon: BugIcon, roles: ['pm', 'dev_lead', 'dev', 'tester'] },
   { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon, roles: ['pm'] },
   { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon, roles: [] },
   { key: 'messages', label: '消息中心', path: '/messages', icon: BellIcon, badge: 'unread', roles: ['pm', 'dev_lead', 'dev', 'tester'] },
