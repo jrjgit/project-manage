@@ -41,7 +41,7 @@ public class DashboardController {
      * 获取测试人员仪表盘数据
      */
     @GetMapping("/tester")
-    @PreAuthorize("hasAnyRole('TESTER','PM')")
+    @PreAuthorize("hasAnyRole('TESTER','PM','DEV','DEV_LEAD')")
     public Result<Map<String, Object>> testerDashboard() {
         return Result.ok(dashboardService.testerDashboardV2());
     }
