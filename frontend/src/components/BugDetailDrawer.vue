@@ -68,7 +68,7 @@
             <div class="description-block">{{ bug.remark || '暂无备注' }}</div>
           </div>
 
-          <div class="section-card">
+          <div class="section-card" @paste.prevent="handlePaste">
             <div class="section-title">截图（{{ images.length }}）</div>
             <div v-if="images.length" class="image-grid">
               <div v-for="img in images" :key="img.id" class="image-item">
@@ -83,6 +83,7 @@
               <n-upload :show-file-list="false" :custom-request="handleImageUpload" accept="image/*">
                 <n-button :loading="imageUploading" size="small">上传截图</n-button>
               </n-upload>
+              <span style="font-size:11px;color:#94a3b8;margin-left:8px">或 Ctrl+V 粘贴截图</span>
             </div>
           </div>
         </section>
@@ -168,6 +169,29 @@ async function handleImageUpload({ file }) {
     console.error(e)
   } finally {
     imageUploading.value = false
+  }
+}
+
+async function handlePaste(e) {
+  const items = e.clipboardData?.items
+  if (!items) return
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const blob = item.getAsFile()
+      if (blob) {
+        const file = new File([blob], `paste-${Date.now()}.png`, { type: blob.type })
+        imageUploading.value = true
+        try {
+          await uploadBugImage(props.bugId, file)
+          window.$message.success('截图粘贴成功')
+          await loadImages()
+        } catch (err) {
+          console.error(err)
+        } finally {
+          imageUploading.value = false
+        }
+      }
+    }
   }
 }
 
