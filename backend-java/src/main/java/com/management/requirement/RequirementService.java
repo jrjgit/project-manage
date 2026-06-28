@@ -590,28 +590,53 @@ public class RequirementService {
             r.setDevProgress(totalPerformance > 0 ? (int) Math.round(weightedSum / totalPerformance) : 0);
         }
 
-        // 测试进度按任务完成率计算：已关闭任务占比
-        long totalTasks = tasks.size();
-        long closedTasks = tasks.stream().filter(t -> "closed".equals(t.getStatus())).count();
-        r.setTestProgress(totalTasks > 0 ? (int) (closedTasks * 100 / totalTasks) : null);
+        boolean allTasksClosed = !tasks.isEmpty() && tasks.stream().allMatch(t -> "closed".equals(t.getStatus()));
 
         long integrationTotal = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
                 .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "integration"));
         long integrationClosed = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
                 .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "integration").eq(Bug::getStatus, "closed"));
-        r.setIntegrationTestProgress(integrationTotal > 0 ? (int) (integrationClosed * 100 / integrationTotal) : 0);
+        if (!allTasksClosed) {
+            r.setIntegrationTestProgress(0);
+        } else if (integrationTotal > 0) {
+            r.setIntegrationTestProgress((int) (integrationClosed * 100 / integrationTotal));
+        } else {
+            r.setIntegrationTestProgress(100);
+        }
 
         long businessTotal = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
                 .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "business"));
         long businessClosed = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
                 .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "business").eq(Bug::getStatus, "closed"));
-        r.setBusinessTestProgress(businessTotal > 0 ? (int) (businessClosed * 100 / businessTotal) : 0);
+        if (!allTasksClosed) {
+            r.setBusinessTestProgress(0);
+        } else if (businessTotal > 0) {
+            r.setBusinessTestProgress((int) (businessClosed * 100 / businessTotal));
+        } else {
+            r.setBusinessTestProgress(100);
+        }
 
         long itTotal = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
                 .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "it_test"));
         long itClosed = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
                 .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "it_test").eq(Bug::getStatus, "closed"));
-        r.setItTestProgress(itTotal > 0 ? (int) (itClosed * 100 / itTotal) : 0);
+        if (!allTasksClosed) {
+            r.setItTestProgress(0);
+        } else if (itTotal > 0) {
+            r.setItTestProgress((int) (itClosed * 100 / itTotal));
+        } else {
+            r.setItTestProgress(100);
+        }
+
+        long totalBugs = integrationTotal + businessTotal + itTotal;
+        long totalClosed = integrationClosed + businessClosed + itClosed;
+        if (!allTasksClosed) {
+            r.setTestProgress(0);
+        } else if (totalBugs > 0) {
+            r.setTestProgress((int) (totalClosed * 100 / totalBugs));
+        } else {
+            r.setTestProgress(100);
+        }
     }
 
     private RequirementDetailDTO toDetailDTO(Requirement r) {
