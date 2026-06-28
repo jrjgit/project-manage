@@ -48,7 +48,7 @@
                   <span class="task-meta">{{ t.reqNumber || '-' }}</span>
                   <span class="task-meta">{{ t.system || '-' }}</span>
                   <span class="task-meta">开发：{{ t.assignee || '-' }}</span>
-                  <span class="task-meta">测试：{{ t.tester || '-' }}</span>
+                  <span class="task-meta">测试：<strong class="tester-name">{{ t.tester || '-' }}</strong></span>
                 </div>
                 <div class="task-item-actions">
                   <n-button
@@ -108,7 +108,7 @@
 
       <!-- Create Bug Modal -->
       <n-modal v-model:show="showCreateBug" preset="card" style="width:520px" title="创建 Bug" :mask-closable="false">
-        <n-form label-placement="top">
+        <n-form label-placement="top" @paste.prevent="handleBugFormPaste">
           <n-form-item label="测试类型">
             <n-select v-model:value="bugForm.test_type" :options="testTypeOptions" />
           </n-form-item>
@@ -134,6 +134,7 @@
             <n-upload :show-file-list="false" :custom-request="handleAttachUpload" accept="image/*" multiple>
               <n-button :loading="imageUploading">选择图片</n-button>
             </n-upload>
+            <span style="font-size:11px;color:#94a3b8;margin-left:8px">或 Ctrl+V 粘贴截图</span>
             <div v-if="previewUrls.length" class="preview-grid">
               <div v-for="(url, idx) in previewUrls" :key="idx" class="preview-item">
                 <img :src="url" style="width:100%;height:80px;object-fit:cover;border-radius:6px" />
@@ -283,6 +284,22 @@ async function loadUsers() {
   try { users.value = await getUsers() || [] } catch (e) { console.error(e) }
 }
 
+function handleBugFormPaste(e) {
+  const items = e.clipboardData?.items
+  if (!items) return
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const blob = item.getAsFile()
+      if (blob) {
+        const file = new File([blob], `paste-${Date.now()}.png`, { type: blob.type })
+        imageFiles.value.push(file)
+        attachFileNames.value.push(file.name)
+        previewUrls.value.push(URL.createObjectURL(file))
+      }
+    }
+  }
+}
+
 function handleAttachUpload({ file, onFinish }) {
   if (file.file && imageFiles.value.some(f => f === file.file || f.name === file.file.name && f.size === file.file.size)) {
     onFinish?.()
@@ -424,6 +441,7 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers(); loadSystems(); lo
 .filter-row .n-select, .filter-row .n-input { flex: 1; min-width: 100px; }
 .task-item-meta { display: flex; gap: 12px; margin-top: 4px; font-size: 11px; color: #94a3b8; }
 .task-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tester-name { color:#6366f1; font-weight:700; }
 .task-item-bug-creators { margin-top: 6px; font-size: 12px; }
 .bug-creators-label { color: #6366f1; font-weight: 600; }
 .bug-creators-names { color: #0f172a; font-weight: 500; }

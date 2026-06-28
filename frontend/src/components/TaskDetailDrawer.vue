@@ -153,7 +153,7 @@
 
   <!-- Create Bug Modal -->
   <n-modal v-model:show="showCreateBugModal" preset="card" style="width: min(92vw, 500px)" title="创建 Bug" :mask-closable="false">
-    <n-form label-placement="top">
+    <n-form label-placement="top" @paste.prevent="handleBugFormPaste">
       <n-form-item label="标题" path="title">
         <n-input v-model:value="bugForm.title" placeholder="Bug标题" />
       </n-form-item>
@@ -170,6 +170,7 @@
         <n-upload :show-file-list="false" :custom-request="handleBugUpload" accept="image/*" multiple>
           <n-button :loading="bugSubmitting">选择图片</n-button>
         </n-upload>
+        <span style="font-size:11px;color:#94a3b8;margin-left:8px">或 Ctrl+V 粘贴截图</span>
         <div v-if="bugPreviewUrls.length" class="preview-grid">
           <div v-for="(url, idx) in bugPreviewUrls" :key="idx" class="preview-item">
             <img :src="url" style="width:100%;height:80px;object-fit:cover;border-radius:6px" />
@@ -381,6 +382,21 @@ function removeBugImage(idx) {
   URL.revokeObjectURL(bugPreviewUrls.value[idx])
   bugImageFiles.value.splice(idx, 1)
   bugPreviewUrls.value.splice(idx, 1)
+}
+
+function handleBugFormPaste(e) {
+  const items = e.clipboardData?.items
+  if (!items) return
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const blob = item.getAsFile()
+      if (blob) {
+        const file = new File([blob], `paste-${Date.now()}.png`, { type: blob.type })
+        bugImageFiles.value.push(file)
+        bugPreviewUrls.value.push(URL.createObjectURL(file))
+      }
+    }
+  }
 }
 
 async function submitBug() {
