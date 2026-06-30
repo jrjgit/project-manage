@@ -76,7 +76,10 @@
               <div v-for="bug in filteredUnfixedBugs" :key="bug.id" class="bug-item" @click="onBugClick(bug)">
                 <div class="bug-item-top">
                   <span class="bug-title">{{ bug.title }}</span>
-                  <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
+                  <div class="bug-item-tags">
+                    <n-tag v-if="bug.terminal" size="tiny" round>{{ skillsMap[bug.terminal] || bug.terminal }}</n-tag>
+                    <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
+                  </div>
                 </div>
                 <div class="bug-item-meta">
                   <span class="bug-task">{{ bug.reqNumber || '-' }}</span>
@@ -93,7 +96,10 @@
               <div v-for="bug in filteredPendingVerifyBugs" :key="bug.id" class="bug-item" @click="onBugClick(bug)">
                 <div class="bug-item-top">
                   <span class="bug-title">{{ bug.title }}</span>
-                  <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
+                  <div class="bug-item-tags">
+                    <n-tag v-if="bug.terminal" size="tiny" round>{{ skillsMap[bug.terminal] || bug.terminal }}</n-tag>
+                    <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
+                  </div>
                 </div>
                 <div class="bug-item-meta">
                   <span class="bug-task">{{ bug.reqNumber || '-' }}</span>
@@ -427,8 +433,9 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers(); loadSystems(); lo
 .task-item-assignee { font-size:11px;color:#94a3b8;white-space:nowrap; }
 .bug-item { padding:10px 12px;border:1px solid #f1f5f9;border-radius:10px;cursor:pointer;transition:background .12s;margin-bottom:6px; }
 .bug-item:hover { background:#f1f5f9; }
-.bug-item-top { display:flex;align-items:center;justify-content:space-between;gap:8px; }
+.bug-item-top { display:flex;align-items:center;gap:8px; }
 .bug-title { font-size:13px;font-weight:500;color:#0f172a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.bug-item-tags { display:flex;align-items:center;gap:6px;flex-shrink:0; }
 .bug-item-meta { display: flex; gap: 12px; margin-top: 6px; font-size: 11px; color: #94a3b8; flex-wrap: wrap; }
 .bug-task { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .empty-state { text-align:center;padding:24px;color:#94a3b8;font-size:13px; }

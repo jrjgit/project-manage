@@ -45,8 +45,8 @@
       <section class="section-card chart-section">
         <div class="section-header gradient-header" style="background: linear-gradient(135deg, #fefce8, #ffffff);">
           <div>
-            <div class="section-kicker" style="color: #f59e0b;">绩效产值</div>
-            <h3>绩效产值统计</h3>
+            <div class="section-kicker" style="color: #f59e0b;">绩效（人天）</div>
+            <h3>绩效统计</h3>
           </div>
         </div>
         <div class="chart-wrap">

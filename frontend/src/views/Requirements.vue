@@ -125,30 +125,6 @@
         </n-form-item>
         <n-grid :cols="2" :x-gap="16">
           <n-gi>
-            <n-form-item label="开发人天">
-              <n-input v-model:value="form.dev_total" placeholder="开发人天" />
-            </n-form-item>
-          </n-gi>
-          <n-gi>
-            <n-form-item label="开发单价">
-              <n-input v-model:value="form.dev_price" placeholder="开发单价" />
-            </n-form-item>
-          </n-gi>
-        </n-grid>
-        <n-grid :cols="2" :x-gap="16">
-          <n-gi>
-            <n-form-item label="测试人天">
-              <n-input v-model:value="form.test_total" placeholder="测试人天" />
-            </n-form-item>
-          </n-gi>
-          <n-gi>
-            <n-form-item label="测试单价">
-              <n-input v-model:value="form.test_price" placeholder="测试单价" />
-            </n-form-item>
-          </n-gi>
-        </n-grid>
-        <n-grid :cols="2" :x-gap="16">
-          <n-gi>
             <n-form-item label="总人天">
               <n-input v-model:value="form.total_amount" placeholder="总人天" />
             </n-form-item>

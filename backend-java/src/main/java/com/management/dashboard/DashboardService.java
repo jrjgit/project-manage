@@ -438,6 +438,13 @@ public class DashboardService {
                     m.put("system", r.getSystem());
                 }
             }
+        } else if (b.getRequirementId() != null) {
+            Requirement r = reqCache.computeIfAbsent(b.getRequirementId(), id -> requirementMapper.selectById(id));
+            if (r != null) {
+                m.put("reqNumber", r.getNumber() != null ? r.getNumber() : r.getRequirementId());
+                m.put("reqId", r.getRequirementId());
+                m.put("system", r.getSystem());
+            }
         }
         return m;
     }

@@ -79,10 +79,6 @@
             </template>
             <span v-else class="info-value edit-hint">{{ req.planned_completion_time ? formatDate2(req.planned_completion_time) : '点击设置' }}</span>
           </div>
-          <div class="info-cell"><span class="info-label">开发人天</span><span class="info-value">{{ req.dev_total || '-' }}</span></div>
-          <div class="info-cell"><span class="info-label">开发单价</span><span class="info-value">{{ req.dev_price || '-' }}</span></div>
-          <div class="info-cell"><span class="info-label">测试人天</span><span class="info-value">{{ req.test_total || '-' }}</span></div>
-          <div class="info-cell"><span class="info-label">测试单价</span><span class="info-value">{{ req.test_price || '-' }}</span></div>
           <div class="info-cell"><span class="info-label">总人天</span><span class="info-value">{{ req.total_amount || '-' }}</span></div>
           <div class="info-cell"><span class="info-label">总价</span><span class="info-value">{{ req.total_price || '-' }}</span></div>
         </div>

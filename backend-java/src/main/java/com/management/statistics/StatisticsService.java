@@ -81,33 +81,37 @@ public class StatisticsService {
         List<User> devUsers = userMapper.selectList(
                 new LambdaQueryWrapper<User>()
                         .in(User::getRole, "dev", "dev_lead"));
-        List<User> testerUsers = userMapper.selectList(
-                new LambdaQueryWrapper<User>()
-                        .eq(User::getRole, "tester"));
+
+        // 测试绩效：按 tester_id 查所有用户（不限角色），确保非 tester 角色受理测试任务后也能看到绩效
+        List<Task> allTesterIdTasks = taskMapper.selectList(
+                new LambdaQueryWrapper<Task>().isNotNull(Task::getTesterId).ne(Task::getTesterId, 0));
+        java.util.Set<Long> testerUserIds = allTesterIdTasks.stream()
+                .map(Task::getTesterId)
+                .filter(Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        List<User> testerUsers = testerUserIds.isEmpty()
+                ? Collections.emptyList()
+                : userMapper.selectList(new LambdaQueryWrapper<User>().in(User::getId, testerUserIds));
 
         // 绩效产值按任务最后更新时间筛选
         LocalDateTime rangeStart;
         LocalDateTime rangeEnd;
         if ("range".equals(filterType) && startDate != null && !startDate.isBlank() && endDate != null && !endDate.isBlank()) {
             rangeStart = LocalDate.parse(startDate).atStartOfDay();
-            rangeEnd = LocalDate.parse(endDate).plusDays(1).atStartOfDay(); // 不包含结束日次日
+            rangeEnd = LocalDate.parse(endDate).plusDays(1).atStartOfDay();
         } else if ("month".equals(filterType)) {
             rangeStart = LocalDateTime.of(year, month, 1, 0, 0);
             rangeEnd = rangeStart.plusMonths(1);
         } else {
-            // 按年
             rangeStart = LocalDateTime.of(year, 1, 1, 0, 0);
             rangeEnd = rangeStart.plusYears(1);
         }
 
-        // 缓存需求信息
         java.util.Map<Long, Requirement> reqCache = new java.util.HashMap<>();
-        java.util.Map<Long, Double> devPriceCache = new java.util.HashMap<>();
-        java.util.Map<Long, Double> testPriceCache = new java.util.HashMap<>();
 
         List<Map<String, Object>> stats = new ArrayList<>();
 
-        // 1. 开发人员绩效：按 assignee_id 关联，使用 performance（开发绩效工时） * dev_price
+        // 1. 开发人员绩效：按 assignee_id 关联，performance 直接累加（人天）
         if (!devUsers.isEmpty()) {
             Map<Long, User> userMap = devUsers.stream().collect(Collectors.toMap(User::getId, u -> u));
             List<Long> userIds = new ArrayList<>(userMap.keySet());
@@ -143,17 +147,14 @@ public class StatisticsService {
                     double progress = t.getProgress() != null ? t.getProgress() : 0;
                     String status = t.getStatus();
 
-                    // 进行中任务负载：状态不等于 closed
                     if (!"closed".equals(status)) {
                         inProgressLoad += perf * (1 - progress / 100.0);
                     }
 
-                    // 绩效产值：状态为 closed，且按任务最后更新时间落在筛选范围内
                     if ("closed".equals(status)) {
                         LocalDateTime updatedAt = t.getUpdatedAt();
                         if (updatedAt != null && !updatedAt.isBefore(rangeStart) && updatedAt.isBefore(rangeEnd)) {
-                            double price = getDevPrice(t.getRequirementId(), devPriceCache);
-                            performanceValue += perf * price;
+                            performanceValue += perf;
                         }
                     }
 
@@ -171,7 +172,7 @@ public class StatisticsService {
             }
         }
 
-        // 2. 测试人员绩效：按 tester_id 关联，使用 test_performance * test_price
+        // 2. 测试人员绩效：按 tester_id 关联，test_performance 直接累加（人天）
         if (!testerUsers.isEmpty()) {
             Map<Long, User> userMap = testerUsers.stream().collect(Collectors.toMap(User::getId, u -> u));
             List<Long> userIds = new ArrayList<>(userMap.keySet());
@@ -193,17 +194,14 @@ public class StatisticsService {
                     double progress = t.getProgress() != null ? t.getProgress() : 0;
                     String status = t.getStatus();
 
-                    // 进行中测试负载：处于 testing 状态
-                    if ("testing".equals(status)) {
+                    if (!"closed".equals(status)) {
                         inProgressLoad += perf * (1 - progress / 100.0);
                     }
 
-                    // 测试绩效产值：状态为 closed，且按任务最后更新时间落在筛选范围内
                     if ("closed".equals(status)) {
                         LocalDateTime updatedAt = t.getUpdatedAt();
                         if (updatedAt != null && !updatedAt.isBefore(rangeStart) && updatedAt.isBefore(rangeEnd)) {
-                            double price = getTestPrice(t.getRequirementId(), testPriceCache);
-                            performanceValue += perf * price;
+                            performanceValue += perf;
                         }
                     }
 
@@ -254,21 +252,5 @@ public class StatisticsService {
         return cache.computeIfAbsent(requirementId, id -> requirementMapper.selectById(id));
     }
 
-    private double getDevPrice(Long requirementId, java.util.Map<Long, Double> cache) {
-        if (requirementId == null) return 0;
-        if (cache.containsKey(requirementId)) return cache.get(requirementId);
-        Requirement r = requirementMapper.selectById(requirementId);
-        double price = r != null ? parseDoubleSafe(r.getDevPrice()) : 0;
-        cache.put(requirementId, price);
-        return price;
-    }
 
-    private double getTestPrice(Long requirementId, java.util.Map<Long, Double> cache) {
-        if (requirementId == null) return 0;
-        if (cache.containsKey(requirementId)) return cache.get(requirementId);
-        Requirement r = requirementMapper.selectById(requirementId);
-        double price = r != null ? parseDoubleSafe(r.getTestPrice()) : 0;
-        cache.put(requirementId, price);
-        return price;
-    }
 }
