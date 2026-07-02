@@ -35,7 +35,10 @@
           <div v-for="bug in filteredBugs" :key="bug.id" class="bug-item" @click="onBugClick(bug)">
             <div class="bug-item-top">
               <span class="bug-title">{{ bug.title }}</span>
-              <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
+              <div class="bug-item-tags">
+                <n-tag v-if="bug.terminal" size="tiny" round>{{ skillsMap[bug.terminal] || bug.terminal }}</n-tag>
+                <n-tag size="tiny" :type="severityMeta[bug.severity]?.tone || 'default'" round>{{ severityMeta[bug.severity]?.label || bug.severity }}</n-tag>
+              </div>
             </div>
              <div class="bug-item-meta">
                <n-tag size="tiny" :type="bugStatusMeta[bug.status]?.tone || 'default'">{{ bugStatusMeta[bug.status]?.label || bug.status }}</n-tag>

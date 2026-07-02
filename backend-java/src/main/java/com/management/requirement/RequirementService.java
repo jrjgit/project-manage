@@ -132,16 +132,17 @@ public class RequirementService {
         return r;
     }
 
-    public List<Requirement> list(String status, String system, String projectType, Boolean overdue) {
+    public List<Requirement> list(String status, String system, String projectType, Boolean overdue, Long projectId, String iterationId) {
         LambdaQueryWrapper<Requirement> q = new LambdaQueryWrapper<>();
         if (status != null && !status.isBlank()) {
             q.eq(Requirement::getStatus, status);
         } else {
-            // 默认排除已发布和已关闭的需求
-            q.notIn(Requirement::getStatus, Arrays.asList("released", "closed"));
+            q.notIn(Requirement::getStatus, List.of("released", "closed"));
         }
         if (system != null && !system.isBlank()) q.eq(Requirement::getSystem, system);
         if (projectType != null && !projectType.isBlank()) q.eq(Requirement::getProjectType, projectType);
+        if (projectId != null) q.eq(Requirement::getProjectId, projectId);
+        if (iterationId != null && !iterationId.isBlank()) q.eq(Requirement::getIterationId, iterationId);
         applyProjectScopeFilter(q);
         applyStatusAndCreatedAtOrder(q);
         List<Requirement> list = requirementMapper.selectList(q);

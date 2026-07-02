@@ -68,7 +68,7 @@
             <div class="description-block">{{ bug.remark || '暂无备注' }}</div>
           </div>
 
-          <div class="section-card" @paste.prevent="handlePaste">
+          <div class="section-card" @paste="handlePaste">
             <div class="section-title">截图（{{ images.length }}）</div>
             <div v-if="images.length" class="image-grid">
               <div v-for="img in images" :key="img.id" class="image-item">
@@ -175,8 +175,10 @@ async function handleImageUpload({ file }) {
 async function handlePaste(e) {
   const items = e.clipboardData?.items
   if (!items) return
+  let hasImage = false
   for (const item of items) {
     if (item.type.startsWith('image/')) {
+      hasImage = true
       const blob = item.getAsFile()
       if (blob) {
         const file = new File([blob], `paste-${Date.now()}.png`, { type: blob.type })
@@ -193,6 +195,7 @@ async function handlePaste(e) {
       }
     }
   }
+  if (hasImage) e.preventDefault()
 }
 
 const statusMeta = computed(() => bugStatusMeta[bug.value?.status] || { label: bug.value?.status || '-', tone: 'default' })

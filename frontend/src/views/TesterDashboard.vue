@@ -114,7 +114,7 @@
 
       <!-- Create Bug Modal -->
       <n-modal v-model:show="showCreateBug" preset="card" style="width:520px" title="创建 Bug" :mask-closable="false">
-        <n-form label-placement="top" @paste.prevent="handleBugFormPaste">
+        <n-form label-placement="top" @paste="handleBugFormPaste">
           <n-form-item label="测试类型">
             <n-select v-model:value="bugForm.test_type" :options="testTypeOptions" />
           </n-form-item>
@@ -293,8 +293,10 @@ async function loadUsers() {
 function handleBugFormPaste(e) {
   const items = e.clipboardData?.items
   if (!items) return
+  let hasImage = false
   for (const item of items) {
     if (item.type.startsWith('image/')) {
+      hasImage = true
       const blob = item.getAsFile()
       if (blob) {
         const file = new File([blob], `paste-${Date.now()}.png`, { type: blob.type })
@@ -304,6 +306,7 @@ function handleBugFormPaste(e) {
       }
     }
   }
+  if (hasImage) e.preventDefault()
 }
 
 function handleAttachUpload({ file, onFinish }) {

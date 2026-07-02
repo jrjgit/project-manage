@@ -246,11 +246,6 @@ const filteredData = computed(() => {
   return allData.value.filter(r => {
     if (f.number && !(r.number || '').includes(f.number)) return false
     if (f.description && !(r.description || '').toLowerCase().includes(f.description.toLowerCase())) return false
-    if (f.status && r.status !== f.status) return false
-    if (f.project_type && r.project_type !== f.project_type) return false
-    if (f.project_id && r.project_id !== f.project_id) return false
-    if (f.iteration_id && r.iteration_id !== f.iteration_id) return false
-    if (f.system && r.system !== f.system) return false
     return true
   })
 })
@@ -482,7 +477,14 @@ async function handleDelete(row) {
 
 async function loadData() {
   try {
-    const params = filters.value.overdue ? { overdue: true } : undefined
+    const f = filters.value
+    const params = {}
+    if (f.status) params.status = f.status
+    if (f.system) params.system = f.system
+    if (f.project_type) params.project_type = f.project_type
+    if (f.project_id) params.project_id = f.project_id
+    if (f.iteration_id) params.iteration_id = f.iteration_id
+    if (f.overdue) params.overdue = true
     const [reqs, proj, sys, usr, iters, stats] = await Promise.all([
       getRequirements(params), getProjects(), getSystems(), getUsers(), getIterations(),
       getRequirementSystemStats()
@@ -495,6 +497,14 @@ onMounted(() => {
   restoreFiltersFromQuery()
   loadData()
 })
+
+watch(
+  () => {
+    const f = filters.value
+    return [f.status, f.system, f.project_type, f.project_id, f.iteration_id, f.overdue]
+  },
+  () => { loadData() }
+)
 </script>
 
 <style scoped>

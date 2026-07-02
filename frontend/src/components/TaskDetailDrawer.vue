@@ -153,7 +153,7 @@
 
   <!-- Create Bug Modal -->
   <n-modal v-model:show="showCreateBugModal" preset="card" style="width: min(92vw, 500px)" title="创建 Bug" :mask-closable="false">
-    <n-form label-placement="top" @paste.prevent="handleBugFormPaste">
+    <n-form label-placement="top" @paste="handleBugFormPaste">
       <n-form-item label="标题" path="title">
         <n-input v-model:value="bugForm.title" placeholder="Bug标题" />
       </n-form-item>
@@ -387,8 +387,10 @@ function removeBugImage(idx) {
 function handleBugFormPaste(e) {
   const items = e.clipboardData?.items
   if (!items) return
+  let hasImage = false
   for (const item of items) {
     if (item.type.startsWith('image/')) {
+      hasImage = true
       const blob = item.getAsFile()
       if (blob) {
         const file = new File([blob], `paste-${Date.now()}.png`, { type: blob.type })
@@ -397,6 +399,7 @@ function handleBugFormPaste(e) {
       }
     }
   }
+  if (hasImage) e.preventDefault()
 }
 
 async function submitBug() {
