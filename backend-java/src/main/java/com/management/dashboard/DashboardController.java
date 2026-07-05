@@ -31,7 +31,7 @@ public class DashboardController {
      * 获取开发者仪表盘数据
      */
     @GetMapping("/developer")
-    @PreAuthorize("hasAnyRole('DEV','DEV_LEAD')")
+    @PreAuthorize("hasAnyRole('DEV','DEV_LEAD','PM')")
     public Result<Map<String, Object>> developerDashboard() {
         return Result.ok(dashboardService.developerDashboard());
     }

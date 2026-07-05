@@ -444,14 +444,42 @@ const pendingDeleteTaskIds = ref([])
 // 弹窗：已有任务的缓存数据 { [userId]: { [skill]: item } }
 const devTaskCache = ref({})
 
-const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
+const devLeadOptions = computed(() => {
+  const devSkillKeys = Object.keys(skillsMap.value)
+  return users.value.filter(u => {
+    if (u.role === 'dev_lead') return true
+    if (u.role === 'pm' && u.skills) {
+      const userSkills = u.skills.split(',').filter(Boolean)
+      if (userSkills.some(s => devSkillKeys.includes(s))) return true
+    }
+    return false
+  }).map(u => ({ label: u.name, value: u.id }))
+})
 
 const showTaskDetail = ref(false)
 const selectedTaskId = ref(null)
 const userWorkloadMap = ref({})
-const devOptions = computed(() => users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
+const devOptions = computed(() => {
+  const devSkillKeys = Object.keys(skillsMap.value)
+  return users.value.filter(u => {
+    if (u.role === 'dev' || u.role === 'dev_lead') return true
+    if (u.role === 'pm' && u.skills) {
+      const userSkills = u.skills.split(',').filter(Boolean)
+      if (userSkills.some(s => devSkillKeys.includes(s))) return true
+    }
+    return false
+  }).map(u => ({ label: u.name, value: u.id }))
+})
 const projectDevOptions = computed(() => {
-  return users.value.filter(u => u.role === 'dev' || u.role === 'dev_lead').map(u => {
+  const devSkillKeys = Object.keys(skillsMap.value)
+  return users.value.filter(u => {
+    if (u.role === 'dev' || u.role === 'dev_lead') return true
+    if (u.role === 'pm' && u.skills) {
+      const userSkills = u.skills.split(',').filter(Boolean)
+      if (userSkills.some(s => devSkillKeys.includes(s))) return true
+    }
+    return false
+  }).map(u => {
     const wl = userWorkloadMap.value[u.id] || {}
     const parts = []
     parts.push(`开发任务：${wl.devCount ?? 0}`)

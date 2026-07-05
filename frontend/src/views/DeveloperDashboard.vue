@@ -50,7 +50,7 @@
       </div>
     </div>
 
-    <TaskDetailDrawer v-model:show="showTaskDetail" :task-id="selectedTaskId" @refresh="loadData" />
+    <TaskDetailDrawer v-model:show="showTaskDetail" :task-id="selectedTaskId" developer-mode @refresh="loadData" />
     <BugDetailDrawer v-model:show="showBugDetail" :bug-id="selectedBugId" @refresh="loadData" />
   </AppLayout>
 </template>
@@ -79,7 +79,7 @@ const showBugDetail = ref(false)
 const selectedBugId = ref(null)
 const reqFilter = ref('')
 
-const roleLabel = computed(() => ({ dev_lead: '开发组长', dev: '开发' })[authStore.userInfo?.role] || '')
+const roleLabel = computed(() => ({ dev_lead: '开发组长', dev: '开发', pm: '项目经理' })[authStore.userInfo?.role] || '')
 
 const stats = computed(() => dashData.value.stats || { total: 0, developing: 0, overdue: 0, pendingBugs: 0 })
 const boardData = computed(() => dashData.value.board || [])

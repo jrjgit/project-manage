@@ -200,7 +200,7 @@ import { priorityMeta, taskStatusMeta, bugStatusMeta, severityMeta } from '@/con
 import { NDrawer, NDrawerContent, NTag, NButton, NTimeline, NTimelineItem, NSelect, NSlider, NModal, NForm, NFormItem, NInput, NUpload, NSpace } from 'naive-ui'
 
 const show = defineModel('show', { type: Boolean, default: false })
-const props = defineProps({ taskId: Number, readonly: Boolean, testerMode: { type: Boolean, default: false } })
+const props = defineProps({ taskId: Number, readonly: Boolean, testerMode: { type: Boolean, default: false }, developerMode: { type: Boolean, default: false } })
 const emit = defineEmits(['status-change', 'refresh'])
 
 const authStore = useAuthStore()
@@ -248,10 +248,24 @@ const overdueDays = computed(() => {
   return diff > 0 ? diff : 0
 })
 
-const devLeadOptions = computed(() => users.value.filter(u => u.role === 'dev_lead').map(u => ({ label: u.name, value: u.id })))
+const devLeadOptions = computed(() => {
+  const devSkillKeys = Object.keys(skillsMap.value)
+  return users.value.filter(u => {
+    if (u.role === 'dev_lead') return true
+    if (u.role === 'pm' && u.skills) {
+      const userSkills = u.skills.split(',').filter(Boolean)
+      if (userSkills.some(s => devSkillKeys.includes(s))) return true
+    }
+    return false
+  }).map(u => ({ label: u.name, value: u.id }))
+})
 
 // 在测试工作台打开时，所有角色按测试人员权限处理
-const effectiveRole = computed(() => props.testerMode ? 'tester' : authStore.userInfo?.role)
+const effectiveRole = computed(() => {
+  if (props.testerMode) return 'tester'
+  if (props.developerMode && authStore.userInfo?.role === 'pm') return 'dev'
+  return authStore.userInfo?.role
+})
 
 const canEditDevLead = computed(() => effectiveRole.value === 'pm' && ['pending', 'developing'].includes(task.value?.status))
 
