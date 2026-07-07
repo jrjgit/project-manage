@@ -229,18 +229,20 @@ public class StatisticsService {
         taskInfo.put("status", t.getStatus());
         taskInfo.put("pending_bugs", pendingBugsByTask.getOrDefault(t.getId(), 0L));
         taskInfo.put("task_type", taskType);
-        if ("dev".equals(taskType)) {
-            taskInfo.put("dev_performance", round2(parseDoubleSafe(t.getPerformance())));
-        } else if ("test".equals(taskType)) {
-            taskInfo.put("test_performance", round2(parseDoubleSafe(t.getTestPerformance())));
-        } else {
-            taskInfo.put("dev_performance", round2(parseDoubleSafe(t.getPerformance())));
-            taskInfo.put("test_performance", round2(parseDoubleSafe(t.getTestPerformance())));
+        double devPerf = parseDoubleSafe(t.getPerformance());
+        double testPerf = parseDoubleSafe(t.getTestPerformance());
+        switch (taskType) {
+            case "dev" -> taskInfo.put("dev_performance", round2(devPerf));
+            case "test" -> taskInfo.put("test_performance", round2(testPerf));
+            default -> {
+                taskInfo.put("dev_performance", round2(devPerf));
+                taskInfo.put("test_performance", round2(testPerf));
+            }
         }
         double perfValue = switch (taskType) {
-            case "test" -> parseDoubleSafe(t.getTestPerformance());
-            case "dev_and_test" -> parseDoubleSafe(t.getPerformance()) + parseDoubleSafe(t.getTestPerformance());
-            default -> parseDoubleSafe(t.getPerformance());
+            case "test" -> testPerf;
+            case "dev_and_test" -> devPerf + testPerf;
+            default -> devPerf;
         };
         taskInfo.put("performance_value", round2(perfValue));
         return taskInfo;

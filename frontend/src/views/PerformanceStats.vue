@@ -298,17 +298,17 @@ const perfTaskColumns = [
   {
     title: '绩效（人天）', key: 'performance_value', width: 130,
     render(row) {
-      const dev = row.dev_performance || 0
-      const test = row.test_performance || 0
-      if (dev > 0 && test > 0) {
+      const dev = row.dev_performance
+      const test = row.test_performance
+      if (dev != null && test != null) {
         return h('span', {}, [
           h('span', { style: 'font-weight:700;color:#3b82f6;' }, dev),
           h('span', { style: 'color:#94a3b8;margin:0 2px;' }, '/'),
           h('span', { style: 'font-weight:700;color:#f59e0b;' }, test)
         ])
       }
-      const val = dev || test
-      const color = dev > 0 ? '#3b82f6' : '#f59e0b'
+      const val = dev ?? test ?? 0
+      const color = dev != null ? '#3b82f6' : '#f59e0b'
       return h('span', { style: `font-weight:700;color:${color};` }, val)
     }
   }
