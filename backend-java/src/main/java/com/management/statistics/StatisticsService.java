@@ -229,6 +229,8 @@ public class StatisticsService {
         taskInfo.put("status", t.getStatus());
         taskInfo.put("pending_bugs", pendingBugsByTask.getOrDefault(t.getId(), 0L));
         taskInfo.put("task_type", taskType);
+        taskInfo.put("dev_performance", round2(parseDoubleSafe(t.getPerformance())));
+        taskInfo.put("test_performance", round2(parseDoubleSafe(t.getTestPerformance())));
         double perfValue = switch (taskType) {
             case "test" -> parseDoubleSafe(t.getTestPerformance());
             case "dev_and_test" -> parseDoubleSafe(t.getPerformance()) + parseDoubleSafe(t.getTestPerformance());

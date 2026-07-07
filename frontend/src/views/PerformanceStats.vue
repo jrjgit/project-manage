@@ -244,6 +244,20 @@ const taskColumns = [
       const color = count > 0 ? '#d03050' : '#18a058'
       return h('span', { style: `font-weight:700;color:${color}` }, count)
     }
+  },
+  {
+    title: '开发绩效', key: 'dev_performance', width: 100,
+    render(row) {
+      const val = row.dev_performance || 0
+      return h('span', { style: `font-weight:700;color:${val > 0 ? '#3b82f6' : '#94a3b8'};` }, val)
+    }
+  },
+  {
+    title: '测试绩效', key: 'test_performance', width: 100,
+    render(row) {
+      const val = row.test_performance || 0
+      return h('span', { style: `font-weight:700;color:${val > 0 ? '#f59e0b' : '#94a3b8'};` }, val)
+    }
   }
 ]
 
@@ -279,10 +293,17 @@ const perfTaskColumns = [
     }
   },
   {
-    title: '绩效值（人天）', key: 'performance_value', width: 120,
+    title: '开发绩效', key: 'dev_performance', width: 100,
     render(row) {
-      const val = row.performance_value || 0
-      return h('span', { style: 'font-weight:700;color:#f59e0b;' }, val)
+      const val = row.dev_performance || 0
+      return h('span', { style: `font-weight:700;color:${val > 0 ? '#3b82f6' : '#94a3b8'};` }, val)
+    }
+  },
+  {
+    title: '测试绩效', key: 'test_performance', width: 100,
+    render(row) {
+      const val = row.test_performance || 0
+      return h('span', { style: `font-weight:700;color:${val > 0 ? '#f59e0b' : '#94a3b8'};` }, val)
     }
   }
 ]
