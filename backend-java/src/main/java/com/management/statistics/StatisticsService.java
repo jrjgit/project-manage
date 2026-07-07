@@ -76,22 +76,31 @@ public class StatisticsService {
         return result;
     }
 
-    /** 人员绩效统计（包含开发与测试人员） */
+    /** 人员绩效统计（包含开发与测试人员，不限角色） */
     public Map<String, Object> performanceStats(String filterType, int year, int month, String startDate, String endDate) {
-        List<User> devUsers = userMapper.selectList(
-                new LambdaQueryWrapper<User>()
-                        .in(User::getRole, "dev", "dev_lead"));
+        // 开发绩效：按 assignee_id 查所有用户（不限角色），确保任何角色被指派开发任务后都能看到绩效
+        List<Task> allAssigneeTasks = taskMapper.selectList(
+                new LambdaQueryWrapper<Task>().isNotNull(Task::getAssigneeId).ne(Task::getAssigneeId, 0));
+        java.util.Set<Long> assigneeUserIds = allAssigneeTasks.stream()
+                .map(Task::getAssigneeId)
+                .filter(Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
 
-        // 测试绩效：按 tester_id 查所有用户（不限角色），确保非 tester 角色受理测试任务后也能看到绩效
-        List<Task> allTesterIdTasks = taskMapper.selectList(
+        // 测试绩效：按 tester_id 查所有用户（不限角色），确保任何角色受理测试任务后也能看到绩效
+        List<Task> allTesterTasks = taskMapper.selectList(
                 new LambdaQueryWrapper<Task>().isNotNull(Task::getTesterId).ne(Task::getTesterId, 0));
-        java.util.Set<Long> testerUserIds = allTesterIdTasks.stream()
+        java.util.Set<Long> testerUserIds = allTesterTasks.stream()
                 .map(Task::getTesterId)
                 .filter(Objects::nonNull)
                 .collect(java.util.stream.Collectors.toSet());
-        List<User> testerUsers = testerUserIds.isEmpty()
+
+        // 合并所有需要统计的用户（assignee 和 tester 的并集），每个人只出现一条记录
+        java.util.Set<Long> allUserIds = new java.util.HashSet<>();
+        allUserIds.addAll(assigneeUserIds);
+        allUserIds.addAll(testerUserIds);
+        List<User> allUsers = allUserIds.isEmpty()
                 ? Collections.emptyList()
-                : userMapper.selectList(new LambdaQueryWrapper<User>().in(User::getId, testerUserIds));
+                : userMapper.selectList(new LambdaQueryWrapper<User>().in(User::getId, allUserIds));
 
         // 绩效产值按任务最后更新时间筛选
         LocalDateTime rangeStart;
@@ -109,114 +118,94 @@ public class StatisticsService {
 
         java.util.Map<Long, Requirement> reqCache = new java.util.HashMap<>();
 
-        List<Map<String, Object>> stats = new ArrayList<>();
+        // 按用户分组开发任务和测试任务
+        Map<Long, List<Task>> devTasksByUser = allAssigneeTasks.stream()
+                .collect(Collectors.groupingBy(Task::getAssigneeId));
+        Map<Long, List<Task>> testTasksByUser = allTesterTasks.stream()
+                .collect(Collectors.groupingBy(Task::getTesterId));
 
-        // 1. 开发人员绩效：按 assignee_id 关联，performance 直接累加（人天）
-        if (!devUsers.isEmpty()) {
-            Map<Long, User> userMap = devUsers.stream().collect(Collectors.toMap(User::getId, u -> u));
-            List<Long> userIds = new ArrayList<>(userMap.keySet());
-
-            List<Task> allDevTasks = taskMapper.selectList(
-                    new LambdaQueryWrapper<Task>().in(Task::getAssigneeId, userIds));
-            Map<Long, List<Task>> tasksByUser = allDevTasks.stream().collect(Collectors.groupingBy(Task::getAssigneeId));
-
-            List<Long> allDevTaskIds = allDevTasks.stream().map(Task::getId).collect(Collectors.toList());
-            java.util.Map<Long, Long> pendingBugsByTask = new java.util.HashMap<>();
-            if (!allDevTaskIds.isEmpty()) {
-                List<com.management.bug.entity.Bug> taskBugs = bugMapper.selectList(
-                        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.management.bug.entity.Bug>()
-                                .in(com.management.bug.entity.Bug::getTaskId, allDevTaskIds)
-                                .eq(com.management.bug.entity.Bug::getStatus, "unfixed"));
-                for (com.management.bug.entity.Bug b : taskBugs) {
-                    if (b.getTaskId() != null) {
-                        pendingBugsByTask.merge(b.getTaskId(), 1L, Long::sum);
-                    }
+        // 批量查询所有任务的待处理 Bug
+        List<Long> allTaskIds = new ArrayList<>();
+        allAssigneeTasks.forEach(t -> allTaskIds.add(t.getId()));
+        allTesterTasks.forEach(t -> allTaskIds.add(t.getId()));
+        java.util.Map<Long, Long> pendingBugsByTask = new java.util.HashMap<>();
+        if (!allTaskIds.isEmpty()) {
+            List<com.management.bug.entity.Bug> taskBugs = bugMapper.selectList(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.management.bug.entity.Bug>()
+                            .in(com.management.bug.entity.Bug::getTaskId, allTaskIds)
+                            .eq(com.management.bug.entity.Bug::getStatus, "unfixed"));
+            for (com.management.bug.entity.Bug b : taskBugs) {
+                if (b.getTaskId() != null) {
+                    pendingBugsByTask.merge(b.getTaskId(), 1L, Long::sum);
                 }
-            }
-
-            for (User u : devUsers) {
-                List<Task> tasks = tasksByUser.getOrDefault(u.getId(), Collections.emptyList());
-                if (tasks.isEmpty()) continue;
-
-                double inProgressLoad = 0;
-                double performanceValue = 0;
-                List<Map<String, Object>> taskDetails = new ArrayList<>();
-
-                for (Task t : tasks) {
-                    double perf = parseDoubleSafe(t.getPerformance());
-                    double progress = t.getProgress() != null ? t.getProgress() : 0;
-                    String status = t.getStatus();
-
-                    if (!"closed".equals(status)) {
-                        inProgressLoad += perf * (1 - progress / 100.0);
-                    }
-
-                    if ("closed".equals(status)) {
-                        LocalDateTime updatedAt = t.getUpdatedAt();
-                        if (updatedAt != null && !updatedAt.isBefore(rangeStart) && updatedAt.isBefore(rangeEnd)) {
-                            performanceValue += perf;
-                        }
-                    }
-
-                    taskDetails.add(buildTaskDetail(t, u, reqCache, pendingBugsByTask));
-                }
-
-                Map<String, Object> userStat = new LinkedHashMap<>();
-                userStat.put("user_id", u.getId());
-                userStat.put("user_name", u.getName());
-                userStat.put("role", u.getRole());
-                userStat.put("in_progress_load", round2(inProgressLoad));
-                userStat.put("performance_value", round2(performanceValue));
-                userStat.put("tasks", taskDetails);
-                stats.add(userStat);
             }
         }
 
-        // 2. 测试人员绩效：按 tester_id 关联，test_performance 直接累加（人天）
-        if (!testerUsers.isEmpty()) {
-            Map<Long, User> userMap = testerUsers.stream().collect(Collectors.toMap(User::getId, u -> u));
-            List<Long> userIds = new ArrayList<>(userMap.keySet());
+        List<Map<String, Object>> stats = new ArrayList<>();
 
-            List<Task> allTestTasks = taskMapper.selectList(
-                    new LambdaQueryWrapper<Task>().in(Task::getTesterId, userIds));
-            Map<Long, List<Task>> tasksByUser = allTestTasks.stream().collect(Collectors.groupingBy(Task::getTesterId));
+        for (User u : allUsers) {
+            List<Task> devTasks = devTasksByUser.getOrDefault(u.getId(), Collections.emptyList());
+            List<Task> testTasks = testTasksByUser.getOrDefault(u.getId(), Collections.emptyList());
+            if (devTasks.isEmpty() && testTasks.isEmpty()) continue;
 
-            for (User u : testerUsers) {
-                List<Task> tasks = tasksByUser.getOrDefault(u.getId(), Collections.emptyList());
-                if (tasks.isEmpty()) continue;
+            double inProgressLoad = 0;
+            double performanceValue = 0;
+            List<Map<String, Object>> taskDetails = new ArrayList<>();
+            // 用于去重：同一用户可能既是 assignee 又是 tester，同一任务不重复添加
+            java.util.Set<Long> addedTaskIds = new java.util.HashSet<>();
 
-                double inProgressLoad = 0;
-                double performanceValue = 0;
-                List<Map<String, Object>> taskDetails = new ArrayList<>();
+            // 计算开发绩效：按 performance 字段累加（人天）
+            for (Task t : devTasks) {
+                double perf = parseDoubleSafe(t.getPerformance());
+                double progress = t.getProgress() != null ? t.getProgress() : 0;
+                String status = t.getStatus();
 
-                for (Task t : tasks) {
-                    double perf = parseDoubleSafe(t.getTestPerformance());
-                    double progress = t.getProgress() != null ? t.getProgress() : 0;
-                    String status = t.getStatus();
-
-                    if (!"closed".equals(status)) {
-                        inProgressLoad += perf * (1 - progress / 100.0);
-                    }
-
-                    if ("closed".equals(status)) {
-                        LocalDateTime updatedAt = t.getUpdatedAt();
-                        if (updatedAt != null && !updatedAt.isBefore(rangeStart) && updatedAt.isBefore(rangeEnd)) {
-                            performanceValue += perf;
-                        }
-                    }
-
-                    taskDetails.add(buildTaskDetail(t, u, reqCache, java.util.Collections.emptyMap()));
+                if (!"closed".equals(status)) {
+                    inProgressLoad += perf * (1 - progress / 100.0);
                 }
 
-                Map<String, Object> userStat = new LinkedHashMap<>();
-                userStat.put("user_id", u.getId());
-                userStat.put("user_name", u.getName());
-                userStat.put("role", u.getRole());
-                userStat.put("in_progress_load", round2(inProgressLoad));
-                userStat.put("performance_value", round2(performanceValue));
-                userStat.put("tasks", taskDetails);
-                stats.add(userStat);
+                if ("closed".equals(status)) {
+                    LocalDateTime updatedAt = t.getUpdatedAt();
+                    if (updatedAt != null && !updatedAt.isBefore(rangeStart) && updatedAt.isBefore(rangeEnd)) {
+                        performanceValue += perf;
+                    }
+                }
+
+                if (addedTaskIds.add(t.getId())) {
+                    taskDetails.add(buildTaskDetail(t, u, reqCache, pendingBugsByTask));
+                }
             }
+
+            // 计算测试绩效：按 test_performance 字段累加（人天）
+            for (Task t : testTasks) {
+                double perf = parseDoubleSafe(t.getTestPerformance());
+                double progress = t.getProgress() != null ? t.getProgress() : 0;
+                String status = t.getStatus();
+
+                if (!"closed".equals(status)) {
+                    inProgressLoad += perf * (1 - progress / 100.0);
+                }
+
+                if ("closed".equals(status)) {
+                    LocalDateTime updatedAt = t.getUpdatedAt();
+                    if (updatedAt != null && !updatedAt.isBefore(rangeStart) && updatedAt.isBefore(rangeEnd)) {
+                        performanceValue += perf;
+                    }
+                }
+
+                if (addedTaskIds.add(t.getId())) {
+                    taskDetails.add(buildTaskDetail(t, u, reqCache, pendingBugsByTask));
+                }
+            }
+
+            Map<String, Object> userStat = new LinkedHashMap<>();
+            userStat.put("user_id", u.getId());
+            userStat.put("user_name", u.getName());
+            userStat.put("role", u.getRole());
+            userStat.put("in_progress_load", round2(inProgressLoad));
+            userStat.put("performance_value", round2(performanceValue));
+            userStat.put("tasks", taskDetails);
+            stats.add(userStat);
         }
 
         return Map.of("users", stats);

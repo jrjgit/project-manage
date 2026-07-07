@@ -48,14 +48,15 @@
             <div class="section-kicker" style="color: #f59e0b;">绩效（人天）</div>
             <h3>绩效统计</h3>
           </div>
+          <div class="section-hint">点击柱状图查看绩效任务明细</div>
         </div>
         <div class="chart-wrap">
-          <BarChart :data="performanceValueData" color="#f59e0b" />
+          <BarChart :data="performanceValueData" color="#f59e0b" @click="openPerformanceTasks" />
         </div>
       </section>
     </div>
 
-    <!-- User tasks detail modal -->
+    <!-- 进行中任务明细弹窗 -->
     <n-modal v-model:show="showTaskModal" preset="card" style="width: min(95vw, 1200px)" :title="`${selectedUserName} - 进行中任务明细`" :mask-closable="false">
       <n-data-table
         :columns="taskColumns"
@@ -68,6 +69,23 @@
       <template #footer>
         <n-space justify="end">
           <n-button @click="showTaskModal = false">关闭</n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- 绩效任务明细弹窗 -->
+    <n-modal v-model:show="showPerfTaskModal" preset="card" style="width: min(95vw, 1200px)" :title="`${selectedPerfUserName} - 绩效任务明细`" :mask-closable="false">
+      <n-data-table
+        :columns="perfTaskColumns"
+        :data="selectedPerfUserTasks"
+        :pagination="{ pageSize: 10 }"
+        :bordered="false"
+        :single-line="false"
+        striped
+      />
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showPerfTaskModal = false">关闭</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -93,6 +111,10 @@ const showTaskModal = ref(false)
 const selectedUserName = ref('')
 const selectedUserTasks = ref([])
 
+const showPerfTaskModal = ref(false)
+const selectedPerfUserName = ref('')
+const selectedPerfUserTasks = ref([])
+
 const yearOptions = Array.from({ length: 7 }, (_, i) => {
   const y = 2024 + i
   return { label: `${y}年`, value: y }
@@ -109,7 +131,7 @@ const inProgressData = computed(() =>
 
 const performanceValueData = computed(() =>
   [...performanceData.value].sort((a, b) => (b.performanceValue || 0) - (a.performanceValue || 0))
-    .map(d => ({ label: d.userName, value: d.performanceValue || 0 }))
+    .map(d => ({ label: d.userName, value: d.performanceValue || 0, userId: d.userId }))
 )
 
 function onFilterTypeChange() {
@@ -161,7 +183,48 @@ function openUserTasks(item) {
   showTaskModal.value = true
 }
 
+function openPerformanceTasks(item) {
+  const user = performanceData.value.find(u => u.userId === item.userId)
+  if (!user) return
+  selectedPerfUserName.value = user.userName
+  selectedPerfUserTasks.value = (user.tasks || []).filter(t => t.status === 'closed')
+  showPerfTaskModal.value = true
+}
+
 const taskColumns = [
+  { title: '需求编号', key: 'requirement_number', width: 150 },
+  { title: '所属系统', key: 'system', width: 120 },
+  { title: '平台', key: 'terminal', width: 100 },
+  {
+    title: '任务描述', key: 'description', minWidth: 200, ellipsis: true,
+    render(row) { return h('span', { title: row.description || '' }, row.description || '-') }
+  },
+  { title: '负责人', key: 'assignee_name', width: 100 },
+  {
+    title: '任务状态', key: 'status', width: 110,
+    render(row) {
+      const meta = taskStatusMeta[row.status] || { label: row.status, tone: 'default' }
+      return h(NTag, { type: meta.tone, size: 'small', round: true }, { default: () => meta.label })
+    }
+  },
+  {
+    title: '完成比例', key: 'progress', width: 100,
+    render(row) {
+      const color = (row.progress || 0) >= 100 ? '#18a058' : '#6366f1'
+      return h('span', { style: `font-weight:700;color:${color}` }, `${row.progress || 0}%`)
+    }
+  },
+  {
+    title: '待处理BUG', key: 'pending_bugs', width: 100,
+    render(row) {
+      const count = row.pending_bugs || 0
+      const color = count > 0 ? '#d03050' : '#18a058'
+      return h('span', { style: `font-weight:700;color:${color}` }, count)
+    }
+  }
+]
+
+const perfTaskColumns = [
   { title: '需求编号', key: 'requirement_number', width: 150 },
   { title: '所属系统', key: 'system', width: 120 },
   { title: '平台', key: 'terminal', width: 100 },
