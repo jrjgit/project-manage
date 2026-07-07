@@ -1,6 +1,8 @@
 package com.management.user.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -30,5 +32,6 @@ public class User {
     /** 技能标签（逗号分隔） */
     private String skills;
     /** 创建时间 */
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 }

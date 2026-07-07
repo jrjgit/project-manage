@@ -75,9 +75,15 @@
 
     <!-- 绩效任务明细弹窗 -->
     <n-modal v-model:show="showPerfTaskModal" preset="card" style="width: min(95vw, 1200px)" :title="`${selectedPerfUserName} - 绩效任务明细`" :mask-closable="false">
+      <n-tabs v-model:value="perfTaskTab" type="segment" size="small" style="margin-bottom: 12px;">
+        <n-tab name="all">全部</n-tab>
+        <n-tab name="dev">开发任务</n-tab>
+        <n-tab name="test">测试任务</n-tab>
+        <n-tab name="dev_and_test">开发+测试</n-tab>
+      </n-tabs>
       <n-data-table
         :columns="perfTaskColumns"
-        :data="selectedPerfUserTasks"
+        :data="filteredPerfTasks"
         :pagination="{ pageSize: 10 }"
         :bordered="false"
         :single-line="false"
@@ -96,7 +102,7 @@
 import { ref, computed, onMounted, h } from 'vue'
 import { getPerformanceStats } from '@/api/statistics'
 import AppLayout from '@/components/AppLayout.vue'
-import { NSelect, NRadioGroup, NRadioButton, NDatePicker, NModal, NDataTable, NSpace, NButton, NTag } from 'naive-ui'
+import { NSelect, NRadioGroup, NRadioButton, NDatePicker, NModal, NDataTable, NSpace, NButton, NTag, NTabs, NTab } from 'naive-ui'
 import BarChart from '@/components/BarChart.vue'
 import { taskStatusMeta } from '@/constants/statusMeta'
 
@@ -114,6 +120,7 @@ const selectedUserTasks = ref([])
 const showPerfTaskModal = ref(false)
 const selectedPerfUserName = ref('')
 const selectedPerfUserTasks = ref([])
+const perfTaskTab = ref('all')
 
 const yearOptions = Array.from({ length: 7 }, (_, i) => {
   const y = 2024 + i
@@ -188,13 +195,29 @@ function openPerformanceTasks(item) {
   if (!user) return
   selectedPerfUserName.value = user.userName
   selectedPerfUserTasks.value = (user.tasks || []).filter(t => t.status === 'closed')
+  perfTaskTab.value = 'all'
   showPerfTaskModal.value = true
 }
+
+const taskTypeLabels = { dev: '开发', test: '测试', dev_and_test: '开发+测试' }
+
+const filteredPerfTasks = computed(() => {
+  if (perfTaskTab.value === 'all') return selectedPerfUserTasks.value
+  return selectedPerfUserTasks.value.filter(t => t.task_type === perfTaskTab.value)
+})
 
 const taskColumns = [
   { title: '需求编号', key: 'requirement_number', width: 150 },
   { title: '所属系统', key: 'system', width: 120 },
   { title: '平台', key: 'terminal', width: 100 },
+  {
+    title: '任务类型', key: 'task_type', width: 110,
+    render(row) {
+      const label = taskTypeLabels[row.task_type] || row.task_type
+      const toneMap = { dev: 'info', test: 'warning', dev_and_test: 'success' }
+      return h(NTag, { type: toneMap[row.task_type] || 'default', size: 'small', round: true }, { default: () => label })
+    }
+  },
   {
     title: '任务描述', key: 'description', minWidth: 200, ellipsis: true,
     render(row) { return h('span', { title: row.description || '' }, row.description || '-') }
@@ -229,6 +252,14 @@ const perfTaskColumns = [
   { title: '所属系统', key: 'system', width: 120 },
   { title: '平台', key: 'terminal', width: 100 },
   {
+    title: '任务类型', key: 'task_type', width: 110,
+    render(row) {
+      const label = taskTypeLabels[row.task_type] || row.task_type
+      const toneMap = { dev: 'info', test: 'warning', dev_and_test: 'success' }
+      return h(NTag, { type: toneMap[row.task_type] || 'default', size: 'small', round: true }, { default: () => label })
+    }
+  },
+  {
     title: '任务描述', key: 'description', minWidth: 200, ellipsis: true,
     render(row) { return h('span', { title: row.description || '' }, row.description || '-') }
   },
@@ -248,11 +279,10 @@ const perfTaskColumns = [
     }
   },
   {
-    title: '待处理BUG', key: 'pending_bugs', width: 100,
+    title: '绩效值（人天）', key: 'performance_value', width: 120,
     render(row) {
-      const count = row.pending_bugs || 0
-      const color = count > 0 ? '#d03050' : '#18a058'
-      return h('span', { style: `font-weight:700;color:${color}` }, count)
+      const val = row.performance_value || 0
+      return h('span', { style: 'font-weight:700;color:#f59e0b;' }, val)
     }
   }
 ]

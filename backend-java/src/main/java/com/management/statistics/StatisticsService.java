@@ -151,8 +151,7 @@ public class StatisticsService {
             double inProgressLoad = 0;
             double performanceValue = 0;
             List<Map<String, Object>> taskDetails = new ArrayList<>();
-            // 用于去重：同一用户可能既是 assignee 又是 tester，同一任务不重复添加
-            java.util.Set<Long> addedTaskIds = new java.util.HashSet<>();
+            java.util.Map<Long, String> taskTypeMap = new java.util.HashMap<>();
 
             // 计算开发绩效：按 performance 字段累加（人天）
             for (Task t : devTasks) {
@@ -171,9 +170,7 @@ public class StatisticsService {
                     }
                 }
 
-                if (addedTaskIds.add(t.getId())) {
-                    taskDetails.add(buildTaskDetail(t, u, reqCache, pendingBugsByTask));
-                }
+                taskTypeMap.merge(t.getId(), "dev", (old, val) -> "dev".equals(old) && "test".equals(val) ? "dev_and_test" : old);
             }
 
             // 计算测试绩效：按 test_performance 字段累加（人天）
@@ -193,9 +190,16 @@ public class StatisticsService {
                     }
                 }
 
-                if (addedTaskIds.add(t.getId())) {
-                    taskDetails.add(buildTaskDetail(t, u, reqCache, pendingBugsByTask));
-                }
+                taskTypeMap.merge(t.getId(), "test", (old, val) -> "test".equals(old) && "dev".equals(val) ? "dev_and_test" : old);
+            }
+
+            java.util.Set<Long> addedTaskIds = new java.util.HashSet<>();
+            List<Task> allUserTasks = new ArrayList<>();
+            devTasks.forEach(t -> { if (addedTaskIds.add(t.getId())) allUserTasks.add(t); });
+            testTasks.forEach(t -> { if (addedTaskIds.add(t.getId())) allUserTasks.add(t); });
+
+            for (Task t : allUserTasks) {
+                taskDetails.add(buildTaskDetail(t, u, reqCache, pendingBugsByTask, taskTypeMap.getOrDefault(t.getId(), "dev")));
             }
 
             Map<String, Object> userStat = new LinkedHashMap<>();
@@ -212,7 +216,7 @@ public class StatisticsService {
     }
 
     private Map<String, Object> buildTaskDetail(Task t, User u, java.util.Map<Long, Requirement> reqCache,
-                                                 java.util.Map<Long, Long> pendingBugsByTask) {
+                                                 java.util.Map<Long, Long> pendingBugsByTask, String taskType) {
         Requirement req = getRequirement(t.getRequirementId(), reqCache);
         Map<String, Object> taskInfo = new LinkedHashMap<>();
         taskInfo.put("id", t.getId());
@@ -224,6 +228,13 @@ public class StatisticsService {
         taskInfo.put("progress", t.getProgress() != null ? t.getProgress() : 0);
         taskInfo.put("status", t.getStatus());
         taskInfo.put("pending_bugs", pendingBugsByTask.getOrDefault(t.getId(), 0L));
+        taskInfo.put("task_type", taskType);
+        double perfValue = switch (taskType) {
+            case "test" -> parseDoubleSafe(t.getTestPerformance());
+            case "dev_and_test" -> parseDoubleSafe(t.getPerformance()) + parseDoubleSafe(t.getTestPerformance());
+            default -> parseDoubleSafe(t.getPerformance());
+        };
+        taskInfo.put("performance_value", round2(perfValue));
         return taskInfo;
     }
 
