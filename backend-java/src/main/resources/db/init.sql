@@ -217,7 +217,7 @@ CREATE TABLE IF NOT EXISTS bugs (
     description    TEXT                  COMMENT '实际结果',
     severity       VARCHAR(20)  DEFAULT 'medium',
     status         VARCHAR(50)  NOT NULL DEFAULT 'unfixed',
-    task_id        BIGINT       NOT NULL,
+    task_id        BIGINT       NULL     DEFAULT NULL,
     creator_id     BIGINT       NOT NULL,
     assignee_id    BIGINT,
     remark         TEXT                  COMMENT '备注',

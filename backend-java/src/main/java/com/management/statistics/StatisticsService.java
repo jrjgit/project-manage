@@ -170,7 +170,7 @@ public class StatisticsService {
                     }
                 }
 
-                taskTypeMap.merge(t.getId(), "dev", (old, val) -> "dev".equals(old) && "test".equals(val) ? "dev_and_test" : old);
+                taskTypeMap.merge(t.getId(), "dev", (old, val) -> "dev".equals(old) && "test".equals(val) ? "dev_and_test" : "test".equals(old) && "dev".equals(val) ? "dev_and_test" : old);
             }
 
             // 计算测试绩效：按 test_performance 字段累加（人天）
@@ -190,7 +190,7 @@ public class StatisticsService {
                     }
                 }
 
-                taskTypeMap.merge(t.getId(), "test", (old, val) -> "test".equals(old) && "dev".equals(val) ? "dev_and_test" : old);
+                taskTypeMap.merge(t.getId(), "test", (old, val) -> "dev".equals(old) && "test".equals(val) ? "dev_and_test" : "test".equals(old) && "dev".equals(val) ? "dev_and_test" : old);
             }
 
             java.util.Set<Long> addedTaskIds = new java.util.HashSet<>();
@@ -229,8 +229,14 @@ public class StatisticsService {
         taskInfo.put("status", t.getStatus());
         taskInfo.put("pending_bugs", pendingBugsByTask.getOrDefault(t.getId(), 0L));
         taskInfo.put("task_type", taskType);
-        taskInfo.put("dev_performance", round2(parseDoubleSafe(t.getPerformance())));
-        taskInfo.put("test_performance", round2(parseDoubleSafe(t.getTestPerformance())));
+        if ("dev".equals(taskType)) {
+            taskInfo.put("dev_performance", round2(parseDoubleSafe(t.getPerformance())));
+        } else if ("test".equals(taskType)) {
+            taskInfo.put("test_performance", round2(parseDoubleSafe(t.getTestPerformance())));
+        } else {
+            taskInfo.put("dev_performance", round2(parseDoubleSafe(t.getPerformance())));
+            taskInfo.put("test_performance", round2(parseDoubleSafe(t.getTestPerformance())));
+        }
         double perfValue = switch (taskType) {
             case "test" -> parseDoubleSafe(t.getTestPerformance());
             case "dev_and_test" -> parseDoubleSafe(t.getPerformance()) + parseDoubleSafe(t.getTestPerformance());
