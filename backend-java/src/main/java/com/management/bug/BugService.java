@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.management.bug.dto.*;
 import com.management.bug.entity.*;
 import com.management.bug.mapper.*;
+import com.management.common.constant.BugStatus;
+import com.management.common.constant.UserRole;
 import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
 import com.management.common.notification.NotificationService;
@@ -64,17 +66,17 @@ public class BugService {
         boolean scoped = taskId != null && !taskId.isBlank();
         if (!scoped) {
             switch (u.getRole()) {
-                case "pm":
+                case UserRole.PM:
                     break;
-                case "dev_lead":
+                case UserRole.DEV_LEAD:
                     q.eq(Bug::getAssigneeId, u.getUserId());
                     break;
-                case "dev":
+                case UserRole.DEV:
                     q.eq(Bug::getAssigneeId, u.getUserId());
                     break;
-                case "tester":
+                case UserRole.TESTER:
                     q.and(w -> w.eq(Bug::getCreatorId, u.getUserId())
-                            .or().eq(Bug::getStatus, "pending_verify")
+                            .or().eq(Bug::getStatus, BugStatus.PENDING_VERIFY)
                             .or().eq(Bug::getStatus, "reopened"));
                     break;
                 default:
@@ -107,7 +109,7 @@ public class BugService {
         bug.setTitle(req.getTitle());
         bug.setDescription(req.getDescription());
         bug.setSeverity(req.getSeverity() != null ? req.getSeverity() : "medium");
-        bug.setStatus("unfixed");
+        bug.setStatus(BugStatus.UNFIXED);
         bug.setTaskId(req.getTaskId());
         bug.setCreatorId(userId);
         bug.setAssigneeId(req.getAssigneeId());
@@ -128,7 +130,7 @@ public class BugService {
         if (bug.getAssigneeId() != null) {
             User target = userMapper.selectById(bug.getAssigneeId());
             if (target != null) {
-                notificationService.emitBugEvent(bug, "", "unfixed",
+                notificationService.emitBugEvent(bug, "", BugStatus.UNFIXED,
                         currentUser().getName(), List.of(target), "");
             }
         }
@@ -178,7 +180,7 @@ public class BugService {
 
         // Bug 转派时重置为未修复状态
         if (assigneeChanged) {
-            bug.setStatus("unfixed");
+            bug.setStatus(BugStatus.UNFIXED);
         }
 
         bugMapper.updateById(bug);
@@ -188,7 +190,7 @@ public class BugService {
             BugStatusHistory history = new BugStatusHistory();
             history.setBugId(id);
             history.setFromStatus(oldStatus);
-            history.setToStatus("unfixed");
+            history.setToStatus(BugStatus.UNFIXED);
             history.setChangedBy(currentUser().getUserId());
             history.setComment("Bug 转派，状态重置为未修复");
             historyMapper.insert(history);
@@ -219,8 +221,8 @@ public class BugService {
         if (bug == null) throw new BusinessException("Bug 不存在");
 
         // dev/dev_lead 修复操作需要是自己的 Bug，验证操作不受限
-        if (("dev".equals(role) || "dev_lead".equals(role))
-                && ("unfixed".equals(bug.getStatus()))
+        if ((UserRole.DEV.equals(role) || UserRole.DEV_LEAD.equals(role))
+                && (BugStatus.UNFIXED.equals(bug.getStatus()))
                 && !operatorId.equals(bug.getAssigneeId())) {
             throw new BusinessException("只能修复指派给自己的 Bug");
         }
@@ -305,7 +307,7 @@ public class BugService {
         Bug bug = bugMapper.selectById(id);
         if (bug == null) throw new BusinessException(404, "Bug不存在");
         JwtUserDetails u = currentUser();
-        if (!u.getUserId().equals(bug.getCreatorId()) && !"pm".equals(u.getRole()))
+        if (!u.getUserId().equals(bug.getCreatorId()) && !UserRole.PM.equals(u.getRole()))
             throw new BusinessException(403, "无权限上传图片");
         String dir = uploadDir + "/bugs/" + id;
         java.io.File dirFile = new java.io.File(dir);
@@ -352,7 +354,7 @@ public class BugService {
         if (bi == null || !bi.getBugId().equals(bugId)) throw new BusinessException(404, "图片不存在");
         Bug bug = bugMapper.selectById(bugId);
         JwtUserDetails u = currentUser();
-        if (!u.getUserId().equals(bug.getCreatorId()) && !"pm".equals(u.getRole()))
+        if (!u.getUserId().equals(bug.getCreatorId()) && !UserRole.PM.equals(u.getRole()))
             throw new BusinessException(403, "无权限删除图片");
         java.io.File f = new java.io.File(uploadDir + "/" + bi.getImagePath());
         if (f.exists()) f.delete();

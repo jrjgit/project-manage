@@ -3,6 +3,7 @@ package com.management.user;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.management.bug.entity.Bug;
 import com.management.bug.mapper.BugMapper;
+import com.management.common.constant.UserRole;
 import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -124,7 +125,7 @@ public class UserService {
 
     public List<Map<String, Object>> getUserWorkload() {
         List<User> devUsers = userMapper.selectList(
-                new LambdaQueryWrapper<User>().in(User::getRole, "dev", "dev_lead"));
+                new LambdaQueryWrapper<User>().in(User::getRole, UserRole.DEV, UserRole.DEV_LEAD));
         List<Map<String, Object>> result = new ArrayList<>();
         for (User u : devUsers) {
             long devCount = taskMapper.selectCount(

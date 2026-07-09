@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.management.bug.entity.Bug;
 import com.management.bug.mapper.BugMapper;
+import com.management.common.constant.BugStatus;
+import com.management.common.constant.TaskStatus;
+import com.management.common.constant.UserRole;
 import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
 import com.management.common.notification.NotificationService;
@@ -58,28 +61,28 @@ public class TaskService {
     @Transactional
     public Task acceptTask(Long taskId) {
         JwtUserDetails operator = currentUser();
-        if (!"tester".equals(operator.getRole()) && !"pm".equals(operator.getRole())
-                && !"dev".equals(operator.getRole()) && !"dev_lead".equals(operator.getRole())) {
+        if (!UserRole.TESTER.equals(operator.getRole()) && !UserRole.PM.equals(operator.getRole())
+                && !UserRole.DEV.equals(operator.getRole()) && !UserRole.DEV_LEAD.equals(operator.getRole())) {
             throw new BusinessException("只有测试人员或项目经理可以受理任务");
         }
 
         Task task = taskMapper.selectById(taskId);
         if (task == null) throw new BusinessException(404, "任务不存在");
-        if (!"pending_test".equals(task.getStatus())
-                && !("testing".equals(task.getStatus()) && task.getTesterId() == null)) {
+        if (!TaskStatus.PENDING_TEST.equals(task.getStatus())
+                && !(TaskStatus.TESTING.equals(task.getStatus()) && task.getTesterId() == null)) {
             throw new BusinessException("只有待测试或未指派测试人员的任务可以受理");
         }
 
         String oldStatus = task.getStatus();
-        boolean statusChanged = !"testing".equals(task.getStatus());
+        boolean statusChanged = !TaskStatus.TESTING.equals(task.getStatus());
         task.setTesterId(operator.getUserId());
-        task.setStatus("testing");
+        task.setStatus(TaskStatus.TESTING);
         taskMapper.updateById(task);
 
         TaskStatusHistory history = new TaskStatusHistory();
         history.setTaskId(taskId);
         history.setFromStatus(statusChanged ? oldStatus : "unassigned");
-        history.setToStatus("testing");
+        history.setToStatus(TaskStatus.TESTING);
         history.setChangedBy(operator.getUserId());
         history.setComment("测试人员受理任务");
         historyMapper.insert(history);
@@ -99,16 +102,16 @@ public class TaskService {
                       || (iterationId != null && !iterationId.isBlank());
         if (!scoped) {
             switch (u.getRole()) {
-                case "pm":
+                case UserRole.PM:
                     break;
-                case "dev_lead":
+                case UserRole.DEV_LEAD:
                     q.exists("SELECT 1 FROM task_assignees WHERE task_assignees.task_id = tasks.id AND task_assignees.user_id = {0}", u.getUserId());
                     break;
-                case "dev":
+                case UserRole.DEV:
                     q.exists("SELECT 1 FROM task_assignees WHERE task_assignees.task_id = tasks.id AND task_assignees.user_id = {0}", u.getUserId());
                     break;
-                case "tester":
-                    if (!scoped) q.eq(Task::getStatus, "testing");
+                case UserRole.TESTER:
+                    if (!scoped) q.eq(Task::getStatus, TaskStatus.TESTING);
                     break;
                 default:
                     q.apply("1=0");
@@ -174,7 +177,7 @@ public class TaskService {
 
     private void applyProjectScopeFilter(JwtUserDetails u, LambdaQueryWrapper<Task> q) {
         String role = u.getRole();
-        if ("pm".equals(role) || "dev_lead".equals(role)) return;
+        if (UserRole.PM.equals(role) || UserRole.DEV_LEAD.equals(role)) return;
         List<Long> projectIds = getVisibleProjectIds(u.getUserId());
         if (projectIds.isEmpty()) {
             q.and(w -> w.isNull(Task::getProjectId));
@@ -257,7 +260,7 @@ public class TaskService {
         Task task = new Task();
         task.setTitle(req.getTitle());
         task.setDescription(req.getDescription());
-        task.setStatus("pending");
+        task.setStatus(TaskStatus.PENDING);
         task.setPriority(req.getPriority() != null ? req.getPriority() : "medium");
         task.setProjectId(req.getProjectId());
         task.setCreatorId(userId);
@@ -281,7 +284,7 @@ public class TaskService {
                 ta.setTaskId(task.getId());
                 ta.setUserId(item.getUserId());
                 ta.setPlatform(item.getPlatform());
-                ta.setStatus("pending");
+                ta.setStatus(TaskStatus.PENDING);
                 taskAssigneeMapper.insert(ta);
             }
             if (task.getAssigneeId() == null) {
@@ -295,7 +298,7 @@ public class TaskService {
                 TaskAssignee ta = new TaskAssignee();
                 ta.setTaskId(task.getId());
                 ta.setUserId(uid);
-                ta.setStatus("pending");
+                ta.setStatus(TaskStatus.PENDING);
                 taskAssigneeMapper.insert(ta);
             }
             if (task.getAssigneeId() == null) {
@@ -306,7 +309,7 @@ public class TaskService {
             TaskAssignee ta = new TaskAssignee();
             ta.setTaskId(task.getId());
             ta.setUserId(req.getAssigneeId());
-            ta.setStatus("pending");
+            ta.setStatus(TaskStatus.PENDING);
             taskAssigneeMapper.insert(ta);
         }
 
@@ -397,7 +400,7 @@ public class TaskService {
 
         // 任务转派时重置状态和进度
         if (assigneeChanged) {
-            task.setStatus("pending");
+            task.setStatus(TaskStatus.PENDING);
             task.setProgress(0);
         }
 
@@ -408,7 +411,7 @@ public class TaskService {
             TaskStatusHistory history = new TaskStatusHistory();
             history.setTaskId(id);
             history.setFromStatus(oldStatus);
-            history.setToStatus("pending");
+            history.setToStatus(TaskStatus.PENDING);
             history.setChangedBy(currentUser().getUserId());
             history.setComment("任务转派，状态重置为待受理");
             historyMapper.insert(history);
@@ -419,7 +422,7 @@ public class TaskService {
                         .eq(TaskAssignee::getTaskId, id)
                         .eq(TaskAssignee::getUserId, oldAssigneeId)
                         .set(TaskAssignee::getUserId, req.getAssigneeId())
-                        .set(TaskAssignee::getStatus, "pending"));
+                        .set(TaskAssignee::getStatus, TaskStatus.PENDING));
             }
         }
 
@@ -485,28 +488,28 @@ public class TaskService {
         String oldStatus = task.getStatus();
 
         // rejected 必须有原因
-        if ("rejected".equals(newStatus) && (req.getComment() == null || req.getComment().isBlank())) {
+        if (TaskStatus.REJECTED.equals(newStatus) && (req.getComment() == null || req.getComment().isBlank())) {
             throw new BusinessException("reject reason is required");
         }
 
         // 多开发场景处理
-        if ("developing".equals(newStatus) && "dev".equals(role) && "developing".equals(task.getStatus())) {
+        if (TaskStatus.DEVELOPING.equals(newStatus) && UserRole.DEV.equals(role) && TaskStatus.DEVELOPING.equals(task.getStatus())) {
             taskAssigneeMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<TaskAssignee>()
                     .eq(TaskAssignee::getTaskId, taskId)
                     .eq(TaskAssignee::getUserId, operatorId)
-                    .set(TaskAssignee::getStatus, "developing"));
+                    .set(TaskAssignee::getStatus, TaskStatus.DEVELOPING));
             return;
         }
-        if ("developed".equals(newStatus) && "dev".equals(role)) {
+        if (TaskStatus.DEVELOPED.equals(newStatus) && UserRole.DEV.equals(role)) {
             List<TaskAssignee> assignees = taskAssigneeMapper.selectList(
                     new LambdaUpdateWrapper<TaskAssignee>().eq(TaskAssignee::getTaskId, taskId));
             if (!assignees.isEmpty()) {
                 taskAssigneeMapper.update(null, new LambdaUpdateWrapper<TaskAssignee>()
                         .eq(TaskAssignee::getTaskId, taskId)
                         .eq(TaskAssignee::getUserId, operatorId)
-                        .set(TaskAssignee::getStatus, "developed"));
+                        .set(TaskAssignee::getStatus, TaskStatus.DEVELOPED));
                 long pending = taskAssigneeMapper.selectCount(new LambdaUpdateWrapper<TaskAssignee>()
-                        .eq(TaskAssignee::getTaskId, taskId).ne(TaskAssignee::getStatus, "developed"));
+                        .eq(TaskAssignee::getTaskId, taskId).ne(TaskAssignee::getStatus, TaskStatus.DEVELOPED));
                 if (pending > 0) return; // 还有人没完成
             }
         }
@@ -518,9 +521,9 @@ public class TaskService {
         }
 
         // testing → closed 时校验该任务下所有 Bug 必须已关闭
-        if ("testing".equals(oldStatus) && "closed".equals(newStatus)) {
+        if (TaskStatus.TESTING.equals(oldStatus) && TaskStatus.CLOSED.equals(newStatus)) {
             long openBugs = bugMapper.selectCount(
-                    new LambdaQueryWrapper<Bug>().eq(Bug::getTaskId, taskId).ne(Bug::getStatus, "closed"));
+                    new LambdaQueryWrapper<Bug>().eq(Bug::getTaskId, taskId).ne(Bug::getStatus, BugStatus.CLOSED));
             if (openBugs > 0) {
                 throw new BusinessException(
                         "该任务下存在 " + openBugs + " 个未关闭的 Bug，请先处理完再关闭任务");
@@ -541,7 +544,7 @@ public class TaskService {
         historyMapper.insert(history);
 
         // 开发完成（developing -> testing）时自动将进度设为100%
-        if ("developing".equals(oldStatus) && "testing".equals(newStatus)) {
+        if (TaskStatus.DEVELOPING.equals(oldStatus) && TaskStatus.TESTING.equals(newStatus)) {
             task.setProgress(100);
             taskMapper.updateById(task);
             TaskProgressHistory ph = new TaskProgressHistory();
@@ -561,14 +564,14 @@ public class TaskService {
         notificationService.emitTaskEvent(task, oldStatus, newStatus, operatorName, targets, req.getComment());
 
         // 关键：developed -> pending_test 自动跳转
-        if ("developed".equals(newStatus)) {
-            task.setStatus("pending_test");
+        if (TaskStatus.DEVELOPED.equals(newStatus)) {
+            task.setStatus(TaskStatus.PENDING_TEST);
             taskMapper.updateById(task);
 
             TaskStatusHistory autoHistory = new TaskStatusHistory();
             autoHistory.setTaskId(taskId);
-            autoHistory.setFromStatus("developed");
-            autoHistory.setToStatus("pending_test");
+            autoHistory.setFromStatus(TaskStatus.DEVELOPED);
+            autoHistory.setToStatus(TaskStatus.PENDING_TEST);
             autoHistory.setChangedBy(operatorId);
             autoHistory.setComment("系统自动将任务加入测试池");
             historyMapper.insert(autoHistory);
@@ -576,17 +579,17 @@ public class TaskService {
         }
 
         // rejected 时保存原因到任务
-        if ("rejected".equals(newStatus)) {
+        if (TaskStatus.REJECTED.equals(newStatus)) {
             taskMapper.update(null, new LambdaUpdateWrapper<Task>()
                     .eq(Task::getId, taskId).set(Task::getRejectReason, req.getComment()));
         }
 
         // dev 开始开发时更新 TaskAssignee
-        if ("developing".equals(newStatus) && "dev".equals(role)) {
+        if (TaskStatus.DEVELOPING.equals(newStatus) && UserRole.DEV.equals(role)) {
             taskAssigneeMapper.update(null, new LambdaUpdateWrapper<TaskAssignee>()
                     .eq(TaskAssignee::getTaskId, taskId)
                     .eq(TaskAssignee::getUserId, operatorId)
-                    .set(TaskAssignee::getStatus, "developing"));
+                    .set(TaskAssignee::getStatus, TaskStatus.DEVELOPING));
         }
     }
 
@@ -629,7 +632,7 @@ public class TaskService {
         ta.setTaskId(taskId);
         ta.setUserId(req.getUserId());
         ta.setPlatform(req.getPlatform());
-        ta.setStatus("pending");
+        ta.setStatus(TaskStatus.PENDING);
         taskAssigneeMapper.insert(ta);
 
         Task task = taskMapper.selectById(taskId);

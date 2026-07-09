@@ -2,6 +2,8 @@ package com.management.statistics;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.management.bug.mapper.BugMapper;
+import com.management.common.constant.BugStatus;
+import com.management.common.constant.TaskStatus;
 import com.management.requirement.entity.Requirement;
 import com.management.requirement.mapper.RequirementMapper;
 import com.management.task.entity.Task;
@@ -133,7 +135,7 @@ public class StatisticsService {
             List<com.management.bug.entity.Bug> taskBugs = bugMapper.selectList(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.management.bug.entity.Bug>()
                             .in(com.management.bug.entity.Bug::getTaskId, allTaskIds)
-                            .eq(com.management.bug.entity.Bug::getStatus, "unfixed"));
+                            .eq(com.management.bug.entity.Bug::getStatus, BugStatus.UNFIXED));
             for (com.management.bug.entity.Bug b : taskBugs) {
                 if (b.getTaskId() != null) {
                     pendingBugsByTask.merge(b.getTaskId(), 1L, Long::sum);
@@ -159,11 +161,11 @@ public class StatisticsService {
                 double progress = t.getProgress() != null ? t.getProgress() : 0;
                 String status = t.getStatus();
 
-                if (!"closed".equals(status)) {
+                if (!TaskStatus.CLOSED.equals(status)) {
                     inProgressLoad += perf * (1 - progress / 100.0);
                 }
 
-                if ("closed".equals(status)) {
+                if (TaskStatus.CLOSED.equals(status)) {
                     LocalDateTime updatedAt = t.getUpdatedAt();
                     if (updatedAt != null && !updatedAt.isBefore(rangeStart) && updatedAt.isBefore(rangeEnd)) {
                         performanceValue += perf;
@@ -179,11 +181,11 @@ public class StatisticsService {
                 double progress = t.getProgress() != null ? t.getProgress() : 0;
                 String status = t.getStatus();
 
-                if (!"closed".equals(status)) {
+                if (!TaskStatus.CLOSED.equals(status)) {
                     inProgressLoad += perf * (1 - progress / 100.0);
                 }
 
-                if ("closed".equals(status)) {
+                if (TaskStatus.CLOSED.equals(status)) {
                     LocalDateTime updatedAt = t.getUpdatedAt();
                     if (updatedAt != null && !updatedAt.isBefore(rangeStart) && updatedAt.isBefore(rangeEnd)) {
                         performanceValue += perf;

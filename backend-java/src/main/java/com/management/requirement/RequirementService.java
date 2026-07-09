@@ -4,6 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.management.bug.BugService;
 import com.management.bug.entity.Bug;
 import com.management.bug.mapper.BugMapper;
+import com.management.common.constant.BugStatus;
+import com.management.common.constant.RequirementStatus;
+import com.management.common.constant.TaskStatus;
+import com.management.common.constant.UserRole;
 import com.management.common.exception.BusinessException;
 import com.management.common.jwt.JwtUserDetails;
 import com.management.common.notification.NotificationService;
@@ -90,7 +94,7 @@ public class RequirementService {
         r.setPersonId(req.getPersonId());
         r.setPersonName(req.getPersonName());
         r.setPriority(req.getPriority() != null ? req.getPriority() : "medium");
-        r.setStatus("pending_task");
+        r.setStatus(RequirementStatus.PENDING_TASK);
         r.setTotalAmount(req.getTotalAmount());
         r.setTotalPrice(req.getTotalPrice());
         r.setDevTotal(req.getDevTotal());
@@ -137,7 +141,7 @@ public class RequirementService {
         if (status != null && !status.isBlank()) {
             q.eq(Requirement::getStatus, status);
         } else {
-            q.notIn(Requirement::getStatus, List.of("released", "closed"));
+            q.notIn(Requirement::getStatus, List.of(RequirementStatus.RELEASED, RequirementStatus.CLOSED));
         }
         if (system != null && !system.isBlank()) q.eq(Requirement::getSystem, system);
         if (projectType != null && !projectType.isBlank()) q.eq(Requirement::getProjectType, projectType);
@@ -157,7 +161,7 @@ public class RequirementService {
     public List<Requirement> opsList() {
         LambdaQueryWrapper<Requirement> q = new LambdaQueryWrapper<Requirement>()
                 .eq(Requirement::getProjectType, "ops")
-                .ne(Requirement::getStatus, "released");
+                .ne(Requirement::getStatus, RequirementStatus.RELEASED);
         applyProjectScopeFilter(q);
         applyStatusAndCreatedAtOrder(q);
         List<Requirement> list = requirementMapper.selectList(q);
@@ -168,7 +172,7 @@ public class RequirementService {
     public List<Requirement> projectList() {
         LambdaQueryWrapper<Requirement> q = new LambdaQueryWrapper<Requirement>()
                 .eq(Requirement::getProjectType, "project")
-                .ne(Requirement::getStatus, "released");
+                .ne(Requirement::getStatus, RequirementStatus.RELEASED);
         applyProjectScopeFilter(q);
         applyStatusAndCreatedAtOrder(q);
         List<Requirement> list = requirementMapper.selectList(q);
@@ -196,13 +200,13 @@ public class RequirementService {
             tp.setTerminal(entry.getKey());
             java.util.List<Task> tl = entry.getValue();
             tp.setTotal(tl.size());
-            long done = tl.stream().filter(t -> "closed".equals(t.getStatus()) || "passed".equals(t.getStatus())).count();
+            long done = tl.stream().filter(t -> TaskStatus.CLOSED.equals(t.getStatus()) || "passed".equals(t.getStatus())).count();
             tp.setDone(done);
             int avgProgress = (int) Math.round(tl.stream().mapToInt(t -> t.getProgress() != null ? t.getProgress() : 0).average().orElse(0));
             tp.setProgress(avgProgress);
             long overdue = tl.stream().filter(t -> t.getDeadline() != null
                     && t.getDeadline().isBefore(java.time.LocalDateTime.now())
-                    && !"closed".equals(t.getStatus()) && !"passed".equals(t.getStatus())).count();
+                    && !TaskStatus.CLOSED.equals(t.getStatus()) && !"passed".equals(t.getStatus())).count();
             tp.setOverdueDays(overdue);
             java.util.List<RequirementDetailDTO.TaskBrief> briefs = tl.stream().map(t -> {
                 RequirementDetailDTO.TaskBrief b = new RequirementDetailDTO.TaskBrief();
@@ -278,7 +282,7 @@ public class RequirementService {
         r.setStatus(newStatus);
         requirementMapper.updateById(r);
 
-        if ("released".equals(newStatus)) {
+        if (RequirementStatus.RELEASED.equals(newStatus)) {
             cleanupBugScreenshots(id);
         }
 
@@ -342,8 +346,8 @@ public class RequirementService {
     public List<Map<String, Object>> getSystemStats() {
         List<Requirement> all = requirementMapper.selectList(
                 new LambdaQueryWrapper<Requirement>()
-                        .ne(Requirement::getStatus, "released")
-                        .ne(Requirement::getStatus, "closed"));
+                        .ne(Requirement::getStatus, RequirementStatus.RELEASED)
+                        .ne(Requirement::getStatus, RequirementStatus.CLOSED));
         Map<String, Long> stats = all.stream()
                 .filter(r -> r.getSystem() != null && !r.getSystem().isBlank())
                 .collect(Collectors.groupingBy(Requirement::getSystem, Collectors.counting()));
@@ -421,7 +425,7 @@ public class RequirementService {
             m.put("person", user != null ? user.getName() : "未知");
             m.put("terminal", terminal);
             m.put("tasks", tl.size());
-            m.put("done", tl.stream().filter(t -> "closed".equals(t.getStatus())).count());
+            m.put("done", tl.stream().filter(t -> TaskStatus.CLOSED.equals(t.getStatus())).count());
             m.put("progressByWeek", weeklyProgress);
             devProgress.add(m);
         }
@@ -438,7 +442,7 @@ public class RequirementService {
                 if (b.getCreatedAt() != null && b.getCreatedAt().isAfter(weekEnd)) continue;
                 total++;
                 String status = getBugStatusAt(b, weekEnd, statusHistoryByBug.getOrDefault(b.getId(), List.of()));
-                if ("closed".equals(status)) closed++;
+                if (TaskStatus.CLOSED.equals(status)) closed++;
                 else if ("unfixed".equals(status)) unfixed++;
                 else if ("fixed".equals(status) || "not_a_bug".equals(status) || "pending_verify".equals(status)) pendingVerify++;
             }
@@ -463,10 +467,10 @@ public class RequirementService {
     }
 
     private LocalDateTime calculateRequirementEndTime(Requirement r) {
-        if ("released".equals(r.getStatus()) && r.getReleaseTime() != null) {
+        if (RequirementStatus.RELEASED.equals(r.getStatus()) && r.getReleaseTime() != null) {
             return r.getReleaseTime();
         }
-        if ("closed".equals(r.getStatus()) && r.getUpdatedAt() != null) {
+        if (RequirementStatus.CLOSED.equals(r.getStatus()) && r.getUpdatedAt() != null) {
             return r.getUpdatedAt();
         }
         return LocalDateTime.now();
@@ -515,8 +519,8 @@ public class RequirementService {
     private void applyProjectScopeFilter(LambdaQueryWrapper<Requirement> q) {
         JwtUserDetails u = currentUser();
         String role = u.getRole();
-        if ("pm".equals(role) || "tester".equals(role)) return;
-        if ("dev_lead".equals(role)) {
+        if (UserRole.PM.equals(role) || UserRole.TESTER.equals(role)) return;
+        if (UserRole.DEV_LEAD.equals(role)) {
             q.eq(Requirement::getDevLeadId, u.getUserId());
             return;
         }
@@ -543,7 +547,7 @@ public class RequirementService {
     private List<Long> getOverdueRequirementIds() {
         List<Task> overdueTasks = taskMapper.selectList(
                 new LambdaQueryWrapper<Task>()
-                        .ne(Task::getStatus, "closed")
+                        .ne(Task::getStatus, TaskStatus.CLOSED)
                         .isNotNull(Task::getDeadline)
                         .lt(Task::getDeadline, LocalDateTime.now()));
         return overdueTasks.stream()
@@ -591,12 +595,12 @@ public class RequirementService {
             r.setDevProgress(totalPerformance > 0 ? (int) Math.round(weightedSum / totalPerformance) : 0);
         }
 
-        boolean allTasksClosed = !tasks.isEmpty() && tasks.stream().allMatch(t -> "closed".equals(t.getStatus()));
+        boolean allTasksClosed = !tasks.isEmpty() && tasks.stream().allMatch(t -> TaskStatus.CLOSED.equals(t.getStatus()));
 
         long integrationTotal = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
                 .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "integration"));
         long integrationClosed = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
-                .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "integration").eq(Bug::getStatus, "closed"));
+                .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "integration").eq(Bug::getStatus, BugStatus.CLOSED));
         if (!allTasksClosed) {
             r.setIntegrationTestProgress(0);
         } else if (integrationTotal > 0) {
@@ -608,7 +612,7 @@ public class RequirementService {
         long businessTotal = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
                 .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "business"));
         long businessClosed = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
-                .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "business").eq(Bug::getStatus, "closed"));
+                .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "business").eq(Bug::getStatus, BugStatus.CLOSED));
         if (!allTasksClosed) {
             r.setBusinessTestProgress(0);
         } else if (businessTotal > 0) {
@@ -620,7 +624,7 @@ public class RequirementService {
         long itTotal = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
                 .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "it_test"));
         long itClosed = bugMapper.selectCount(new LambdaQueryWrapper<Bug>()
-                .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "it_test").eq(Bug::getStatus, "closed"));
+                .eq(Bug::getRequirementId, r.getId()).eq(Bug::getTestType, "it_test").eq(Bug::getStatus, BugStatus.CLOSED));
         if (!allTasksClosed) {
             r.setItTestProgress(0);
         } else if (itTotal > 0) {

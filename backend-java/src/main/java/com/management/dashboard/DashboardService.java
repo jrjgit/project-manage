@@ -3,6 +3,9 @@ package com.management.dashboard;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.management.bug.entity.Bug;
 import com.management.bug.mapper.BugMapper;
+import com.management.common.constant.BugStatus;
+import com.management.common.constant.TaskStatus;
+import com.management.common.constant.UserRole;
 import com.management.common.jwt.JwtUserDetails;
 import com.management.iteration.entity.Iteration;
 import com.management.iteration.mapper.IterationMapper;
@@ -43,10 +46,10 @@ public class DashboardService {
     public Map<String, Object> getDashboard() {
         JwtUserDetails u = currentUser();
         return switch (u.getRole()) {
-            case "pm" -> pmDashboard(u);
-            case "dev_lead" -> devLeadDashboard(u);
-            case "dev" -> devDashboard(u);
-            case "tester" -> testerDashboard(u);
+            case UserRole.PM -> pmDashboard(u);
+            case UserRole.DEV_LEAD -> devLeadDashboard(u);
+            case UserRole.DEV -> devDashboard(u);
+            case UserRole.TESTER -> testerDashboard(u);
             default -> Map.of("message", "unknown role");
         };
     }
@@ -63,11 +66,11 @@ public class DashboardService {
         long pendingReleaseReqs = allReqs.stream().filter(r -> "pending_release".equals(r.getStatus())).count();
 
         long overdueTasks = allTasks.stream().filter(t ->
-                !"closed".equals(t.getStatus()) && t.getDeadline() != null
+                !TaskStatus.CLOSED.equals(t.getStatus()) && t.getDeadline() != null
                         && t.getDeadline().isBefore(LocalDateTime.now())).count();
 
         List<Map<String, Object>> overdueList = allTasks.stream()
-                .filter(t -> !"closed".equals(t.getStatus()) && t.getDeadline() != null
+                .filter(t -> !TaskStatus.CLOSED.equals(t.getStatus()) && t.getDeadline() != null
                         && t.getDeadline().isBefore(LocalDateTime.now()))
                 .sorted(Comparator.comparing(Task::getDeadline))
                 .limit(8).map(t -> {
@@ -107,23 +110,23 @@ public class DashboardService {
         List<Task> teamTasks = taskMapper.selectList(
                 new LambdaQueryWrapper<Task>().eq(Task::getDevLeadId, u.getUserId()));
         long total = teamTasks.size();
-        long developing = teamTasks.stream().filter(t -> "developing".equals(t.getStatus())).count();
-        long done = teamTasks.stream().filter(t -> "closed".equals(t.getStatus())).count();
+        long developing = teamTasks.stream().filter(t -> TaskStatus.DEVELOPING.equals(t.getStatus())).count();
+        long done = teamTasks.stream().filter(t -> TaskStatus.CLOSED.equals(t.getStatus())).count();
         long overdue = teamTasks.stream().filter(t ->
-                !"closed".equals(t.getStatus()) && t.getDeadline() != null
+                !TaskStatus.CLOSED.equals(t.getStatus()) && t.getDeadline() != null
                         && t.getDeadline().isBefore(LocalDateTime.now())).count();
 
         List<Map<String, Object>> overdueList = teamTasks.stream()
-                .filter(t -> !"closed".equals(t.getStatus()) && t.getDeadline() != null
+                .filter(t -> !TaskStatus.CLOSED.equals(t.getStatus()) && t.getDeadline() != null
                         && t.getDeadline().isBefore(LocalDateTime.now()))
                 .sorted(Comparator.comparing(Task::getDeadline))
                 .limit(8).map(t -> taskToMap(t)).collect(Collectors.toList());
 
         List<Map<String, Object>> board = List.of(
-                boardCol(teamTasks, "pending", "待受理"),
-                boardCol(teamTasks, "developing", "开发中"),
-                boardCol(teamTasks, "testing", "综合测试中"),
-                boardCol(teamTasks, "closed", "已完成")
+                boardCol(teamTasks, TaskStatus.PENDING, "待受理"),
+                boardCol(teamTasks, TaskStatus.DEVELOPING, "开发中"),
+                boardCol(teamTasks, TaskStatus.TESTING, "综合测试中"),
+                boardCol(teamTasks, TaskStatus.CLOSED, "已完成")
         );
 
         // Per-person workload
@@ -135,8 +138,8 @@ public class DashboardService {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("name", person != null ? person.getName() : "未知");
             m.put("total", e.getValue().size());
-            m.put("developing", e.getValue().stream().filter(t -> "developing".equals(t.getStatus())).count());
-            m.put("done", e.getValue().stream().filter(t -> "closed".equals(t.getStatus())).count());
+            m.put("developing", e.getValue().stream().filter(t -> TaskStatus.DEVELOPING.equals(t.getStatus())).count());
+            m.put("done", e.getValue().stream().filter(t -> TaskStatus.CLOSED.equals(t.getStatus())).count());
             return m;
         }).collect(Collectors.toList());
 
@@ -151,18 +154,18 @@ public class DashboardService {
     private Map<String, Object> devDashboard(JwtUserDetails u) {
         List<Task> myTasks = taskMapper.selectList(
                 new LambdaQueryWrapper<Task>().eq(Task::getAssigneeId, u.getUserId()));
-        long pending = myTasks.stream().filter(t -> "pending".equals(t.getStatus())).count();
-        long developing = myTasks.stream().filter(t -> "developing".equals(t.getStatus())).count();
-        long done = myTasks.stream().filter(t -> "closed".equals(t.getStatus())).count();
+        long pending = myTasks.stream().filter(t -> TaskStatus.PENDING.equals(t.getStatus())).count();
+        long developing = myTasks.stream().filter(t -> TaskStatus.DEVELOPING.equals(t.getStatus())).count();
+        long done = myTasks.stream().filter(t -> TaskStatus.CLOSED.equals(t.getStatus())).count();
         long overdue = myTasks.stream().filter(t ->
-                !"closed".equals(t.getStatus()) && t.getDeadline() != null
+                !TaskStatus.CLOSED.equals(t.getStatus()) && t.getDeadline() != null
                         && t.getDeadline().isBefore(LocalDateTime.now())).count();
 
         List<Map<String, Object>> taskList = myTasks.stream()
                 .sorted(Comparator.comparing(Task::getDeadline, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(t -> {
                     Map<String, Object> m = taskToMap(t);
-                    m.put("overdue", t.getDeadline() != null && !"closed".equals(t.getStatus())
+                    m.put("overdue", t.getDeadline() != null && !TaskStatus.CLOSED.equals(t.getStatus())
                             && t.getDeadline().isBefore(LocalDateTime.now()));
                     return m;
                 }).collect(Collectors.toList());
@@ -175,9 +178,9 @@ public class DashboardService {
 
     private Map<String, Object> testerDashboard(JwtUserDetails u) {
         long pendingTest = taskMapper.selectCount(
-                new LambdaQueryWrapper<Task>().eq(Task::getStatus, "testing").eq(Task::getTesterId, u.getUserId()));
+                new LambdaQueryWrapper<Task>().eq(Task::getStatus, TaskStatus.TESTING).eq(Task::getTesterId, u.getUserId()));
         long testing = taskMapper.selectCount(
-                new LambdaQueryWrapper<Task>().eq(Task::getStatus, "testing"));
+                new LambdaQueryWrapper<Task>().eq(Task::getStatus, TaskStatus.TESTING));
 
         List<Bug> myBugs = bugMapper.selectList(
                 new LambdaQueryWrapper<Bug>().eq(Bug::getCreatorId, u.getUserId()).or().eq(Bug::getAssigneeId, u.getUserId()));
@@ -185,7 +188,7 @@ public class DashboardService {
         long bugTotal = myBugs.size();
 
         List<Map<String, Object>> testingTasks = taskMapper.selectList(
-                new LambdaQueryWrapper<Task>().eq(Task::getStatus, "testing")
+                new LambdaQueryWrapper<Task>().eq(Task::getStatus, TaskStatus.TESTING)
                         .and(w -> w.eq(Task::getTesterId, u.getUserId()).or().isNull(Task::getTesterId)))
                 .stream().limit(10).map(t -> taskToMap(t)).collect(Collectors.toList());
 
@@ -216,10 +219,10 @@ public class DashboardService {
                                 "SELECT task_id FROM task_assignees WHERE user_id = " + userId));
         for (Task t : allTasks) fillTaskUser(t);
 
-        List<Task> pendingTasks = allTasks.stream().filter(t -> "pending".equals(t.getStatus())).collect(Collectors.toList());
-        List<Task> developingTasks = allTasks.stream().filter(t -> "developing".equals(t.getStatus())).collect(Collectors.toList());
-        List<Task> testingTasks = allTasks.stream().filter(t -> "testing".equals(t.getStatus())).collect(Collectors.toList());
-        List<Task> completedTasks = allTasks.stream().filter(t -> "closed".equals(t.getStatus()))
+        List<Task> pendingTasks = allTasks.stream().filter(t -> TaskStatus.PENDING.equals(t.getStatus())).collect(Collectors.toList());
+        List<Task> developingTasks = allTasks.stream().filter(t -> TaskStatus.DEVELOPING.equals(t.getStatus())).collect(Collectors.toList());
+        List<Task> testingTasks = allTasks.stream().filter(t -> TaskStatus.TESTING.equals(t.getStatus())).collect(Collectors.toList());
+        List<Task> completedTasks = allTasks.stream().filter(t -> TaskStatus.CLOSED.equals(t.getStatus()))
                 .sorted(Comparator.comparing(Task::getUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(50)
                 .collect(Collectors.toList());
@@ -227,13 +230,13 @@ public class DashboardService {
         long total = allTasks.size();
         long developing = developingTasks.size();
         long done = completedTasks.size();
-        long overdue = allTasks.stream().filter(t -> !"closed".equals(t.getStatus())
+        long overdue = allTasks.stream().filter(t -> !TaskStatus.CLOSED.equals(t.getStatus())
                 && t.getDeadline() != null && t.getDeadline().isBefore(LocalDateTime.now())).count();
 
         List<Bug> bugs = bugMapper.selectList(
                 new LambdaQueryWrapper<Bug>()
                         .eq(Bug::getAssigneeId, userId)
-                        .in(Bug::getStatus, "unfixed")
+                        .in(Bug::getStatus, BugStatus.UNFIXED)
                         .orderByDesc(Bug::getUpdatedAt));
         for (Bug b : bugs) {
             if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
@@ -257,9 +260,9 @@ public class DashboardService {
         java.util.Map<Long, Requirement> bugReqCache = new java.util.HashMap<>();
 
         List<Map<String, Object>> board = List.of(
-                Map.of("status", "pending", "label", "待受理", "tasks", pendingTasks.stream().map(this::taskToMap).collect(Collectors.toList())),
-                Map.of("status", "developing", "label", "开发中", "tasks", developingTasks.stream().map(this::taskToMap).collect(Collectors.toList())),
-                Map.of("status", "testing", "label", "综合测试中", "tasks", testingTasks.stream().map(this::taskToMap).collect(Collectors.toList()))
+                Map.of("status", TaskStatus.PENDING, "label", "待受理", "tasks", pendingTasks.stream().map(this::taskToMap).collect(Collectors.toList())),
+                Map.of("status", TaskStatus.DEVELOPING, "label", "开发中", "tasks", developingTasks.stream().map(this::taskToMap).collect(Collectors.toList())),
+                Map.of("status", TaskStatus.TESTING, "label", "综合测试中", "tasks", testingTasks.stream().map(this::taskToMap).collect(Collectors.toList()))
         );
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -276,7 +279,7 @@ public class DashboardService {
         Long userId = u.getUserId();
 
         List<Task> allTestingTasks = taskMapper.selectList(
-                new LambdaQueryWrapper<Task>().in(Task::getStatus, "pending_test", "testing"));
+                new LambdaQueryWrapper<Task>().in(Task::getStatus, TaskStatus.PENDING_TEST, TaskStatus.TESTING));
         for (Task t : allTestingTasks) fillTaskUser(t);
 
         // 批量加载待测试任务的 Bug 创建人
@@ -303,7 +306,7 @@ public class DashboardService {
         List<Bug> pendingVerifyBugs = bugMapper.selectList(
                 new LambdaQueryWrapper<Bug>()
                         .eq(Bug::getCreatorId, userId)
-                        .notIn(Bug::getStatus, "unfixed", "closed")
+                        .notIn(Bug::getStatus, BugStatus.UNFIXED, BugStatus.CLOSED)
                         .orderByDesc(Bug::getUpdatedAt));
         for (Bug b : pendingVerifyBugs) {
             if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
@@ -313,7 +316,7 @@ public class DashboardService {
         List<Bug> unfixedBugs = bugMapper.selectList(
                 new LambdaQueryWrapper<Bug>()
                         .eq(Bug::getCreatorId, userId)
-                        .eq(Bug::getStatus, "unfixed")
+                        .eq(Bug::getStatus, BugStatus.UNFIXED)
                         .orderByDesc(Bug::getUpdatedAt));
         for (Bug b : unfixedBugs) {
             if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
@@ -361,7 +364,7 @@ public class DashboardService {
     public List<Map<String, Object>> getProgressAnomalies() {
         List<Task> tasks = taskMapper.selectList(
                 new LambdaQueryWrapper<Task>()
-                        .ne(Task::getStatus, "closed")
+                        .ne(Task::getStatus, TaskStatus.CLOSED)
                         .lt(Task::getProgress, 100)
                         .isNotNull(Task::getProgress));
         if (tasks.isEmpty()) {
@@ -475,7 +478,7 @@ public class DashboardService {
             }
         }
         if (t.getDeadline() != null) {
-            m.put("overdueDays", !"closed".equals(t.getStatus()) && t.getDeadline().isBefore(LocalDateTime.now())
+            m.put("overdueDays", !TaskStatus.CLOSED.equals(t.getStatus()) && t.getDeadline().isBefore(LocalDateTime.now())
                     ? LocalDateTime.now().toLocalDate().toEpochDay() - t.getDeadline().toLocalDate().toEpochDay() : 0);
         } else {
             m.put("overdueDays", 0);
