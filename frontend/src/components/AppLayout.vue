@@ -201,7 +201,7 @@ onUnmounted(() => {
 
 const roleLabelMap = {
   pm: '项目经理', dev_lead: '开发组长', dev: '开发',
-  tester: '测试'
+  tester_lead: '测试组长', tester: '测试'
 }
 const roleLabel = computed(() => roleLabelMap[authStore.userInfo?.role] || '')
 const avatarLetter = computed(() => authStore.userInfo?.name?.charAt(0)?.toUpperCase() || '?')
