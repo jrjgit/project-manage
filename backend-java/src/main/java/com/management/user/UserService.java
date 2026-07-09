@@ -103,6 +103,25 @@ public class UserService {
         userMapper.updateById(user);
     }
 
+    /**
+     * 当前用户修改自己的密码，需验证旧密码
+     */
+    public void changeOwnPassword(Long userId, String oldPassword, String newPassword) {
+        User user = userMapper.selectById(userId);
+        if (user == null) throw new BusinessException(404, "用户不存在");
+        if (oldPassword == null || oldPassword.isBlank()) {
+            throw new BusinessException(400, "请输入原密码");
+        }
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new BusinessException(400, "原密码不正确");
+        }
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new BusinessException(400, "新密码长度不能少于 6 位");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userMapper.updateById(user);
+    }
+
     public List<Map<String, Object>> getUserWorkload() {
         List<User> devUsers = userMapper.selectList(
                 new LambdaQueryWrapper<User>().in(User::getRole, "dev", "dev_lead"));

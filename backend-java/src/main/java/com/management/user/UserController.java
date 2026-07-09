@@ -1,5 +1,6 @@
 package com.management.user;
 
+import com.management.common.jwt.JwtUserDetails;
 import com.management.common.result.Result;
 import com.management.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,6 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -82,7 +84,7 @@ public class UserController {
     }
 
     /**
-     * 修改用户密码
+     * 修改用户密码（仅PM可操作）
      */
     @Operation(summary = "修改用户密码")
     @PutMapping("/{id}/password")
@@ -90,6 +92,19 @@ public class UserController {
     public Result<Map<String, String>> changePassword(@PathVariable Long id,
                                                        @RequestBody ChangePasswordRequest req) {
         userService.changePassword(id, req.getPassword());
+        return Result.ok(Map.of("message", "password changed"));
+    }
+
+    /**
+     * 当前用户修改自己的密码
+     */
+    @Operation(summary = "修改自己的密码")
+    @PutMapping("/me/password")
+    @PreAuthorize("isAuthenticated()")
+    public Result<Map<String, String>> changeOwnPassword(@RequestBody ChangeOwnPasswordRequest req) {
+        JwtUserDetails currentUser = (JwtUserDetails) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+        userService.changeOwnPassword(currentUser.getUserId(), req.getOldPassword(), req.getNewPassword());
         return Result.ok(Map.of("message", "password changed"));
     }
 
@@ -103,6 +118,14 @@ public class UserController {
     static class ChangePasswordRequest {
         @NotBlank(message = "密码不能为空")
         private String password;
+    }
+
+    @Data
+    static class ChangeOwnPasswordRequest {
+        @NotBlank(message = "原密码不能为空")
+        private String oldPassword;
+        @NotBlank(message = "新密码不能为空")
+        private String newPassword;
     }
 
     @Data

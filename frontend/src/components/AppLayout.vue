@@ -37,13 +37,20 @@
             <div class="user-role">{{ roleLabel }}</div>
           </div>
         </div>
-        <button class="logout-btn" @click="logout">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-        </button>
+        <div class="footer-actions">
+          <button class="logout-btn" title="修改密码" @click="showPasswordModal = true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+            </svg>
+          </button>
+          <button class="logout-btn" title="退出登录" @click="logout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </aside>
 
@@ -92,6 +99,27 @@
         <slot />
       </div>
     </main>
+
+    <!-- 修改密码弹窗 -->
+    <n-modal v-model:show="showPasswordModal" preset="card" style="width: 420px" title="修改密码" :mask-closable="false">
+      <n-form label-placement="top">
+        <n-form-item label="原密码">
+          <n-input v-model:value="passwordForm.oldPassword" type="password" show-password-on="click" placeholder="请输入原密码" />
+        </n-form-item>
+        <n-form-item label="新密码">
+          <n-input v-model:value="passwordForm.newPassword" type="password" show-password-on="click" placeholder="请输入新密码（至少6位）" />
+        </n-form-item>
+        <n-form-item label="确认新密码">
+          <n-input v-model:value="passwordForm.confirmPassword" type="password" show-password-on="click" placeholder="请再次输入新密码" />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showPasswordModal = false">取消</n-button>
+          <n-button type="primary" :loading="passwordSubmitting" @click="submitChangePassword">确定</n-button>
+        </n-space>
+      </template>
+    </n-modal>
   </div>
 </template>
 
@@ -101,6 +129,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useMessageStore } from '@/store/useMessageStore'
 import { fetchMessages, markRead, markAllRead } from '@/api/message'
+import { changeMyPassword } from '@/api/users'
+import { NModal, NForm, NFormItem, NInput, NButton, NSpace } from 'naive-ui'
 
 const route = useRoute()
 const router = useRouter()
@@ -110,6 +140,10 @@ const messageStore = useMessageStore()
 const showDropdown = ref(false)
 const unreadList = ref([])
 const bellRef = ref(null)
+
+const showPasswordModal = ref(false)
+const passwordSubmitting = ref(false)
+const passwordForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
 
 async function fetchUnreadList() {
   try {
@@ -279,6 +313,21 @@ const pageSubtitle = computed(() => pageMeta.value.subtitle)
 function logout() {
   authStore.logout()
   router.push('/login')
+}
+
+async function submitChangePassword() {
+  const { oldPassword, newPassword, confirmPassword } = passwordForm.value
+  if (!oldPassword) { window.$message?.warning('请输入原密码'); return }
+  if (!newPassword || newPassword.length < 6) { window.$message?.warning('新密码长度不能少于6位'); return }
+  if (newPassword !== confirmPassword) { window.$message?.warning('两次输入的新密码不一致'); return }
+  passwordSubmitting.value = true
+  try {
+    await changeMyPassword(oldPassword, newPassword)
+    window.$message?.success('密码修改成功')
+    showPasswordModal.value = false
+    passwordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
+  } catch (e) { console.error(e) }
+  passwordSubmitting.value = false
 }
 
 // SVG icon components
@@ -596,6 +645,11 @@ function CodeIcon(props) {
 .logout-btn svg {
   width: 16px;
   height: 16px;
+}
+
+.footer-actions {
+  display: flex;
+  gap: 6px;
 }
 
 /* Main Content */
