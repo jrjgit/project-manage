@@ -216,7 +216,7 @@ const allMenus = [
   { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon, roles: ['pm', 'dev_lead'] },
   { key: 'iterations', label: '发布迭代', path: '/iterations', icon: MilestoneIcon, roles: ['pm', 'dev_lead', 'dev', 'tester'] },
   { key: 'revenue', label: '运维营收统计', path: '/revenue', icon: ChartBarIcon, roles: ['pm'] },
-  { key: 'performance', label: '人员绩效', path: '/performance', icon: TrendingUpIcon, roles: ['pm'] },
+  { key: 'performance', label: '人员绩效', path: '/performance', icon: TrendingUpIcon, roles: ['pm', 'dev_lead', 'dev', 'tester_lead', 'tester'] },
   { key: 'users', label: '用户管理', path: '/users', icon: UsersIcon, roles: ['pm'] },
   { key: 'systems', label: '系统管理', path: '/systems', icon: BookOpenIcon, roles: ['pm'] },
   { key: 'dictionary', label: '基础字典', path: '/dictionary', icon: BookOpenIcon, roles: ['pm'] }
