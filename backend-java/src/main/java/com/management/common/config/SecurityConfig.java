@@ -35,7 +35,7 @@ public class SecurityConfig {
                     res.setContentType("application/json;charset=UTF-8");
                     PrintWriter w = res.getWriter();
                     try {
-                        w.write("{\"error\":\"未登录或令牌已过期\"}");
+                        w.write("{\"code\":401,\"error\":\"未登录或令牌已过期\"}");
                         w.flush();
                     } finally {
                         w.close();
@@ -46,7 +46,7 @@ public class SecurityConfig {
                     res.setContentType("application/json;charset=UTF-8");
                     PrintWriter w = res.getWriter();
                     try {
-                        w.write("{\"error\":\"无权限执行此操作\"}");
+                        w.write("{\"code\":403,\"error\":\"无权限执行此操作\"}");
                         w.flush();
                     } finally {
                         w.close();
