@@ -16,6 +16,7 @@
           <div class="stat-pill"><span class="stat-num" style="color:#f59e0b">{{ stats.developing }}</span><span class="stat-label">开发中</span></div>
           <div class="stat-pill"><span class="stat-num" style="color:#d03050">{{ stats.overdue }}</span><span class="stat-label">逾期</span></div>
           <div class="stat-pill"><span class="stat-num" style="color:#d03050">{{ stats.pendingBugs }}</span><span class="stat-label">待修复Bug</span></div>
+          <div class="stat-pill"><span class="stat-num" style="color:#18a058">{{ stats.done }}</span><span class="stat-label">已完成</span></div>
         </div>
       </section>
 
@@ -48,6 +49,32 @@
           </div>
         </section>
       </div>
+
+      <!-- 已完成任务 -->
+      <section class="section-card completed-section">
+        <n-collapse>
+          <n-collapse-item title="已完成任务" name="completed">
+            <template #header-extra>
+              <span class="completed-count">{{ filteredCompletedTasks.length }} 项</span>
+            </template>
+            <div v-if="filteredCompletedTasks.length === 0" class="empty-state">{{ reqFilter.trim() ? '没有匹配的已完成任务' : '暂无已完成任务' }}</div>
+            <div v-for="t in filteredCompletedTasks" :key="t.id" class="completed-item" @click="onTaskClick(t.id)">
+              <div class="completed-item-top">
+                <span class="completed-item-title">{{ t.title }}</span>
+                <div class="completed-item-tags">
+                  <n-tag v-if="t.terminal" size="tiny" round>{{ skillsMap[t.terminal] || t.terminal }}</n-tag>
+                  <n-tag size="tiny" type="success" round>已完成</n-tag>
+                </div>
+              </div>
+              <div class="completed-item-meta">
+                <span class="completed-meta-text">{{ t.reqNumber || '-' }}</span>
+                <span class="completed-meta-text">{{ t.system || '-' }}</span>
+                <span class="completed-meta-text" v-if="t.deadline">截止: {{ t.deadline.substring(0, 10) }}</span>
+              </div>
+            </div>
+          </n-collapse-item>
+        </n-collapse>
+      </section>
     </div>
 
     <TaskDetailDrawer v-model:show="showTaskDetail" :task-id="selectedTaskId" developer-mode @refresh="loadData" />
@@ -66,7 +93,7 @@ import TaskBoard from '@/components/TaskBoard.vue'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer.vue'
 import BugDetailDrawer from '@/components/BugDetailDrawer.vue'
 import AppLayout from '@/components/AppLayout.vue'
-import { NTag, NInput } from 'naive-ui'
+import { NTag, NInput, NCollapse, NCollapseItem } from 'naive-ui'
 
 const authStore = useAuthStore()
 const route = useRoute()
@@ -84,6 +111,7 @@ const roleLabel = computed(() => ({ dev_lead: '开发组长', dev: '开发', pm:
 const stats = computed(() => dashData.value.stats || { total: 0, developing: 0, overdue: 0, pendingBugs: 0 })
 const boardData = computed(() => dashData.value.board || [])
 const bugs = computed(() => dashData.value.bugs || [])
+const completedTasks = computed(() => dashData.value.completedTasks || [])
 
 const boardTasks = computed(() => {
   const result = []
@@ -107,6 +135,15 @@ const filteredBugs = computed(() => {
   const kw = reqFilter.value.trim().toLowerCase()
   return bugs.value.filter(b => {
     const reqNum = (b.reqNumber || '').toString().toLowerCase()
+    return reqNum.includes(kw)
+  })
+})
+
+const filteredCompletedTasks = computed(() => {
+  if (!reqFilter.value.trim()) return completedTasks.value
+  const kw = reqFilter.value.trim().toLowerCase()
+  return completedTasks.value.filter(t => {
+    const reqNum = (t.reqNumber || '').toString().toLowerCase()
     return reqNum.includes(kw)
   })
 })
@@ -222,6 +259,18 @@ onMounted(() => { loadData(); loadDictionaries() })
 .bug-task { font-size: 11px; color: #94a3b8; }
 .bug-expected { font-size: 11px; color: #6366f1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
 .empty-state { text-align: center; padding: 24px; color: #94a3b8; font-size: 13px; }
+.completed-section { padding: 8px 16px; }
+.completed-count { font-size: 12px; color: #94a3b8; font-weight: 500; }
+.completed-item {
+  padding: 10px 12px; border: 1px solid #f1f5f9; border-radius: 10px;
+  cursor: pointer; transition: background 0.12s; margin-bottom: 6px;
+}
+.completed-item:hover { background: #f0fdf4; }
+.completed-item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.completed-item-title { font-size: 13px; font-weight: 500; color: #0f172a; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.completed-item-tags { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.completed-item-meta { display: flex; gap: 12px; margin-top: 6px; }
+.completed-meta-text { font-size: 11px; color: #94a3b8; }
 @media (max-width: 768px) {
   .hero-card { flex-direction: column; align-items: flex-start; }
   .hero-stats { flex-wrap: wrap; }

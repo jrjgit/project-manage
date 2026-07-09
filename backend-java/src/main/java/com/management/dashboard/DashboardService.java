@@ -219,10 +219,14 @@ public class DashboardService {
         List<Task> pendingTasks = allTasks.stream().filter(t -> "pending".equals(t.getStatus())).collect(Collectors.toList());
         List<Task> developingTasks = allTasks.stream().filter(t -> "developing".equals(t.getStatus())).collect(Collectors.toList());
         List<Task> testingTasks = allTasks.stream().filter(t -> "testing".equals(t.getStatus())).collect(Collectors.toList());
+        List<Task> completedTasks = allTasks.stream().filter(t -> "closed".equals(t.getStatus()))
+                .sorted(Comparator.comparing(Task::getUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .limit(50)
+                .collect(Collectors.toList());
 
         long total = allTasks.size();
         long developing = developingTasks.size();
-        long done = allTasks.stream().filter(t -> "closed".equals(t.getStatus())).count();
+        long done = completedTasks.size();
         long overdue = allTasks.stream().filter(t -> !"closed".equals(t.getStatus())
                 && t.getDeadline() != null && t.getDeadline().isBefore(LocalDateTime.now())).count();
 
@@ -262,6 +266,7 @@ public class DashboardService {
         result.put("stats", Map.of("total", total, "developing", developing, "done", done, "overdue", overdue, "pendingBugs", (long) bugs.size()));
         result.put("board", board);
         result.put("bugs", bugs.stream().map(b -> bugToMap(b, bugUserMap, bugReqCache)).collect(Collectors.toList()));
+        result.put("completedTasks", completedTasks.stream().map(this::taskToMap).collect(Collectors.toList()));
         return result;
     }
 
