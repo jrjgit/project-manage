@@ -214,19 +214,13 @@ watch(() => messageStore.unreadCount, (newVal, oldVal) => {
   document.title = newVal > 0 ? `(${newVal}) ProjectOS` : 'ProjectOS'
 })
 
-function handleWindowFocus() {
-  messageStore.refreshUnreadCount()
-}
-
 onMounted(() => {
   messageStore.refreshUnreadCount()
   document.addEventListener('click', handleClickOutside)
-  window.addEventListener('focus', handleWindowFocus)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
-  window.removeEventListener('focus', handleWindowFocus)
 })
 
 const roleLabelMap = {
