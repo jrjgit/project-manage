@@ -235,7 +235,7 @@ onUnmounted(() => {
 
 const roleLabelMap = {
   pm: '项目经理', dev_lead: '开发组长', dev: '开发',
-  tester_lead: '测试组长', tester: '测试'
+  tester: '测试'
 }
 const roleLabel = computed(() => roleLabelMap[authStore.userInfo?.role] || '')
 const avatarLetter = computed(() => authStore.userInfo?.name?.charAt(0)?.toUpperCase() || '?')
@@ -245,12 +245,11 @@ const allMenus = [
   { key: 'developer', label: '开发工作台', path: '/developer', icon: CodeIcon, roles: ['pm', 'dev_lead', 'dev'] },
   { key: 'tester', label: '测试工作台', path: '/tester', icon: BugIcon, roles: ['pm', 'dev_lead', 'dev', 'tester'] },
   { key: 'projects', label: '项目管理', path: '/projects', icon: FolderKanbanIcon, roles: ['pm'] },
-  { key: 'tasks', label: '任务管理', path: '/tasks', icon: ClipboardListIcon, roles: [] },
   { key: 'messages', label: '消息中心', path: '/messages', icon: BellIcon, badge: 'unread', roles: ['pm', 'dev_lead', 'dev', 'tester'] },
   { key: 'requirements', label: '需求管理', path: '/requirements', icon: FileTextIcon, roles: ['pm', 'dev_lead'] },
   { key: 'iterations', label: '发布迭代', path: '/iterations', icon: MilestoneIcon, roles: ['pm', 'dev_lead', 'dev', 'tester'] },
   { key: 'revenue', label: '运维营收统计', path: '/revenue', icon: ChartBarIcon, roles: ['pm'] },
-  { key: 'performance', label: '人员绩效', path: '/performance', icon: TrendingUpIcon, roles: ['pm', 'dev_lead', 'dev', 'tester_lead', 'tester'] },
+  { key: 'performance', label: '人员绩效', path: '/performance', icon: TrendingUpIcon, roles: ['pm', 'dev_lead', 'dev', 'tester'] },
   { key: 'users', label: '用户管理', path: '/users', icon: UsersIcon, roles: ['pm'] },
   { key: 'systems', label: '系统管理', path: '/systems', icon: BookOpenIcon, roles: ['pm'] },
   { key: 'dictionary', label: '基础字典', path: '/dictionary', icon: BookOpenIcon, roles: ['pm'] }
@@ -344,16 +343,6 @@ function FolderKanbanIcon(props) {
     h('path', { d: 'M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z' }),
     h('line', { x1: '9', y1: '10', x2: '15', y2: '10' }),
     h('line', { x1: '12', y1: '10', x2: '12', y2: '16' })
-  ])
-}
-function ClipboardListIcon(props) {
-  return h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', ...props }, [
-    h('rect', { x: '8', y: '2', width: '8', height: '4', rx: '1' }),
-    h('path', { d: 'M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2' }),
-    h('path', { d: 'M12 11h4' }),
-    h('path', { d: 'M12 16h4' }),
-    h('path', { d: 'M8 11h.01' }),
-    h('path', { d: 'M8 16h.01' })
   ])
 }
 function BugIcon(props) {

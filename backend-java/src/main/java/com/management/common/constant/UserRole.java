@@ -13,8 +13,6 @@ public final class UserRole {
     public static final String DEV_LEAD = "dev_lead";
     /** 开发 */
     public static final String DEV = "dev";
-    /** 测试组长 */
-    public static final String TESTER_LEAD = "tester_lead";
     /** 测试 */
     public static final String TESTER = "tester";
 }

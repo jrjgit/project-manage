@@ -25,7 +25,7 @@ public class User {
     /** 登录密码（加密存储，JSON序列化时忽略） */
     @JsonIgnore
     private String password;
-    /** 角色（pm=项目经理, dev_lead=开发组长, dev=开发, tester_lead=测试组长, tester=测试） */
+    /** 角色（pm=项目经理, dev_lead=开发组长, dev=开发, tester=测试） */
     private String role;
     /** 邮箱 */
     private String email;
