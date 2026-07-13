@@ -29,10 +29,12 @@ public class BugController {
      */
     @Operation(summary = "获取Bug列表")
     @GetMapping
-    public Result<List<Bug>> list(@RequestParam(name = "task_id", required = false) String taskId,
+    public Result<Object> list(@RequestParam(name = "task_id", required = false) String taskId,
                                    @RequestParam(required = false) String status,
-                                   @RequestParam(required = false) String severity) {
-        return Result.ok(bugService.listBugs(taskId, status, severity));
+                                   @RequestParam(required = false) String severity,
+                                   @RequestParam(required = false) Integer page,
+                                   @RequestParam(required = false) Integer size) {
+        return Result.ok(bugService.listBugs(taskId, status, severity, page, size));
     }
 
     /**

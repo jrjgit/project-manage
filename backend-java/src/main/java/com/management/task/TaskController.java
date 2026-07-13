@@ -32,12 +32,14 @@ public class TaskController {
      */
     @Operation(summary = "获取任务列表")
     @GetMapping
-    public Result<List<Task>> list(@RequestParam(required = false) String projectId,
+    public Result<Object> list(@RequestParam(required = false) String projectId,
                                     @RequestParam(required = false) String status,
                                     @RequestParam(required = false) String priority,
                                     @RequestParam(name = "requirement_id", required = false) String requirementId,
-                                    @RequestParam(name = "iteration_id", required = false) String iterationId) {
-        return Result.ok(taskService.listTasks(projectId, status, priority, requirementId, iterationId));
+                                    @RequestParam(name = "iteration_id", required = false) String iterationId,
+                                    @RequestParam(required = false) Integer page,
+                                    @RequestParam(required = false) Integer size) {
+        return Result.ok(taskService.listTasks(projectId, status, priority, requirementId, iterationId, page, size));
     }
 
     /**

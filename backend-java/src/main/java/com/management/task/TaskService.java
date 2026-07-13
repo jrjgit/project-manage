@@ -2,6 +2,8 @@ package com.management.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.management.bug.entity.Bug;
 import com.management.bug.mapper.BugMapper;
 import com.management.common.constant.BugStatus;
@@ -92,8 +94,9 @@ public class TaskService {
         return task;
     }
 
-    /** 按角色过滤查询任务列表 */
-    public List<Task> listTasks(String projectId, String status, String priority, String requirementId, String iterationId) {
+    /** 按角色过滤查询任务列表（支持可选分页） */
+    public Object listTasks(String projectId, String status, String priority, String requirementId, String iterationId,
+                            Integer page, Integer size) {
         JwtUserDetails u = currentUser();
         LambdaQueryWrapper<Task> q = new LambdaQueryWrapper<>();
 
@@ -126,6 +129,17 @@ public class TaskService {
         applyProjectScopeFilter(u, q);
 
         q.orderByDesc(Task::getUpdatedAt);
+
+        // 分页参数可选，不传则返回全部
+        if (page != null && size != null) {
+            Page<Task> pg = new Page<>(page, size);
+            IPage<Task> result = taskMapper.selectPage(pg, q);
+            for (Task t : result.getRecords()) {
+                fillAssociations(t);
+            }
+            return result;
+        }
+
         List<Task> tasks = taskMapper.selectList(q);
         for (Task t : tasks) {
             fillAssociations(t);

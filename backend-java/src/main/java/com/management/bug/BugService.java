@@ -2,6 +2,8 @@ package com.management.bug;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.management.bug.dto.*;
 import com.management.bug.entity.*;
 import com.management.bug.mapper.*;
@@ -58,8 +60,8 @@ public class BugService {
                 .getAuthentication().getPrincipal();
     }
 
-    /** 按角色过滤 Bug 列表 */
-    public List<Bug> listBugs(String taskId, String status, String severity) {
+    /** 按角色过滤 Bug 列表（支持可选分页） */
+    public Object listBugs(String taskId, String status, String severity, Integer page, Integer size) {
         JwtUserDetails u = currentUser();
         LambdaQueryWrapper<Bug> q = new LambdaQueryWrapper<>();
 
@@ -88,6 +90,14 @@ public class BugService {
         if (status != null && !status.isBlank()) q.eq(Bug::getStatus, status);
         if (severity != null && !severity.isBlank()) q.eq(Bug::getSeverity, severity);
         q.orderByDesc(Bug::getUpdatedAt);
+
+        // 分页参数可选，不传则返回全部
+        if (page != null && size != null) {
+            Page<Bug> pg = new Page<>(page, size);
+            IPage<Bug> result = bugMapper.selectPage(pg, q);
+            for (Bug b : result.getRecords()) fillAssociations(b);
+            return result;
+        }
 
         List<Bug> bugs = bugMapper.selectList(q);
         for (Bug b : bugs) fillAssociations(b);
