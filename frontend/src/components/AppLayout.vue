@@ -83,11 +83,12 @@
               <div class="dropdown-body">
                 <div v-for="msg in unreadList" :key="msg.id" class="dropdown-item" @click.stop="handleDropdownItemClick(msg)">
                   <div class="dropdown-item-title">{{ msg.title }}</div>
+                  <div class="dropdown-item-content" v-if="msg.content">{{ msg.content }}</div>
                   <div class="dropdown-item-time">{{ formatTime(msg.created_at) }}</div>
                 </div>
                 <div v-if="unreadList.length === 0" class="dropdown-empty">暂无未读消息</div>
               </div>
-              <div class="dropdown-footer" v-if="messageStore.unreadCount > 0">
+              <div class="dropdown-footer">
                 <router-link to="/messages" @click="showDropdown = false">查看全部消息</router-link>
               </div>
             </div>
@@ -168,10 +169,10 @@ async function handleMarkAllRead() {
 
 async function handleDropdownItemClick(msg) {
   showDropdown.value = false
-  if (!msg.is_read && msg.is_read !== undefined) {
+  if (!msg.is_read) {
     try { await markRead(msg.id); messageStore.refreshUnreadCount() } catch {}
   }
-  const id = msg.related_id || msg.relatedId || msg.id
+  const id = msg.related_id
   if (!id || !msg.type) return
   const routes = { task: '/developer?taskId=', bug: '/developer?bugId=', requirement: '/requirements/' }
   const path = routes[msg.type]
@@ -885,6 +886,18 @@ function CodeIcon(props) {
   overflow: hidden;
   text-overflow: ellipsis;
   margin-bottom: 2px;
+}
+
+.dropdown-item-content {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 4px;
+  word-break: break-all;
 }
 
 .dropdown-item-time {
