@@ -31,11 +31,4 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background-color: #f5f7fa;
 }
-
-.page-paused *,
-.page-paused *::before,
-.page-paused *::after {
-  animation-play-state: paused !important;
-  transition-play-state: paused !important;
-}
 </style>

@@ -217,9 +217,6 @@ watch(() => messageStore.unreadCount, (newVal, oldVal) => {
 function handleVisibility() {
   if (!document.hidden) {
     messageStore.refreshUnreadCount()
-    document.body.classList.remove('page-paused')
-  } else {
-    document.body.classList.add('page-paused')
   }
 }
 
