@@ -214,21 +214,19 @@ watch(() => messageStore.unreadCount, (newVal, oldVal) => {
   document.title = newVal > 0 ? `(${newVal}) ProjectOS` : 'ProjectOS'
 })
 
-function handleVisibility() {
-  if (!document.hidden) {
-    messageStore.refreshUnreadCount()
-  }
+function handleWindowFocus() {
+  messageStore.refreshUnreadCount()
 }
 
 onMounted(() => {
   messageStore.refreshUnreadCount()
   document.addEventListener('click', handleClickOutside)
-  document.addEventListener('visibilitychange', handleVisibility)
+  window.addEventListener('focus', handleWindowFocus)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
-  document.removeEventListener('visibilitychange', handleVisibility)
+  window.removeEventListener('focus', handleWindowFocus)
 })
 
 const roleLabelMap = {
