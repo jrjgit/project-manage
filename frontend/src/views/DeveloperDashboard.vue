@@ -108,7 +108,7 @@ const reqFilter = ref('')
 
 const roleLabel = computed(() => ({ dev_lead: '开发组长', dev: '开发', pm: '项目经理' })[authStore.userInfo?.role] || '')
 
-const stats = computed(() => dashData.value.stats || { total: 0, developing: 0, overdue: 0, pendingBugs: 0 })
+const stats = computed(() => dashData.value.stats || { total: 0, developing: 0, done: 0, overdue: 0, pendingBugs: 0 })
 const boardData = computed(() => dashData.value.board || [])
 const bugs = computed(() => dashData.value.bugs || [])
 const completedTasks = computed(() => dashData.value.completedTasks || [])

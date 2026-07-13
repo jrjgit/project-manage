@@ -314,7 +314,7 @@ const canReportProgress = computed(() => {
 
 watch([() => props.taskId, show], async ([id, visible]) => {
   if (id && visible) { await loadDetail(); await loadHistory(); await loadUsers(); await loadDictionaries() }
-})
+}, { immediate: true })
 
 async function loadUsers() { try { users.value = await getUsers() } catch (e) { console.error(e) } }
 async function loadDictionaries() {
