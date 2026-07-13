@@ -481,9 +481,9 @@ async function loadData() {
     const params = {}
     if (f.status) params.status = f.status
     if (f.system) params.system = f.system
-    if (f.project_type) params.project_type = f.project_type
-    if (f.project_id) params.project_id = f.project_id
-    if (f.iteration_id) params.iteration_id = f.iteration_id
+    if (f.project_type) params.projectType = f.project_type
+    if (f.project_id) params.projectId = f.project_id
+    if (f.iteration_id) params.iterationId = f.iteration_id
     if (f.overdue) params.overdue = true
     const [reqs, proj, sys, usr, iters, stats] = await Promise.all([
       getRequirements(params), getProjects(), getSystems(), getUsers(), getIterations(),
