@@ -38,6 +38,20 @@ public class DashboardService {
     private final IterationMapper iterationMapper;
     private final TaskProgressHistoryMapper taskProgressHistoryMapper;
 
+    /** 批量加载用户，返回 id -> User 映射 */
+    private java.util.Map<Long, User> batchLoadUsers(java.util.Set<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) return new java.util.HashMap<>();
+        return userMapper.selectBatchIds(userIds).stream()
+                .collect(java.util.stream.Collectors.toMap(User::getId, u -> u));
+    }
+
+    /** 批量加载需求，返回 id -> Requirement 映射 */
+    private java.util.Map<Long, Requirement> batchLoadRequirements(java.util.Set<Long> reqIds) {
+        if (reqIds == null || reqIds.isEmpty()) return new java.util.HashMap<>();
+        return requirementMapper.selectBatchIds(reqIds).stream()
+                .collect(java.util.stream.Collectors.toMap(Requirement::getId, r -> r));
+    }
+
     private JwtUserDetails currentUser() {
         return (JwtUserDetails) SecurityContextHolder.getContext()
                 .getAuthentication().getPrincipal();
@@ -217,7 +231,21 @@ public class DashboardService {
                         .or()
                         .inSql(Task::getId,
                                 "SELECT task_id FROM task_assignees WHERE user_id = " + userId));
-        for (Task t : allTasks) fillTaskUser(t);
+
+        // 批量加载所有任务关联的用户，避免 N+1
+        java.util.Set<Long> taskUserIds = new java.util.HashSet<>();
+        java.util.Set<Long> taskReqIds = new java.util.HashSet<>();
+        for (Task t : allTasks) {
+            if (t.getAssigneeId() != null) taskUserIds.add(t.getAssigneeId());
+            if (t.getTesterId() != null) taskUserIds.add(t.getTesterId());
+            if (t.getRequirementId() != null) taskReqIds.add(t.getRequirementId());
+        }
+        java.util.Map<Long, User> userMap = batchLoadUsers(taskUserIds);
+        java.util.Map<Long, Requirement> reqMap = batchLoadRequirements(taskReqIds);
+        for (Task t : allTasks) {
+            if (t.getAssigneeId() != null) t.setAssignee(userMap.get(t.getAssigneeId()));
+            if (t.getTesterId() != null) t.setTester(userMap.get(t.getTesterId()));
+        }
 
         List<Task> pendingTasks = allTasks.stream().filter(t -> TaskStatus.PENDING.equals(t.getStatus())).collect(Collectors.toList());
         List<Task> developingTasks = allTasks.stream().filter(t -> TaskStatus.DEVELOPING.equals(t.getStatus())).collect(Collectors.toList());
@@ -238,8 +266,19 @@ public class DashboardService {
                         .eq(Bug::getAssigneeId, userId)
                         .in(Bug::getStatus, BugStatus.UNFIXED)
                         .orderByDesc(Bug::getUpdatedAt));
+
+        // 批量加载 Bug 关联任务
+        java.util.Set<Long> bugTaskIds = new java.util.HashSet<>();
         for (Bug b : bugs) {
-            if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
+            if (b.getTaskId() != null) bugTaskIds.add(b.getTaskId());
+        }
+        java.util.Map<Long, Task> bugTaskMap = new java.util.HashMap<>();
+        if (!bugTaskIds.isEmpty()) {
+            bugTaskMap = taskMapper.selectBatchIds(bugTaskIds).stream()
+                    .collect(java.util.stream.Collectors.toMap(Task::getId, t -> t));
+        }
+        for (Bug b : bugs) {
+            if (b.getTaskId() != null) b.setTask(bugTaskMap.get(b.getTaskId()));
         }
 
         // 批量加载 Bug 相关人员
@@ -248,13 +287,7 @@ public class DashboardService {
             if (b.getCreatorId() != null) bugUserIds.add(b.getCreatorId());
             if (b.getAssigneeId() != null) bugUserIds.add(b.getAssigneeId());
         }
-        java.util.Map<Long, User> bugUserMap = new java.util.HashMap<>();
-        if (!bugUserIds.isEmpty()) {
-            for (Long uid : bugUserIds) {
-                User user = userMapper.selectById(uid);
-                if (user != null) bugUserMap.put(uid, user);
-            }
-        }
+        java.util.Map<Long, User> bugUserMap = batchLoadUsers(bugUserIds);
 
         // 缓存 Bug 关联任务的需求信息，用于前端按需求编号筛选
         java.util.Map<Long, Requirement> bugReqCache = new java.util.HashMap<>();
@@ -280,7 +313,18 @@ public class DashboardService {
 
         List<Task> allTestingTasks = taskMapper.selectList(
                 new LambdaQueryWrapper<Task>().in(Task::getStatus, TaskStatus.PENDING_TEST, TaskStatus.TESTING));
-        for (Task t : allTestingTasks) fillTaskUser(t);
+
+        // 批量加载任务关联用户
+        java.util.Set<Long> taskUserIds = new java.util.HashSet<>();
+        for (Task t : allTestingTasks) {
+            if (t.getAssigneeId() != null) taskUserIds.add(t.getAssigneeId());
+            if (t.getTesterId() != null) taskUserIds.add(t.getTesterId());
+        }
+        java.util.Map<Long, User> taskUserMap = batchLoadUsers(taskUserIds);
+        for (Task t : allTestingTasks) {
+            if (t.getAssigneeId() != null) t.setAssignee(taskUserMap.get(t.getAssigneeId()));
+            if (t.getTesterId() != null) t.setTester(taskUserMap.get(t.getTesterId()));
+        }
 
         // 批量加载待测试任务的 Bug 创建人
         List<Long> testingTaskIds = allTestingTasks.stream().map(Task::getId).collect(Collectors.toList());
@@ -291,7 +335,7 @@ public class DashboardService {
             java.util.Map<Long, java.util.Set<String>> creatorsSet = new java.util.HashMap<>();
             for (Bug b : taskBugs) {
                 if (b.getCreatorId() != null && b.getTaskId() != null) {
-                    User creator = userMapper.selectById(b.getCreatorId());
+                    User creator = taskUserMap.containsKey(b.getCreatorId()) ? taskUserMap.get(b.getCreatorId()) : userMapper.selectById(b.getCreatorId());
                     if (creator != null) {
                         creatorsSet.computeIfAbsent(b.getTaskId(), k -> new java.util.LinkedHashSet<>()).add(creator.getName());
                     }
@@ -308,8 +352,18 @@ public class DashboardService {
                         .eq(Bug::getCreatorId, userId)
                         .notIn(Bug::getStatus, BugStatus.UNFIXED, BugStatus.CLOSED)
                         .orderByDesc(Bug::getUpdatedAt));
+        // 批量加载待验证Bug关联任务
+        java.util.Set<Long> pendingVerifyBugTaskIds = new java.util.HashSet<>();
         for (Bug b : pendingVerifyBugs) {
-            if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
+            if (b.getTaskId() != null) pendingVerifyBugTaskIds.add(b.getTaskId());
+        }
+        java.util.Map<Long, Task> pendingVerifyBugTaskMap = new java.util.HashMap<>();
+        if (!pendingVerifyBugTaskIds.isEmpty()) {
+            pendingVerifyBugTaskMap = taskMapper.selectBatchIds(pendingVerifyBugTaskIds).stream()
+                    .collect(java.util.stream.Collectors.toMap(Task::getId, t -> t));
+        }
+        for (Bug b : pendingVerifyBugs) {
+            if (b.getTaskId() != null) b.setTask(pendingVerifyBugTaskMap.get(b.getTaskId()));
         }
 
         // 我创建的未修复Bug
@@ -318,8 +372,18 @@ public class DashboardService {
                         .eq(Bug::getCreatorId, userId)
                         .eq(Bug::getStatus, BugStatus.UNFIXED)
                         .orderByDesc(Bug::getUpdatedAt));
+        // 批量加载未修复Bug关联任务
+        java.util.Set<Long> unfixedBugTaskIds = new java.util.HashSet<>();
         for (Bug b : unfixedBugs) {
-            if (b.getTaskId() != null) b.setTask(taskMapper.selectById(b.getTaskId()));
+            if (b.getTaskId() != null) unfixedBugTaskIds.add(b.getTaskId());
+        }
+        java.util.Map<Long, Task> unfixedBugTaskMap = new java.util.HashMap<>();
+        if (!unfixedBugTaskIds.isEmpty()) {
+            unfixedBugTaskMap = taskMapper.selectBatchIds(unfixedBugTaskIds).stream()
+                    .collect(java.util.stream.Collectors.toMap(Task::getId, t -> t));
+        }
+        for (Bug b : unfixedBugs) {
+            if (b.getTaskId() != null) b.setTask(unfixedBugTaskMap.get(b.getTaskId()));
         }
 
         // 批量加载 Bug 相关人员，避免 N+1
@@ -458,7 +522,8 @@ public class DashboardService {
     }
 
     private Map<String, Object> taskToMap(Task t) {
-        fillTaskUser(t);
+        if (t.getAssignee() == null && t.getAssigneeId() != null) t.setAssignee(userMapper.selectById(t.getAssigneeId()));
+        if (t.getTester() == null && t.getTesterId() != null) t.setTester(userMapper.selectById(t.getTesterId()));
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", t.getId());
         m.put("title", t.getTitle());
