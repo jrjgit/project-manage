@@ -8,7 +8,7 @@
               v-for="t in typeFilters"
               :key="t.value"
               :class="['filter-btn', { active: typeFilter === t.value }]"
-              @click="typeFilter = t.value; loadMessages()"
+              @click="typeFilter = t.value; page = 1; loadMessages()"
             >{{ t.label }}</button>
           </div>
           <div class="filter-tabs">
@@ -16,7 +16,7 @@
               v-for="s in statusFilters"
               :key="s.value"
               :class="['filter-btn', { active: statusFilter === s.value }]"
-              @click="statusFilter = s.value; loadMessages()"
+              @click="statusFilter = s.value; page = 1; loadMessages()"
             >{{ s.label }}</button>
           </div>
           <button class="mark-all-btn" @click="handleMarkAllRead" v-if="hasUnread">
@@ -33,16 +33,33 @@
         <div
           v-for="msg in messages"
           :key="msg.id"
-          :class="['msg-item', { unread: !msg.is_read }]"
+          :class="['msg-item', { unread: !msg.is_read, expanded: expandedIds.has(msg.id) }]"
+          @click="handleMsgClick(msg)"
         >
           <div class="msg-indicator" v-if="!msg.is_read"></div>
           <div class="msg-body">
-            <div class="msg-title">{{ msg.title }}</div>
-            <div class="msg-content">{{ msg.content }}</div>
+            <div class="msg-title" :class="{ 'title-expanded': expandedIds.has(msg.id) }">{{ msg.title }}</div>
+            <div
+              class="msg-content"
+              :class="{ 'content-expanded': expandedIds.has(msg.id) }"
+            >{{ msg.content }}</div>
             <div class="msg-meta">
               <span :class="['msg-type', msg.type]">{{ typeLabel(msg.type) }}</span>
               <span class="msg-time">{{ formatTime(msg.created_at) }}</span>
+              <span
+                class="msg-detail-link"
+                v-if="msg.related_id && expandedIds.has(msg.id)"
+                @click.stop="navigateToDetail(msg)"
+              >查看详情 →</span>
             </div>
+          </div>
+          <div class="msg-expand-icon" v-if="msg.content && msg.content.length > 80">
+            <svg v-if="!expandedIds.has(msg.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="expand-icon">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="expand-icon">
+              <polyline points="18 15 12 9 6 15"/>
+            </svg>
           </div>
         </div>
       </div>
@@ -54,6 +71,11 @@
           <line x1="9" y1="14" x2="15" y2="14"/>
         </svg>
         <p>暂无消息</p>
+      </div>
+
+      <div class="loading-state" v-if="loading">
+        <div class="loading-spinner"></div>
+        <p>加载中...</p>
       </div>
 
       <div class="pagination-bar" v-if="total > size">
@@ -86,6 +108,7 @@ const total = ref(0)
 const loading = ref(false)
 const typeFilter = ref('all')
 const statusFilter = ref('all')
+const expandedIds = ref(new Set())
 
 const typeFilters = [
   { label: '全部', value: 'all' },
@@ -101,7 +124,7 @@ const statusFilters = [
 ]
 
 const pageCount = computed(() => Math.ceil(total.value / size.value))
-const hasUnread = computed(() => messages.value.some(m => !m.isRead))
+const hasUnread = computed(() => messages.value.some(m => !m.is_read))
 
 function typeLabel(type) {
   const map = { task: '任务', bug: 'Bug', system: '系统' }
@@ -130,15 +153,20 @@ async function loadMessages() {
   try {
     const isRead = statusFilter.value === 'all' ? null : statusFilter.value === 'read'
     const res = await fetchMessages(page.value, size.value, typeFilter.value, isRead)
-    messages.value = res.records
-    total.value = res.total
+    messages.value = res.records || []
+    total.value = res.total || 0
+    expandedIds.value = new Set()
+  } catch (e) {
+    console.error('[messages] load error', e)
+    messages.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
 }
 
 function navigateToDetail(msg) {
-  const id = msg.related_id || msg.relatedId || msg.id
+  const id = msg.related_id
   if (!id || !msg.type) return
   const routes = { task: '/developer?taskId=', bug: '/developer?bugId=', requirement: '/requirements/' }
   const path = routes[msg.type]
@@ -148,21 +176,38 @@ function navigateToDetail(msg) {
   }
 }
 
-async function handleMarkRead(msg) {
-  if (!msg.is_read) {
-    await markRead(msg.id)
-    msg.is_read = true
-    messageStore.refreshUnreadCount()
+async function handleMsgClick(msg) {
+  // 切换展开/折叠
+  if (expandedIds.value.has(msg.id)) {
+    expandedIds.value.delete(msg.id)
+  } else {
+    expandedIds.value.add(msg.id)
   }
-  navigateToDetail(msg)
+  // 触发响应式更新
+  expandedIds.value = new Set(expandedIds.value)
+
+  // 标记已读
+  if (!msg.is_read) {
+    try {
+      await markRead(msg.id)
+      msg.is_read = true
+      messageStore.refreshUnreadCount()
+    } catch (e) {
+      console.error('[messages] markRead error', e)
+    }
+  }
 }
 
 async function handleMarkAllRead() {
-  await markAllRead()
-  for (const msg of messages.value) {
-    msg.is_read = true
+  try {
+    await markAllRead()
+    for (const msg of messages.value) {
+      msg.is_read = true
+    }
+    messageStore.refreshUnreadCount()
+  } catch (e) {
+    console.error('[messages] markAllRead error', e)
   }
-  messageStore.refreshUnreadCount()
 }
 
 function handlePageChange(p) {
@@ -264,7 +309,7 @@ onMounted(loadMessages)
   padding: 16px 20px;
   background: white;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s;
   position: relative;
   min-width: 0;
 }
@@ -283,6 +328,14 @@ onMounted(loadMessages)
 
 .msg-item.unread:hover {
   background: #e8eeff;
+}
+
+.msg-item.expanded {
+  background: #fafbff;
+}
+
+.msg-item.expanded:hover {
+  background: #f5f7ff;
 }
 
 .msg-indicator {
@@ -310,6 +363,13 @@ onMounted(loadMessages)
   text-overflow: ellipsis;
 }
 
+.msg-title.title-expanded {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: break-all;
+}
+
 .msg-item.unread .msg-title {
   color: #1e293b;
 }
@@ -317,18 +377,28 @@ onMounted(loadMessages)
 .msg-content {
   font-size: 13px;
   color: #64748b;
-  line-height: 1.5;
+  line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin-bottom: 8px;
+  word-break: break-all;
+}
+
+.msg-content.content-expanded {
+  -webkit-line-clamp: unset;
+  display: block;
+  overflow: visible;
+  white-space: pre-wrap;
+  margin-bottom: 12px;
 }
 
 .msg-meta {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .msg-type {
@@ -359,6 +429,29 @@ onMounted(loadMessages)
   color: #94a3b8;
 }
 
+.msg-detail-link {
+  font-size: 12px;
+  color: #6366f1;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.msg-detail-link:hover {
+  text-decoration: underline;
+}
+
+.msg-expand-icon {
+  flex-shrink: 0;
+  margin-top: 4px;
+  margin-left: 8px;
+  color: #94a3b8;
+}
+
+.expand-icon {
+  width: 16px;
+  height: 16px;
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;
@@ -374,6 +467,31 @@ onMounted(loadMessages)
 
 .empty-state p {
   font-size: 14px;
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-state p {
+  font-size: 13px;
 }
 
 /* Pagination */
