@@ -71,7 +71,7 @@
             <span v-else class="info-value edit-hint">{{ priorityMeta[req.priority]?.label || req.priority || '点击选择' }}</span>
           </div>
           <div class="info-cell editable-cell" @click="startEdit('planned_completion_time')">
-            <span class="info-label">计划完成时间</span>
+            <span class="info-label">需求截止日期</span>
             <template v-if="editingField === 'planned_completion_time'">
               <n-date-picker v-model:value="localPlannedTime" type="date" size="small" clearable
                 @blur="savePlannedTime(); editingField = null"
@@ -133,6 +133,8 @@
             <div class="task-table-header">
               <span class="col-person">人员</span>
               <span class="col-tester">测试负责人</span>
+              <span class="col-dev-deadline">开发截止日期</span>
+              <span class="col-test-deadline">测试截止日期</span>
               <span class="col-terminal">终端</span>
               <span class="col-title">任务描述</span>
               <span class="col-status">任务状态</span>
@@ -142,13 +144,16 @@
             </div>
             <div v-for="t in tasks" :key="t.id" class="task-table-row">
               <span class="col-person">{{ t.assignee?.name || userNameMap[t.assignee_id] || '-' }}</span>
-              <span class="col-tester">{{ t.tester?.name || userNameMap[t.tester_id] || '-' }}</span>
+              <span class="col-tester">{{ testersDisplay(t) }}</span>
+              <span class="col-dev-deadline">{{ formatDate2(t.deadline) || '-' }}</span>
+              <span class="col-test-deadline">{{ formatDate2(t.test_deadline) || '-' }}</span>
               <span class="col-terminal">{{ skillsMap[t.terminal] || t.terminal || '-' }}</span>
               <span class="col-title" :title="t.title">{{ t.title }}</span>
               <span class="col-status"><n-tag size="tiny" :type="taskStatusMeta[t.status]?.tone || 'default'">{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag></span>
               <span class="col-overdue"><span v-if="calcOverdueDays(t.deadline) > 0" style="color:#d03050">{{ calcOverdueDays(t.deadline) }}天</span><span v-else style="color:#94a3b8">-</span></span>
               <span class="col-progress"><span v-if="t.progress != null" :style="{fontSize:'14px',fontWeight:'700',color: t.progress >= 100 ? '#18a058' : '#6366f1'}">{{ t.progress }}%</span><span v-else style="color:#94a3b8">-</span></span>
               <span class="col-actions">
+                <n-button v-if="(authStore.isPM || authStore.isDevLead) && t.progress >= 100 && !t.tester_id" text size="tiny" type="primary" @click="openAssignTester(t)">分配测试负责人</n-button>
                 <template v-if="transferringTaskId === t.id">
                   <n-select v-model:value="t.assignee_id" :options="devOptions" size="tiny" style="width:110px" filterable />
                   <n-button size="tiny" type="primary" @click="confirmTransfer(t)">确定</n-button>
@@ -197,6 +202,20 @@
           <n-space justify="end">
             <n-button @click="showTaskRelease = false">取消</n-button>
             <n-button type="primary" :loading="releasing" @click="confirmTaskRelease">确定</n-button>
+          </n-space>
+        </template>
+      </n-modal>
+
+      <!-- 分配测试负责人 -->
+      <n-modal v-model:show="showAssignTester" preset="card" style="width: min(92vw, 480px)" title="分配测试负责人" :mask-closable="false">
+        <div v-if="assigningTask" style="margin-bottom:12px;font-size:13px;color:#64748b">
+          任务：{{ assigningTask.title }}
+        </div>
+        <n-select v-model:value="selectedTesterIds" :options="testerOptions" placeholder="选择测试人员（可多选）" filterable multiple />
+        <template #footer>
+          <n-space justify="end">
+            <n-button @click="showAssignTester = false">取消</n-button>
+            <n-button type="primary" :loading="assigningTester" @click="confirmAssignTester">确定</n-button>
           </n-space>
         </template>
       </n-modal>
@@ -365,10 +384,18 @@
                   <span class="preview-field-label">测试绩效</span>
                   <n-input v-model:value="item.test_performance" placeholder="测试绩效" size="small" />
                 </div>
+                <div></div>
+              </div>
+              <div class="preview-row-3">
                 <div class="preview-field-row">
-                  <span class="preview-field-label">计划完成时间</span>
-                  <n-date-picker v-model:value="item.deadline" type="date" placeholder="计划完成时间" size="small" clearable style="width:100%" />
+                  <span class="preview-field-label">开发截止时间</span>
+                  <n-date-picker v-model:value="item.deadline" type="date" placeholder="开发截止时间" size="small" clearable style="width:100%" />
                 </div>
+                <div class="preview-field-row">
+                  <span class="preview-field-label">测试截止时间</span>
+                  <n-date-picker v-model:value="item.test_deadline" type="date" placeholder="测试截止时间" size="small" clearable style="width:100%" />
+                </div>
+                <div></div>
               </div>
               <div class="preview-field-row">
                 <span class="preview-field-label">技术经理备注</span>
@@ -394,7 +421,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getUsers, getUserWorkload } from '@/api/users'
-import { getTasks, createTask, updateTask, deleteTask, getTaskProgressHistory } from '@/api/tasks'
+import { getTasks, createTask, updateTask, deleteTask, getTaskProgressHistory, getTaskTesters, addTaskTesters } from '@/api/tasks'
 import {
   getRequirement,
   updateRequirement,
@@ -470,6 +497,9 @@ const devOptions = computed(() => {
     return false
   }).map(u => ({ label: u.name, value: u.id }))
 })
+const testerOptions = computed(() =>
+  users.value.filter(u => u.role === 'tester').map(u => ({ label: u.name, value: u.id }))
+)
 const projectDevOptions = computed(() => {
   const devSkillKeys = Object.keys(skillsMap.value)
   return users.value.filter(u => {
@@ -582,6 +612,7 @@ async function openTaskDispatch() {
       performance: t.performance || '',
       test_performance: t.test_performance || '',
       deadline: t.deadline ? new Date(t.deadline).getTime() : null,
+      test_deadline: t.test_deadline ? new Date(t.test_deadline).getTime() : null,
       notes: t.description || ''
     })
 
@@ -604,6 +635,10 @@ const showTaskRelease = ref(false)
 const releasingTask = ref(null)
 const selectedIterationId = ref(null)
 const releasing = ref(false)
+const showAssignTester = ref(false)
+const assigningTask = ref(null)
+const selectedTesterIds = ref([])
+const assigningTester = ref(false)
 const documentLoading = ref(false)
 
 const statusMeta = computed(() => requirementStatusMeta[req.value.status] || null)
@@ -889,6 +924,7 @@ function rebuildTaskPreview() {
           performance: '',
           test_performance: '',
           deadline: null,
+          test_deadline: null,
           notes: ''
         })
       }
@@ -939,6 +975,7 @@ function appendTask(uid, skill) {
     performance: '',
     test_performance: '',
     deadline: null,
+    test_deadline: null,
     notes: ''
   }
 
@@ -986,7 +1023,8 @@ async function handleCreateTasks() {
         terminal: item.skill,
         performance: item.performance || undefined,
         test_performance: item.test_performance || undefined,
-        deadline: item.deadline ? new Date(item.deadline).toISOString() : undefined
+        deadline: item.deadline ? new Date(item.deadline).toISOString() : undefined,
+        test_deadline: item.test_deadline ? new Date(item.test_deadline).toISOString() : undefined
       }
       if (item.id) {
         await updateTask(item.id, payload)
@@ -1050,6 +1088,39 @@ async function confirmTransfer(t) {
     transferringTaskId.value = null
     await loadTasks()
   } catch (e) { console.error(e) }
+}
+
+async function openAssignTester(t) {
+  assigningTask.value = t
+  showAssignTester.value = true
+  // 加载已指派的测试人员
+  try {
+    const testers = await getTaskTesters(t.id) || []
+    selectedTesterIds.value = testers.map(tt => tt.user_id)
+  } catch (e) {
+    selectedTesterIds.value = t.tester_id ? [t.tester_id] : []
+  }
+}
+
+async function confirmAssignTester() {
+  if (!selectedTesterIds.value || selectedTesterIds.value.length === 0) { window.$message?.warning('请选择测试人员'); return }
+  if (!assigningTask.value) return
+  assigningTester.value = true
+  try {
+    await addTaskTesters(assigningTask.value.id, selectedTesterIds.value)
+    window.$message?.success('已分配测试负责人')
+    showAssignTester.value = false
+    assigningTask.value = null
+    await loadTasks()
+  } catch (e) { console.error(e) }
+  assigningTester.value = false
+}
+
+// 表格"测试负责人"列展示：优先用多指派列表（task.testers），否则回落到单 tester_id
+function testersDisplay(t) {
+  if (t.testers && t.testers.length > 0) return t.testers.map(u => u.name).join('、')
+  if (t.tester?.name) return t.tester.name
+  return userNameMap[t.tester_id] || '-'
 }
 
 async function handleDeleteTask(t) {
@@ -1506,7 +1577,7 @@ onMounted(() => {
 /* Task Table */
 .task-table-header {
   display: grid;
-  grid-template-columns: 60px 90px 80px 1fr 90px 80px 100px 1fr;
+  grid-template-columns: 60px 90px 100px 100px 80px 1fr 90px 80px 100px 1fr;
   gap: 8px;
   padding: 8px 12px;
   font-size: 11px;
@@ -1519,7 +1590,7 @@ onMounted(() => {
 }
 .task-table-row {
   display: grid;
-  grid-template-columns: 60px 90px 80px 1fr 90px 80px 100px 1fr;
+  grid-template-columns: 60px 90px 100px 100px 80px 1fr 90px 80px 100px 1fr;
   gap: 8px;
   align-items: center;
   padding: 10px 12px;

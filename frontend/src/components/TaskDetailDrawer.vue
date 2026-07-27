@@ -14,7 +14,7 @@
             <div class="task-overview-row">
               <div class="overview-item">
                 <span class="overview-label">需求编号</span>
-                <span class="overview-value">{{ requirementData?.number || task.requirement_name || '-' }}</span>
+                <span class="overview-value req-link" @click="goToRequirement">{{ requirementData?.number || task.requirement_name || '-' }}</span>
               </div>
               <div class="overview-item">
                 <span class="overview-label">所属系统</span>
@@ -31,8 +31,12 @@
             </div>
             <div class="deadline-row">
               <span class="deadline-item">
-                <span class="deadline-label">截止日期</span>
+                <span class="deadline-label">需求截止日期</span>
                 <span class="deadline-value">{{ formatDate(task.deadline) || '-' }}</span>
+              </span>
+              <span v-if="task.test_deadline" class="deadline-item">
+                <span class="deadline-label">测试截止日期</span>
+                <span class="deadline-value">{{ formatDate(task.test_deadline) || '-' }}</span>
               </span>
               <span v-if="overdueDays > 0" class="deadline-overdue">延期天数：{{ overdueDays }} 天</span>
             </div>
@@ -87,11 +91,12 @@
               <div class="info-item"><span>创建人</span><strong>{{ task.creator?.name || '-' }}</strong></div>
               <div class="info-item"><span>开发组长</span><strong>{{ task.dev_lead?.name || '-' }}</strong></div>
               <div class="info-item"><span>开发人员</span><strong>{{ task.assignee?.name || '-' }}</strong></div>
-              <div class="info-item"><span>测试人员</span><strong>{{ task.tester?.name || '-' }}</strong></div>
+              <div class="info-item"><span>测试人员</span><strong>{{ taskTestersText || task.tester?.name || '-' }}</strong></div>
                <div class="info-item"><span>终端</span><strong>{{ skillsMap[task.terminal] || task.terminal || '-' }}</strong></div>
               <div class="info-item"><span>所属系统</span><strong>{{ requirementData?.system || '-' }}</strong></div>
               <div class="info-item"><span>绩效工时</span><strong>{{ task.performance || '-' }}</strong></div>
-              <div class="info-item"><span>截止日期</span><strong>{{ formatDate(task.deadline) || '-' }}</strong></div>
+              <div class="info-item"><span>需求截止日期</span><strong>{{ formatDate(task.deadline) || '-' }}</strong></div>
+              <div v-if="task.test_deadline" class="info-item"><span>测试截止日期</span><strong>{{ formatDate(task.test_deadline) || '-' }}</strong></div>
             </div>
           </div>
           <div style="display:flex;flex-direction:column;gap:16px">
@@ -190,6 +195,7 @@
 
 <script setup>
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getTask, getTaskHistory, changeTaskStatus, updateTask, acceptTask } from '@/api/tasks'
 import { createBug, uploadBugImage, getBugs } from '@/api/bugs'
@@ -204,6 +210,7 @@ const props = defineProps({ taskId: Number, readonly: Boolean, testerMode: { typ
 const emit = defineEmits(['status-change', 'refresh'])
 
 const authStore = useAuthStore()
+const router = useRouter()
 
 const windowWidth = ref(window.innerWidth)
 function onResize() { windowWidth.value = window.innerWidth }
@@ -248,6 +255,11 @@ const overdueDays = computed(() => {
   return diff > 0 ? diff : 0
 })
 
+const taskTestersText = computed(() => {
+  if (!task.value?.testers || task.value.testers.length === 0) return ''
+  return task.value.testers.map(t => t.name).join('、')
+})
+
 const devLeadOptions = computed(() => {
   const devSkillKeys = Object.keys(skillsMap.value)
   return users.value.filter(u => {
@@ -268,6 +280,14 @@ const effectiveRole = computed(() => {
 })
 
 const canEditDevLead = computed(() => effectiveRole.value === 'pm' && ['pending', 'developing'].includes(task.value?.status))
+
+function goToRequirement() {
+  const reqId = task.value?.requirement_id
+  if (reqId) {
+    router.push(`/requirements/${reqId}`)
+    show.value = false
+  }
+}
 
 const nextActionText = computed(() => ({
   pending: '等待分配开发人员进行开发。',
@@ -527,6 +547,8 @@ function formatDate(value) {
 .overview-item { display: flex; flex-direction: column; gap: 2px; }
 .overview-label { font-size: 11px; color: #94a3b8; }
 .overview-value { font-size: 14px; font-weight: 700; color: #0f172a; }
+.req-link { cursor: pointer; color: #6366f1; transition: color .12s; }
+.req-link:hover { color: #4f46e5; text-decoration: underline; }
 .deadline-row { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
 .deadline-item { display: flex; align-items: center; gap: 6px; }
 .deadline-label { font-size: 12px; color: #94a3b8; }

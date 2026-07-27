@@ -135,8 +135,8 @@
             </n-form-item>
           </n-gi>
         </n-grid>
-        <n-form-item label="计划完成时间">
-          <n-date-picker v-model:value="form.planned_completion_time" type="date" placeholder="选择计划完成时间" clearable style="width:100%" />
+        <n-form-item label="需求截止日期">
+          <n-date-picker v-model:value="form.planned_completion_time" type="date" placeholder="选择需求截止日期" clearable style="width:100%" />
         </n-form-item>
       </n-form>
       <template #footer>

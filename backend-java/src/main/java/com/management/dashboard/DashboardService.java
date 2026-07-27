@@ -311,8 +311,15 @@ public class DashboardService {
         JwtUserDetails u = currentUser();
         Long userId = u.getUserId();
 
+        // 需求5-1：测试工作台只展示"分配给自己"的测试任务
+        // 命中条件：tasks.tester_id = 当前用户，或在 task_testers 多测试指派表中有当前用户，
+        // 或当前用户在该任务上提过Bug且任务未关闭
         List<Task> allTestingTasks = taskMapper.selectList(
-                new LambdaQueryWrapper<Task>().in(Task::getStatus, TaskStatus.PENDING_TEST, TaskStatus.TESTING));
+                new LambdaQueryWrapper<Task>()
+                        .ne(Task::getStatus, TaskStatus.CLOSED)
+                        .and(w -> w.eq(Task::getTesterId, userId)
+                                .or().exists("SELECT 1 FROM task_testers tt WHERE tt.task_id = tasks.id AND tt.user_id = {0}", userId)
+                                .or().exists("SELECT 1 FROM bugs b WHERE b.task_id = tasks.id AND b.creator_id = {0}", userId)));
 
         // 批量加载任务关联用户
         java.util.Set<Long> taskUserIds = new java.util.HashSet<>();
@@ -507,6 +514,7 @@ public class DashboardService {
                 if (r != null) {
                     m.put("reqNumber", r.getNumber() != null ? r.getNumber() : r.getRequirementId());
                     m.put("reqId", r.getRequirementId());
+                    m.put("requirement_id", r.getId());
                     m.put("system", r.getSystem());
                 }
             }
@@ -515,6 +523,7 @@ public class DashboardService {
             if (r != null) {
                 m.put("reqNumber", r.getNumber() != null ? r.getNumber() : r.getRequirementId());
                 m.put("reqId", r.getRequirementId());
+                m.put("requirement_id", r.getId());
                 m.put("system", r.getSystem());
             }
         }
@@ -532,6 +541,7 @@ public class DashboardService {
         m.put("tester", t.getTester() != null ? t.getTester().getName() : "-");
         m.put("testerId", t.getTesterId());
         m.put("deadline", t.getDeadline() != null ? t.getDeadline().toString() : null);
+        m.put("test_deadline", t.getTestDeadline() != null ? t.getTestDeadline().toString() : null);
         m.put("progress", t.getProgress());
         m.put("terminal", t.getTerminal());
         if (t.getRequirementId() != null) {
@@ -539,6 +549,7 @@ public class DashboardService {
             if (r != null) {
                 m.put("reqNumber", r.getNumber() != null ? r.getNumber() : r.getRequirementId());
                 m.put("reqId", r.getRequirementId());
+                m.put("requirement_id", r.getId());
                 m.put("system", r.getSystem());
             }
         }

@@ -59,13 +59,13 @@ const routes = [
     path: '/requirements',
     name: 'Requirements',
     component: () => import('@/views/Requirements.vue'),
-    meta: { requiresAuth: true, roles: ['pm', 'dev_lead'] }
+    meta: { requiresAuth: true, roles: ['pm', 'dev_lead', 'dev'] }
   },
   {
     path: '/requirements/:id',
     name: 'RequirementDetail',
     component: () => import('@/views/RequirementDetail.vue'),
-    meta: { requiresAuth: true, roles: ['pm', 'dev_lead'] }
+    meta: { requiresAuth: true, roles: ['pm', 'dev_lead', 'dev'] }
   },
   {
     path: '/iterations',
