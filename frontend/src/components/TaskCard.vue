@@ -8,7 +8,9 @@
       </div>
       <div class="card-title">{{ task.title }}</div>
       <div class="card-info-row">
-        <span v-if="task.requirement_name" class="card-info-item">需求: {{ task.requirement_name }}</span>
+        <span v-if="task.requirement_id || task.reqId || task.requirement_name"
+              class="card-info-item card-info-link"
+              @click.stop="onRequirementClick">需求: {{ task.requirement_name || task.reqNumber }}</span>
         <span v-if="overdueDays > 0" class="card-info-item overdue">逾期 {{ overdueDays }} 天</span>
       </div>
       <div class="card-meta-row">
@@ -33,6 +35,12 @@ import { NTag } from 'naive-ui'
 import { priorityMeta, taskStatusMeta } from '@/constants/statusMeta'
 
 const props = defineProps({ task: Object, skillsMap: { type: Object, default: () => ({}) } })
+const emit = defineEmits(['requirement-click'])
+
+function onRequirementClick() {
+  const reqId = props.task.requirement_id || props.task.reqId
+  if (reqId) emit('requirement-click', reqId)
+}
 
 const priorityMetaItem = computed(() => priorityMeta[props.task.priority] || { label: props.task.priority, tone: 'default', color: '#94a3b8' })
 const statusMetaItem = computed(() => taskStatusMeta[props.task.status] || { label: props.task.status, tone: 'default', color: '#94a3b8' })
@@ -64,6 +72,8 @@ function formatDate(value) {
 .card-info-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
 .card-info-item { font-size: 11px; color: #64748b; background: #f8fafc; padding: 2px 8px; border-radius: 8px; }
 .card-info-item.overdue { color: #d03050; background: #fef2f2; }
+.card-info-link { cursor: pointer; transition: background .12s, color .12s; }
+.card-info-link:hover { background: #e0e7ff; color: #6366f1; }
 .card-meta-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .status-pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; color: var(--status-color); background: color-mix(in srgb, var(--status-color) 12%, white); }
 .project-name { font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

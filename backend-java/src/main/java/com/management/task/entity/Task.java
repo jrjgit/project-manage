@@ -54,14 +54,20 @@ public class Task {
     /** 测试人员关联对象（非数据库字段） */
     @TableField(exist = false)
     private User tester;
+    /** 测试人员列表（非数据库字段，多测试指派） */
+    @TableField(exist = false)
+    private List<User> testers;
     /** 所有指派人列表（非数据库字段） */
     @TableField(exist = false)
     private List<TaskAssignee> assignees;
     /** 驳回原因 */
     private String rejectReason;
-    /** 截止日期 */
+    /** 截止日期（开发截止时间 / 需求截止日期） */
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime deadline;
+    /** 测试截止时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime testDeadline;
     /** 关联需求ID */
     private Long requirementId;
     /** 需求名称（非数据库字段，查询填充） */

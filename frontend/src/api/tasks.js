@@ -11,3 +11,6 @@ export const getTaskProgressHistory = (id) => request.get(`/tasks/${id}/progress
 export const addTaskAssignee = (id, data) => request.post(`/tasks/${id}/assignees`, data)
 export const removeTaskAssignee = (id, userId) => request.delete(`/tasks/${id}/assignees/${userId}`)
 export const deleteTask = (id) => request.delete(`/tasks/${id}`)
+export const addTaskTesters = (id, userIds) => request.post(`/tasks/${id}/testers`, { user_ids: userIds })
+export const removeTaskTester = (id, userId) => request.delete(`/tasks/${id}/testers/${userId}`)
+export const getTaskTesters = (id) => request.get(`/tasks/${id}/testers`)

@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 public class TaskService {
     private final TaskMapper taskMapper;
     private final TaskAssigneeMapper taskAssigneeMapper;
+    private final TaskTesterMapper taskTesterMapper;
     private final TaskStatusHistoryMapper historyMapper;
     private final TaskProgressHistoryMapper progressHistoryMapper;
     private final BugMapper bugMapper;
@@ -231,6 +232,17 @@ public class TaskService {
         if (t.getDevLeadId() != null) t.setDevLead(userMapper.selectById(t.getDevLeadId()));
 
         if (t.getTesterId() != null) t.setTester(userMapper.selectById(t.getTesterId()));
+        // 多测试人员
+        List<TaskTester> taskTesters = taskTesterMapper.selectList(
+                new LambdaQueryWrapper<TaskTester>().eq(TaskTester::getTaskId, t.getId()));
+        if (!taskTesters.isEmpty()) {
+            List<User> testerUsers = new ArrayList<>();
+            for (TaskTester tt : taskTesters) {
+                User tu = userMapper.selectById(tt.getUserId());
+                if (tu != null) testerUsers.add(tu);
+            }
+            t.setTesters(testerUsers);
+        }
         if (t.getRequirementId() != null) {
             Requirement req = requirementMapper.selectById(t.getRequirementId());
             if (req != null) { t.setRequirementName(req.getNumber()); t.setRequirementDesc(req.getDescription()); }
@@ -245,21 +257,24 @@ public class TaskService {
     }
 
     /**
+     * 解析 ISO 日期或日期时间字符串为 LocalDateTime，空值返回 null
+     */
+    private static LocalDateTime parseDateTime(String value) {
+        if (value == null || value.isBlank()) return null;
+        String v = value.trim();
+        if (v.contains("T")) return java.time.OffsetDateTime.parse(v).toLocalDateTime();
+        return LocalDate.parse(v, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
+    }
+
+    /**
      * 创建任务，校验关联实体存在性，初始化指派人列表，发送通知
      */
     @Transactional
     public Task createTask(CreateTaskRequest req) {
         Long userId = currentUser().getUserId();
 
-        LocalDateTime deadline = null;
-        if (req.getDeadline() != null && !req.getDeadline().isBlank()) {
-            String d = req.getDeadline().trim();
-            if (d.contains("T")) {
-                deadline = java.time.OffsetDateTime.parse(d).toLocalDateTime();
-            } else {
-                deadline = LocalDate.parse(d, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
-            }
-        }
+        LocalDateTime deadline = parseDateTime(req.getDeadline());
+        LocalDateTime testDeadline = parseDateTime(req.getTestDeadline());
 
         if (req.getProjectId() != null && projectMapper.selectById(req.getProjectId()) == null)
             throw new BusinessException(400, "项目不存在");
@@ -280,6 +295,7 @@ public class TaskService {
         task.setCreatorId(userId);
         task.setDevLeadId(req.getDevLeadId());
         task.setDeadline(deadline);
+        task.setTestDeadline(testDeadline);
         if (req.getPerformance() != null) task.setPerformance(req.getPerformance());
         if (req.getAssigneeId() != null) task.setAssigneeId(req.getAssigneeId());
         if (req.getTesterId() != null) task.setTesterId(req.getTesterId());
@@ -388,14 +404,8 @@ public class TaskService {
                 throw new BusinessException(400, "关联需求不存在");
             task.setRequirementId(req.getRequirementId());
         }
-        if (req.getDeadline() != null && !req.getDeadline().isBlank()) {
-            String d = req.getDeadline().trim();
-            if (d.contains("T")) {
-                task.setDeadline(java.time.OffsetDateTime.parse(d).toLocalDateTime());
-            } else {
-                task.setDeadline(LocalDate.parse(d, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay());
-            }
-        }
+        if (req.getDeadline() != null) task.setDeadline(parseDateTime(req.getDeadline()));
+        if (req.getTestDeadline() != null) task.setTestDeadline(parseDateTime(req.getTestDeadline()));
         if (req.getPerformance() != null) task.setPerformance(req.getPerformance());
         if (req.getTestPerformance() != null) task.setTestPerformance(req.getTestPerformance());
         if (req.getTerminal() != null) task.setTerminal(req.getTerminal());
@@ -661,5 +671,55 @@ public class TaskService {
     public void removeAssignee(Long taskId, Long userId) {
         taskAssigneeMapper.delete(new LambdaUpdateWrapper<TaskAssignee>()
                 .eq(TaskAssignee::getTaskId, taskId).eq(TaskAssignee::getUserId, userId));
+    }
+
+    /** 批量指派测试人员 */
+    @Transactional
+    public void addTesters(Long taskId, AddTaskTestersRequest req) {
+        Task task = taskMapper.selectById(taskId);
+        if (task == null) throw new BusinessException(404, "任务不存在");
+        for (Long uid : req.getUserIds()) {
+            if (userMapper.selectById(uid) == null)
+                throw new BusinessException(400, "测试人员不存在: " + uid);
+            TaskTester existing = taskTesterMapper.selectOne(new LambdaUpdateWrapper<TaskTester>()
+                    .eq(TaskTester::getTaskId, taskId).eq(TaskTester::getUserId, uid));
+            if (existing == null) {
+                TaskTester tt = new TaskTester();
+                tt.setTaskId(taskId);
+                tt.setUserId(uid);
+                taskTesterMapper.insert(tt);
+            }
+        }
+        // 向后兼容：若任务尚未设置主测试人，取第一个作为 tester_id
+        if (task.getTesterId() == null && !req.getUserIds().isEmpty()) {
+            task.setTesterId(req.getUserIds().get(0));
+            taskMapper.updateById(task);
+        }
+        // 通知新测试人员
+        JwtUserDetails op = currentUser();
+        for (Long uid : req.getUserIds()) {
+            User t = userMapper.selectById(uid);
+            if (t != null) {
+                notificationService.emitGenericEvent(
+                        "任务【" + task.getTitle() + "】您被指派为测试人员，操作人：" + op.getName(),
+                        op.getName(), List.of(t));
+            }
+        }
+    }
+
+    /** 移除测试人员 */
+    public void removeTester(Long taskId, Long userId) {
+        taskTesterMapper.delete(new LambdaUpdateWrapper<TaskTester>()
+                .eq(TaskTester::getTaskId, taskId).eq(TaskTester::getUserId, userId));
+    }
+
+    /** 获取任务测试人员列表 */
+    public List<TaskTester> getTesters(Long taskId) {
+        List<TaskTester> list = taskTesterMapper.selectList(
+                new LambdaQueryWrapper<TaskTester>().eq(TaskTester::getTaskId, taskId));
+        for (TaskTester tt : list) {
+            tt.setUser(userMapper.selectById(tt.getUserId()));
+        }
+        return list;
     }
 }

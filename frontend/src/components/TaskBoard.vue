@@ -19,6 +19,7 @@
             draggable="true"
             @dragstart="onDragStart($event, task)"
             @click="$emit('task-click', task.id)"
+            @requirement-click="$emit('requirement-click', $event)"
           />
         </div>
       </div>
@@ -36,7 +37,7 @@ const props = defineProps({
   columnKeys: { type: Array, default: () => ['pending', 'developing', 'testing'] },
   skillsMap: { type: Object, default: () => ({}) }
 })
-const emit = defineEmits(['status-change', 'task-click'])
+const emit = defineEmits(['status-change', 'task-click', 'requirement-click'])
 
 const columns = computed(() =>
   props.columnKeys.map((key) => ({
@@ -64,7 +65,9 @@ function onDrop(event, newStatus) {
 .board-row { display: flex; gap: 12px; }
 .board-column {
   flex: 1; min-width: 240px; background: #f8fafc; border-radius: 14px;
-  display: flex; flex-direction: column; max-height: calc(100vh - 200px);
+  display: flex; flex-direction: column;
+  max-height: 100%;
+  min-height: 0;
   border: 1px solid #e2e8f0;
 }
 .column-header {

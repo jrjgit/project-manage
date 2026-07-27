@@ -29,8 +29,10 @@ public class CreateTaskRequest {
     private List<TaskAssigneeItem> assignees;
     /** 测试人员ID */
     private Long testerId;
-    /** 截止日期 */
+    /** 截止日期（开发截止时间） */
     private String deadline;
+    /** 测试截止时间 */
+    private String testDeadline;
     /** 绩效工时 */
     private String performance;
     /** 关联需求ID */

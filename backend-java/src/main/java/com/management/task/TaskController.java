@@ -2,6 +2,7 @@ package com.management.task;
 
 import com.management.common.result.Result;
 import com.management.task.dto.AddTaskAssigneeRequest;
+import com.management.task.dto.AddTaskTestersRequest;
 import com.management.task.dto.ChangeTaskStatusRequest;
 import com.management.task.dto.CreateTaskRequest;
 import com.management.task.dto.UpdateTaskRequest;
@@ -9,6 +10,7 @@ import com.management.task.entity.Task;
 import com.management.task.entity.TaskAssignee;
 import com.management.task.entity.TaskProgressHistory;
 import com.management.task.entity.TaskStatusHistory;
+import com.management.task.entity.TaskTester;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -131,6 +133,39 @@ public class TaskController {
                                                        @PathVariable Long userId) {
         taskService.removeAssignee(id, userId);
         return Result.ok(Map.of("message", "assignee removed"));
+    }
+
+    /**
+     * 批量指派任务测试人员
+     */
+    @Operation(summary = "批量指派任务测试人员")
+    @PostMapping("/{id}/testers")
+    @PreAuthorize("hasAnyRole('PM','DEV_LEAD')")
+    public Result<Map<String, String>> addTesters(@PathVariable Long id,
+                                                   @Valid @RequestBody AddTaskTestersRequest req) {
+        taskService.addTesters(id, req);
+        return Result.ok(Map.of("message", "testers assigned"));
+    }
+
+    /**
+     * 移除任务测试人员
+     */
+    @Operation(summary = "移除任务测试人员")
+    @DeleteMapping("/{id}/testers/{userId}")
+    @PreAuthorize("hasAnyRole('PM','DEV_LEAD')")
+    public Result<Map<String, String>> removeTester(@PathVariable Long id,
+                                                     @PathVariable Long userId) {
+        taskService.removeTester(id, userId);
+        return Result.ok(Map.of("message", "tester removed"));
+    }
+
+    /**
+     * 获取任务测试人员列表
+     */
+    @Operation(summary = "获取任务测试人员列表")
+    @GetMapping("/{id}/testers")
+    public Result<List<TaskTester>> listTesters(@PathVariable Long id) {
+        return Result.ok(taskService.getTesters(id));
     }
 
     /**

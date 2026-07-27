@@ -27,7 +27,7 @@
             <h3>待处理任务</h3>
             <n-input v-model:value="reqFilter" placeholder="输入需求编号筛选任务 / Bug" clearable size="small" style="width: 220px;" />
           </div>
-          <TaskBoard :tasks="filteredBoardTasks" :column-keys="['pending', 'developing']" :skills-map="skillsMap" @status-change="onStatusChange" @task-click="onTaskClick" />
+          <TaskBoard :tasks="filteredBoardTasks" :column-keys="['pending', 'developing']" :skills-map="skillsMap" @status-change="onStatusChange" @task-click="onTaskClick" @requirement-click="onRequirementClick" />
         </section>
 
         <section class="section-card bug-section">
@@ -84,7 +84,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getDeveloperDashboard } from '@/api/statistics'
 import { getDictionaries } from '@/api/dictionaries'
@@ -97,6 +97,7 @@ import { NTag, NInput, NCollapse, NCollapseItem } from 'naive-ui'
 
 const authStore = useAuthStore()
 const route = useRoute()
+const router = useRouter()
 
 const dashData = ref({})
 const skillsMap = ref({})
@@ -194,6 +195,10 @@ function onTaskClick(taskId) {
   showTaskDetail.value = true
 }
 
+function onRequirementClick(reqId) {
+  router.push(`/requirements/${reqId}`)
+}
+
 function onBugClick(bug) {
   selectedBugId.value = bug.id
   showBugDetail.value = true
@@ -241,7 +246,7 @@ onMounted(() => { loadData(); loadDictionaries() })
 }
 .stat-num { display: block; font-size: 20px; font-weight: 700; color: #0f172a; }
 .stat-label { font-size: 11px; color: #64748b; margin-top: 2px; }
-.main-split { display: flex; gap: 16px; align-items: flex-start; }
+.main-split { display: flex; gap: 16px; align-items: stretch; flex: 1; min-height: 0; }
 .task-section { flex: 1; min-width: 0; }
 .bug-section { flex: 1; min-width: 0; }
 .section-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 16px; }
