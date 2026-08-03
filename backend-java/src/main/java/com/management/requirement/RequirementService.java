@@ -579,20 +579,29 @@ public class RequirementService {
         } else {
             double weightedSum = 0;
             double totalPerformance = 0;
+            LocalDateTime earliestDeadline = null;
+            LocalDateTime earliestTestDeadline = null;
             for (Task t : tasks) {
                 double perf = 1;
                 if (t.getPerformance() != null) {
                     try { perf = Double.parseDouble(t.getPerformance()); } catch (NumberFormatException e) { perf = 1; }
                 }
-                // 绩效工时为空或解析为 0 时，使用默认权重 1，避免任务进度被忽略
                 if (perf <= 0) {
                     perf = 1;
                 }
                 double prog = t.getProgress() != null ? t.getProgress() : 0;
                 weightedSum += perf * prog;
                 totalPerformance += perf;
+                if (t.getDeadline() != null && (earliestDeadline == null || t.getDeadline().isBefore(earliestDeadline))) {
+                    earliestDeadline = t.getDeadline();
+                }
+                if (t.getTestDeadline() != null && (earliestTestDeadline == null || t.getTestDeadline().isBefore(earliestTestDeadline))) {
+                    earliestTestDeadline = t.getTestDeadline();
+                }
             }
             r.setDevProgress(totalPerformance > 0 ? (int) Math.round(weightedSum / totalPerformance) : 0);
+            r.setDevDeadline(earliestDeadline);
+            r.setTestDeadline(earliestTestDeadline);
         }
 
         boolean allTasksClosed = !tasks.isEmpty() && tasks.stream().allMatch(t -> TaskStatus.CLOSED.equals(t.getStatus()));

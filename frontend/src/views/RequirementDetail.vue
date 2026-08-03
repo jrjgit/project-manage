@@ -81,6 +81,9 @@
           </div>
           <div class="info-cell"><span class="info-label">总人天</span><span class="info-value">{{ req.total_amount || '-' }}</span></div>
           <div class="info-cell"><span class="info-label">总价</span><span class="info-value">{{ req.total_price || '-' }}</span></div>
+          <div class="info-cell"><span class="info-label">最后更新时间</span><span class="info-value">{{ req.updated_at ? formatTime(req.updated_at) : '-' }}</span></div>
+          <div class="info-cell"><span class="info-label">开发截止时间</span><span class="info-value">{{ req.dev_deadline ? formatDate2(req.dev_deadline) : '-' }}</span></div>
+          <div class="info-cell"><span class="info-label">测试截止时间</span><span class="info-value">{{ req.test_deadline ? formatDate2(req.test_deadline) : '-' }}</span></div>
         </div>
       </section>
 
@@ -498,7 +501,7 @@ const devOptions = computed(() => {
   }).map(u => ({ label: u.name, value: u.id }))
 })
 const testerOptions = computed(() =>
-  users.value.filter(u => u.role === 'tester').map(u => ({ label: u.name, value: u.id }))
+  users.value.map(u => ({ label: u.name, value: u.id }))
 )
 const projectDevOptions = computed(() => {
   const devSkillKeys = Object.keys(skillsMap.value)

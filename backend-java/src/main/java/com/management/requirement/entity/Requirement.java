@@ -106,4 +106,10 @@ public class Requirement {
     /** 测试进度（非数据库字段） */
     @TableField(exist = false)
     private Integer testProgress;
+    /** 开发截止时间（非数据库字段，取该需求下任务最早的deadline） */
+    @TableField(exist = false)
+    private LocalDateTime devDeadline;
+    /** 测试截止时间（非数据库字段，取该需求下任务最早的testDeadline） */
+    @TableField(exist = false)
+    private LocalDateTime testDeadline;
 }
