@@ -72,7 +72,6 @@ public class DataInitializer implements ApplicationRunner {
             rule("task", "dev",         "testing",     "developing"),
             rule("task", "tester",      "pending",     "testing"),
             rule("task", "tester",      "testing",     "closed"),
-            rule("task", "tester",      "testing",     "developing"),
             // Bug rules（V35 重构,4状态,无 tester_lead；+pm/dev/dev_lead 验证）
             rule("bug", "tester",    "fixed",     "unfixed"),
             rule("bug", "tester",    "fixed",     "closed"),

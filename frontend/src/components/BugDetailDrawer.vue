@@ -1,10 +1,13 @@
 <template>
   <n-drawer v-model:show="show" :width="windowWidth <= 768 ? '100%' : 780" placement="right">
-    <n-drawer-content v-if="bug" closable>
+    <n-drawer-content v-if="bug" closable :body-content-style="{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }">
       <template #header>
         <div class="drawer-header">
           <div class="drawer-kicker">BUG-{{ bug.id }}</div>
-          <div class="drawer-title">{{ bug.title }}</div>
+          <div class="drawer-title" :class="{ expanded: titleExpanded }" :title="bug.title">{{ bug.title }}</div>
+          <n-button v-if="bug.title && bug.title.length > 80" size="tiny" text type="primary" style="margin-top:4px;align-self:flex-start" @click="titleExpanded = !titleExpanded">
+            {{ titleExpanded ? '收起' : '展开' }}
+          </n-button>
           <div class="drawer-subtitle">{{ summaryText }}</div>
         </div>
       </template>
@@ -150,6 +153,7 @@ onMounted(() => window.addEventListener('resize', onResize))
 onUnmounted(() => window.removeEventListener('resize', onResize))
 
 const bug = ref(null)
+const titleExpanded = ref(false)
 const histories = ref([])
 const actionLoading = ref(false)
 const showCommentModal = ref(false)
@@ -350,6 +354,7 @@ function formatTime(value) {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .drawer-kicker {
@@ -364,6 +369,19 @@ function formatTime(value) {
   font-size: 22px;
   font-weight: 700;
   color: #0f172a;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.45;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.drawer-title.expanded {
+  -webkit-line-clamp: unset;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .drawer-subtitle {
@@ -371,10 +389,36 @@ function formatTime(value) {
   color: #64748b;
 }
 
+:deep(.n-drawer-content) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+:deep(.n-drawer-content .n-drawer-header) {
+  flex-shrink: 0;
+  overflow: hidden;
+}
+:deep(.n-drawer-content .n-drawer-body) {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+:deep(.n-drawer-content .n-drawer-body-content-wrapper) {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 .drawer-body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .hero-card,

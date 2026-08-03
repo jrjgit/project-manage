@@ -1,10 +1,13 @@
 <template>
   <n-drawer v-model:show="show" :width="windowWidth <= 768 ? '100%' : 920" placement="right">
-    <n-drawer-content v-if="task" closable>
+    <n-drawer-content v-if="task" closable :body-content-style="{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }">
       <template #header>
         <div class="drawer-header">
           <div class="drawer-kicker">任务 #{{ task.id }}</div>
-          <div class="drawer-title">{{ task.title }}</div>
+          <div class="drawer-title" :class="{ expanded: titleExpanded }" :title="task.title">{{ task.title }}</div>
+          <n-button v-if="task.title && task.title.length > 80" size="tiny" text type="primary" style="margin-top:4px;align-self:flex-start" @click="titleExpanded = !titleExpanded">
+            {{ titleExpanded ? '收起' : '展开' }}
+          </n-button>
         </div>
       </template>
 
@@ -34,7 +37,7 @@
                 <span class="deadline-label">需求截止日期</span>
                 <span class="deadline-value">{{ formatDate(task.deadline) || '-' }}</span>
               </span>
-              <span v-if="task.test_deadline" class="deadline-item">
+              <span class="deadline-item">
                 <span class="deadline-label">测试截止日期</span>
                 <span class="deadline-value">{{ formatDate(task.test_deadline) || '-' }}</span>
               </span>
@@ -96,18 +99,28 @@
               <div class="info-item"><span>所属系统</span><strong>{{ requirementData?.system || '-' }}</strong></div>
               <div class="info-item"><span>绩效工时</span><strong>{{ task.performance || '-' }}</strong></div>
               <div class="info-item"><span>需求截止日期</span><strong>{{ formatDate(task.deadline) || '-' }}</strong></div>
-              <div v-if="task.test_deadline" class="info-item"><span>测试截止日期</span><strong>{{ formatDate(task.test_deadline) || '-' }}</strong></div>
+              <div class="info-item"><span>测试截止日期</span><strong>{{ formatDate(task.test_deadline) || '-' }}</strong></div>
             </div>
           </div>
           <div style="display:flex;flex-direction:column;gap:16px">
             <div class="section-card">
-              <div class="section-title">项目经理备注</div>
-              <div class="description-block">{{ requirementData?.notes || '暂无备注' }}</div>
+              <div class="section-title">
+                项目经理备注
+                <n-button v-if="requirementData?.notes && requirementData.notes.length > 120" size="tiny" text type="primary" @click="pmNotesExpanded = !pmNotesExpanded">
+                  {{ pmNotesExpanded ? '收起' : '展开' }}
+                </n-button>
+              </div>
+              <div class="description-block" :class="{ collapsed: !pmNotesExpanded }">{{ requirementData?.notes || '暂无备注' }}</div>
             </div>
             <div class="section-card">
-            <div class="section-title">技术经理备注</div>
-            <div class="description-block" style="white-space:pre-wrap">{{ task.description || '暂无备注' }}</div>
-          </div>
+              <div class="section-title">
+                技术经理备注
+                <n-button v-if="task.description && task.description.length > 120" size="tiny" text type="primary" @click="techNotesExpanded = !techNotesExpanded">
+                  {{ techNotesExpanded ? '收起' : '展开' }}
+                </n-button>
+              </div>
+              <div class="description-block" :class="{ collapsed: !techNotesExpanded }" style="white-space:pre-wrap">{{ task.description || '暂无备注' }}</div>
+            </div>
           </div>
         </section>
 
@@ -230,6 +243,9 @@ const reportProgress = ref(0)
 const progressComment = ref('')
 const submittingProgress = ref(false)
 const taskNotFound = ref(false)
+const pmNotesExpanded = ref(false)
+const techNotesExpanded = ref(false)
+const titleExpanded = ref(false)
 
 // 创建 Bug 弹窗
 const showCreateBugModal = ref(false)
@@ -349,6 +365,8 @@ async function loadDictionaries() {
 }
 async function loadDetail() {
   taskNotFound.value = false
+  pmNotesExpanded.value = false
+  techNotesExpanded.value = false
   try {
     const res = await getTask(props.taskId)
     task.value = res.task
@@ -466,9 +484,11 @@ function executeAction(action) {
   } else if (action.action === 'accept') {
     handleAcceptTask()
   } else {
+    const fullTitle = task.value?.title || String(props.taskId)
+    const titleShort = fullTitle.length > 50 ? fullTitle.slice(0, 50) + '...' : fullTitle
     window.$dialog?.warning({
       title: '确认操作',
-      content: `确定将任务「${task.value?.title || props.taskId}」状态变更为「${action.label}」吗？`,
+      content: `确定将任务「${titleShort}」状态变更为「${action.label}」吗？`,
       positiveText: '确定',
       negativeText: '取消',
       onPositiveClick: () => { doChangeStatus(action.status, '') },
@@ -535,10 +555,19 @@ function formatDate(value) {
 </script>
 
 <style scoped>
-.drawer-header { display: flex; flex-direction: column; gap: 6px; }
+.drawer-header { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .drawer-kicker { font-size: 12px; color: #6366f1; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.drawer-title { font-size: 20px; font-weight: 700; color: #0f172a; }
-.drawer-body { display: flex; flex-direction: column; gap: 16px; }
+.drawer-title {
+  font-size: 20px; font-weight: 700; color: #0f172a;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; line-height: 1.45; word-break: break-word; white-space: pre-wrap;
+}
+.drawer-title.expanded { -webkit-line-clamp: unset; max-height: 300px; overflow-y: auto; }
+:deep(.n-drawer-content) { display: flex; flex-direction: column; height: 100%; }
+:deep(.n-drawer-content .n-drawer-header) { flex-shrink: 0; overflow: hidden; }
+:deep(.n-drawer-content .n-drawer-body) { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+:deep(.n-drawer-content .n-drawer-body-content-wrapper) { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+.drawer-body { display: flex; flex-direction: column; gap: 16px; overflow-y: auto; flex: 1; min-height: 0; }
 .hero-card, .section-card { border: 1px solid #e2e8f0; border-radius: 18px; background: white; }
 .hero-card { padding: 18px; background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%); }
 .section-card { padding: 18px; }
@@ -556,7 +585,7 @@ function formatDate(value) {
 .deadline-overdue { font-size: 13px; font-weight: 700; color: #d03050; }
 .next-action-title { font-size: 15px; font-weight: 700; color: #0f172a; }
 .next-action-copy { margin-top: 6px; font-size: 13px; line-height: 1.7; color: #64748b; }
-.section-title { font-size: 15px; font-weight: 700; color: #0f172a; }
+.section-title { font-size: 15px; font-weight: 700; color: #0f172a; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .action-block + .action-block { margin-top: 16px; }
 .action-block-copy { margin-top: 6px; font-size: 13px; color: #64748b; }
 .action-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
@@ -567,6 +596,21 @@ function formatDate(value) {
 .info-item span { color: #64748b; }
 .info-item strong { color: #0f172a; text-align: right; }
 .description-block { margin-top: 14px; font-size: 13px; line-height: 1.7; color: #64748b; }
+.description-block.collapsed {
+  max-height: 110px;
+  overflow: hidden;
+  position: relative;
+}
+.description-block.collapsed::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 40px;
+  background: linear-gradient(transparent, white);
+  pointer-events: none;
+}
 .timeline { margin-top: 16px; }
 .timeline-title { font-size: 13px; color: #0f172a; font-weight: 600; }
 .timeline-meta { margin-top: 4px; font-size: 12px; color: #94a3b8; }
