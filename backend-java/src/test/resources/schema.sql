@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     tester_id        BIGINT,
     reject_reason    TEXT,
     deadline         TIMESTAMP,
+    test_deadline    TIMESTAMP,
     requirement_id   BIGINT,
     terminal         VARCHAR(50),
     progress         INT          DEFAULT 0,
@@ -57,6 +58,15 @@ CREATE TABLE IF NOT EXISTS task_assignees (
     status     VARCHAR(50)  DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS task_testers (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    task_id    BIGINT       NOT NULL,
+    user_id    BIGINT       NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_task_tester UNIQUE (task_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS task_status_histories (

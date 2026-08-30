@@ -21,7 +21,9 @@
             <n-select v-if="editingField === 'status'" v-model:value="req.status" :options="statusOptions" size="small"
               @blur="saveField('status'); editingField = null"
               @keyup.enter="saveField('status'); editingField = null" autofocus @click.stop style="width:130px" />
-            <n-tag v-else :type="statusMeta?.tone || 'default'" size="small" round style="cursor:pointer" @click="startEdit('status')">{{ statusMeta?.label || req.status }}</n-tag>
+            <n-tag v-else :type="statusMeta?.tagColor ? undefined : (statusMeta?.tone || 'default')"
+              :color="statusMeta?.tagColor ? { color: statusMeta.tagColor, textColor: '#fff' } : undefined"
+              size="small" round style="cursor:pointer" @click="startEdit('status')">{{ statusMeta?.label || req.status }}</n-tag>
             <n-tag :type="priorityMeta[req.priority]?.tone || 'default'" size="small" round>{{ priorityMeta[req.priority]?.label || req.priority }}</n-tag>
             <n-tag v-if="req.project?.name" size="small" round>{{ req.project.name }}</n-tag>
           </div>
@@ -143,6 +145,7 @@
               <span class="col-status">任务状态</span>
               <span class="col-overdue">逾期天数</span>
               <span class="col-progress">当前进度</span>
+              <span class="col-perf">开发绩效工时</span>
               <span class="col-actions">操作</span>
             </div>
             <div v-for="t in tasks" :key="t.id" class="task-table-row">
@@ -155,6 +158,7 @@
               <span class="col-status"><n-tag size="tiny" :type="taskStatusMeta[t.status]?.tone || 'default'">{{ taskStatusMeta[t.status]?.label || t.status }}</n-tag></span>
               <span class="col-overdue"><span v-if="calcOverdueDays(t.deadline) > 0" style="color:#d03050">{{ calcOverdueDays(t.deadline) }}天</span><span v-else style="color:#94a3b8">-</span></span>
               <span class="col-progress"><span v-if="t.progress != null" :style="{fontSize:'14px',fontWeight:'700',color: t.progress >= 100 ? '#18a058' : '#6366f1'}">{{ t.progress }}%</span><span v-else style="color:#94a3b8">-</span></span>
+              <span class="col-perf"><span v-if="t.performance" style="font-size:13px;font-weight:700;color:#3b82f6">{{ t.performance }} 人天</span><span v-else style="color:#94a3b8">-</span></span>
               <span class="col-actions">
                 <n-button v-if="(authStore.isPM || authStore.isDevLead) && t.progress >= 100 && !t.tester_id" text size="tiny" type="primary" @click="openAssignTester(t)">分配测试负责人</n-button>
                 <template v-if="transferringTaskId === t.id">
@@ -1580,7 +1584,7 @@ onMounted(() => {
 /* Task Table */
 .task-table-header {
   display: grid;
-  grid-template-columns: 60px 90px 100px 100px 80px 1fr 90px 80px 100px 1fr;
+  grid-template-columns: 60px 90px 100px 100px 80px 1fr 90px 80px 100px 90px 1fr;
   gap: 8px;
   padding: 8px 12px;
   font-size: 11px;
@@ -1593,7 +1597,7 @@ onMounted(() => {
 }
 .task-table-row {
   display: grid;
-  grid-template-columns: 60px 90px 100px 100px 80px 1fr 90px 80px 100px 1fr;
+  grid-template-columns: 60px 90px 100px 100px 80px 1fr 90px 80px 100px 90px 1fr;
   gap: 8px;
   align-items: center;
   padding: 10px 12px;
@@ -1634,6 +1638,10 @@ onMounted(() => {
 .task-table-row .col-overdue {
   font-size: 12px;
   font-weight: 500;
+}
+.task-table-row .col-perf {
+  font-size: 12px;
+  white-space: nowrap;
 }
 .task-table-row .col-actions {
   display: flex;

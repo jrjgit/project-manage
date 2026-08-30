@@ -61,6 +61,7 @@
       <n-data-table
         :columns="taskColumns"
         :data="selectedUserTasks"
+        :scroll-x="1220"
         :pagination="{ pageSize: 10 }"
         :bordered="false"
         :single-line="false"
@@ -84,6 +85,7 @@
       <n-data-table
         :columns="perfTaskColumns"
         :data="filteredPerfTasks"
+        :scroll-x="1120"
         :pagination="{ pageSize: 10 }"
         :bordered="false"
         :single-line="false"

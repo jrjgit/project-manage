@@ -136,7 +136,7 @@ public class RequirementService {
         return r;
     }
 
-    public List<Requirement> list(String status, String system, String projectType, Boolean overdue, Long projectId, String iterationId) {
+    public List<Requirement> list(String status, String system, String projectType, Boolean overdue, Long projectId, String iterationId, String number, String description) {
         LambdaQueryWrapper<Requirement> q = new LambdaQueryWrapper<>();
         if (status != null && !status.isBlank()) {
             q.eq(Requirement::getStatus, status);
@@ -147,6 +147,8 @@ public class RequirementService {
         if (projectType != null && !projectType.isBlank()) q.eq(Requirement::getProjectType, projectType);
         if (projectId != null) q.eq(Requirement::getProjectId, projectId);
         if (iterationId != null && !iterationId.isBlank()) q.eq(Requirement::getIterationId, iterationId);
+        if (number != null && !number.isBlank()) q.like(Requirement::getNumber, number.trim());
+        if (description != null && !description.isBlank()) q.like(Requirement::getDescription, description.trim());
         applyProjectScopeFilter(q);
         applyStatusAndCreatedAtOrder(q);
         List<Requirement> list = requirementMapper.selectList(q);
@@ -266,10 +268,16 @@ public class RequirementService {
         if (req.getBusinessStatus() != null) r.setBusinessStatus(req.getBusinessStatus());
         if (req.getNumber() != null) r.setNumber(req.getNumber());
         if (req.getProjectType() != null) r.setProjectType(req.getProjectType());
+        boolean releasingViaUpdate = req.getStatus() != null
+                && RequirementStatus.RELEASED.equals(req.getStatus())
+                && !RequirementStatus.RELEASED.equals(r.getStatus());
         if (req.getStatus() != null) r.setStatus(req.getStatus());
         if (req.getProgressNotes() != null) r.setProgressNotes(req.getProgressNotes());
         if (req.getPlannedCompletionTime() != null)
             r.setPlannedCompletionTime(java.time.OffsetDateTime.parse(req.getPlannedCompletionTime()).toLocalDateTime());
+        if (releasingViaUpdate) {
+            assertCanRelease(r.getId());
+        }
         requirementMapper.updateById(r);
         fillAssociations(r);
         return r;
@@ -279,6 +287,9 @@ public class RequirementService {
         Requirement r = requirementMapper.selectById(id);
         if (r == null) throw new BusinessException(404, "需求不存在");
         String oldStatus = r.getStatus();
+        if (RequirementStatus.RELEASED.equals(newStatus) && !RequirementStatus.RELEASED.equals(oldStatus)) {
+            assertCanRelease(id);
+        }
         r.setStatus(newStatus);
         requirementMapper.updateById(r);
 
@@ -294,6 +305,16 @@ public class RequirementService {
         if (!notifyTargets.isEmpty()) {
             String operatorName = currentUser().getName();
             notificationService.emitRequirementEvent(r, oldStatus, newStatus, operatorName, notifyTargets, null);
+        }
+    }
+
+    /** 需求发布前校验：其下存在未完成任务时禁止发布 */
+    private void assertCanRelease(Long requirementId) {
+        long openTasks = taskMapper.selectCount(new LambdaQueryWrapper<Task>()
+                .eq(Task::getRequirementId, requirementId)
+                .ne(Task::getStatus, TaskStatus.CLOSED));
+        if (openTasks > 0) {
+            throw new BusinessException(400, "该需求下还有 " + openTasks + " 个未完成的任务，请先完成所有任务后再发布");
         }
     }
 

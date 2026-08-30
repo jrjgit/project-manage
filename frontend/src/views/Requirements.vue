@@ -32,7 +32,7 @@
         </div>
         <n-data-table
           :columns="columns"
-          :data="filteredData"
+          :data="allData"
           :pagination="{ pageSize: 15 }"
           :bordered="false"
           :single-line="false"
@@ -150,7 +150,7 @@
 </template>
 
 <script setup>
-import { computed, h, onMounted, ref, watch } from 'vue'
+import { computed, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/useAuthStore'
 import { getProjects } from '@/api/projects'
@@ -241,15 +241,6 @@ const filterSystemOptions = computed(() =>
   systems.value.map(s => ({ label: s.name, value: s.name }))
 )
 
-const filteredData = computed(() => {
-  const f = filters.value
-  return allData.value.filter(r => {
-    if (f.number && !(r.number || '').includes(f.number)) return false
-    if (f.description && !(r.description || '').toLowerCase().includes(f.description.toLowerCase())) return false
-    return true
-  })
-})
-
 const columns = [
   {
     title: '需求编号', key: 'number', width: 140,
@@ -271,7 +262,10 @@ const columns = [
     title: '状态', key: 'status', width: 100,
     render(row) {
       const meta = requirementStatusMeta[row.status] || { label: row.status, tone: 'default' }
-      return h(NTag, { type: meta.tone, size: 'small', round: true }, { default: () => meta.label })
+      const tagProps = meta.tagColor
+        ? { color: { color: meta.tagColor, textColor: '#fff' }, size: 'small', round: true }
+        : { type: meta.tone, size: 'small', round: true }
+      return h(NTag, tagProps, { default: () => meta.label })
     }
   },
   {
@@ -485,6 +479,8 @@ async function loadData() {
     if (f.project_id) params.projectId = f.project_id
     if (f.iteration_id) params.iterationId = f.iteration_id
     if (f.overdue) params.overdue = true
+    if (f.number) params.number = f.number
+    if (f.description) params.description = f.description
     const [reqs, proj, sys, usr, iters, stats] = await Promise.all([
       getRequirements(params), getProjects(), getSystems(), getUsers(), getIterations(),
       getRequirementSystemStats()
@@ -498,13 +494,19 @@ onMounted(() => {
   loadData()
 })
 
+let searchTimer = null
 watch(
   () => {
     const f = filters.value
-    return [f.status, f.system, f.project_type, f.project_id, f.iteration_id, f.overdue]
+    return [f.status, f.system, f.project_type, f.project_id, f.iteration_id, f.overdue, f.number, f.description]
   },
-  () => { loadData() }
+  () => {
+    clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => { loadData() }, 300)
+  }
 )
+
+onBeforeUnmount(() => clearTimeout(searchTimer))
 </script>
 
 <style scoped>
