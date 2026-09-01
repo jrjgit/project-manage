@@ -51,8 +51,8 @@ public class RequirementController {
                                            @RequestParam(required = false) String iterationId,
                                            @RequestParam(required = false) String number,
                                            @RequestParam(required = false) String description,
-                                           @RequestParam(required = false) Long personId) {
-        return Result.ok(requirementService.list(status, system, projectType, overdue, projectId, iterationId, number, description, personId));
+                                           @RequestParam(required = false) Long assigneeId) {
+        return Result.ok(requirementService.list(status, system, projectType, overdue, projectId, iterationId, number, description, assigneeId));
     }
 
     @Operation(summary = "获取系统板块统计（按系统分组统计进行中需求数）")

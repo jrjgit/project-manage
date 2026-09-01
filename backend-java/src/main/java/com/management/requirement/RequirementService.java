@@ -136,7 +136,7 @@ public class RequirementService {
         return r;
     }
 
-    public List<Requirement> list(String status, String system, String projectType, Boolean overdue, Long projectId, String iterationId, String number, String description, Long personId) {
+    public List<Requirement> list(String status, String system, String projectType, Boolean overdue, Long projectId, String iterationId, String number, String description, Long assigneeId) {
         LambdaQueryWrapper<Requirement> q = new LambdaQueryWrapper<>();
         if (status != null && !status.isBlank()) {
             q.eq(Requirement::getStatus, status);
@@ -147,7 +147,10 @@ public class RequirementService {
         if (projectType != null && !projectType.isBlank()) q.eq(Requirement::getProjectType, projectType);
         if (projectId != null) q.eq(Requirement::getProjectId, projectId);
         if (iterationId != null && !iterationId.isBlank()) q.eq(Requirement::getIterationId, iterationId);
-        if (personId != null) q.eq(Requirement::getPersonId, personId);
+        // 按开发人员筛选：该需求下存在此人负责的任务（assigneeId 为 Long，拼接无注入风险）
+        if (assigneeId != null) {
+            q.exists("SELECT 1 FROM tasks t WHERE t.requirement_id = requirements.id AND t.assignee_id = " + assigneeId);
+        }
         if (number != null && !number.isBlank()) q.like(Requirement::getNumber, number.trim());
         if (description != null && !description.isBlank()) q.like(Requirement::getDescription, description.trim());
         applyProjectScopeFilter(q);
