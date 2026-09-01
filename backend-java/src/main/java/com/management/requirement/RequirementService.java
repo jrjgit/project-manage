@@ -136,7 +136,7 @@ public class RequirementService {
         return r;
     }
 
-    public List<Requirement> list(String status, String system, String projectType, Boolean overdue, Long projectId, String iterationId, String number, String description) {
+    public List<Requirement> list(String status, String system, String projectType, Boolean overdue, Long projectId, String iterationId, String number, String description, Long personId) {
         LambdaQueryWrapper<Requirement> q = new LambdaQueryWrapper<>();
         if (status != null && !status.isBlank()) {
             q.eq(Requirement::getStatus, status);
@@ -147,6 +147,7 @@ public class RequirementService {
         if (projectType != null && !projectType.isBlank()) q.eq(Requirement::getProjectType, projectType);
         if (projectId != null) q.eq(Requirement::getProjectId, projectId);
         if (iterationId != null && !iterationId.isBlank()) q.eq(Requirement::getIterationId, iterationId);
+        if (personId != null) q.eq(Requirement::getPersonId, personId);
         if (number != null && !number.isBlank()) q.like(Requirement::getNumber, number.trim());
         if (description != null && !description.isBlank()) q.like(Requirement::getDescription, description.trim());
         applyProjectScopeFilter(q);

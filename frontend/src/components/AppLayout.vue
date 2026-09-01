@@ -570,7 +570,7 @@ function CodeIcon(props) {
 .user-avatar {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;

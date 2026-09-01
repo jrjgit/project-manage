@@ -28,6 +28,7 @@
           <n-select v-model:value="filters.project_id" :options="projectOptions" placeholder="项目名称" clearable filterable style="width:160px" size="small" />
           <n-select v-model:value="filters.system" :options="filterSystemOptions" placeholder="所属系统" clearable filterable style="width:140px" size="small" />
           <n-select v-model:value="filters.iteration_id" :options="iterationOptions" placeholder="需求迭代" clearable filterable style="width:160px" size="small" />
+          <n-select v-model:value="filters.person_id" :options="userOptions" placeholder="业务负责人" clearable filterable style="width:140px" size="small" />
           <n-button size="small" quaternary @click="resetFilters">重置</n-button>
         </div>
         <n-data-table
@@ -195,7 +196,7 @@ const editingRequirementId = ref(null)
 const editingIterationId = ref(null)
 const savingIteration = ref(false)
 
-const filters = ref({ number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null, system: null, overdue: false })
+const filters = ref({ number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null, system: null, person_id: null, overdue: false })
 
 function emptyForm() {
   return {
@@ -322,7 +323,7 @@ const columns = [
 ]
 
 function resetFilters() {
-  filters.value = { number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null, system: null, overdue: false }
+  filters.value = { number: '', description: '', status: null, project_type: null, project_id: null, iteration_id: null, system: null, person_id: null, overdue: false }
 }
 
 function buildFilterQuery() {
@@ -335,6 +336,7 @@ function buildFilterQuery() {
   if (f.project_id) q.project_id = f.project_id
   if (f.iteration_id) q.iteration_id = f.iteration_id
   if (f.system) q.system = f.system
+  if (f.person_id) q.person_id = f.person_id
   if (f.overdue) q.overdue = 'true'
   return q
 }
@@ -349,6 +351,7 @@ function restoreFiltersFromQuery() {
     project_id: q.project_id ? Number(q.project_id) : null,
     iteration_id: q.iteration_id || null,
     system: q.system || null,
+    person_id: q.person_id ? Number(q.person_id) : null,
     overdue: q.overdue === 'true'
   }
 }
@@ -481,6 +484,7 @@ async function loadData() {
     if (f.overdue) params.overdue = true
     if (f.number) params.number = f.number
     if (f.description) params.description = f.description
+    if (f.person_id) params.personId = f.person_id
     const [reqs, proj, sys, usr, iters, stats] = await Promise.all([
       getRequirements(params), getProjects(), getSystems(), getUsers(), getIterations(),
       getRequirementSystemStats()
@@ -498,7 +502,7 @@ let searchTimer = null
 watch(
   () => {
     const f = filters.value
-    return [f.status, f.system, f.project_type, f.project_id, f.iteration_id, f.overdue, f.number, f.description]
+    return [f.status, f.system, f.project_type, f.project_id, f.iteration_id, f.overdue, f.number, f.description, f.person_id]
   },
   () => {
     clearTimeout(searchTimer)

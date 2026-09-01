@@ -200,6 +200,12 @@ public class StatisticsService {
             devTasks.forEach(t -> { if (addedTaskIds.add(t.getId())) allUserTasks.add(t); });
             testTasks.forEach(t -> { if (addedTaskIds.add(t.getId())) allUserTasks.add(t); });
 
+            // 明细与绩效数字保持同一口径：已完成任务只在所选时间窗内才进入明细（未完成任务不受时间过滤）
+            allUserTasks.removeIf(t -> TaskStatus.CLOSED.equals(t.getStatus())
+                    && (t.getUpdatedAt() == null
+                        || t.getUpdatedAt().isBefore(rangeStart)
+                        || !t.getUpdatedAt().isBefore(rangeEnd)));
+
             for (Task t : allUserTasks) {
                 taskDetails.add(buildTaskDetail(t, u, reqCache, pendingBugsByTask, taskTypeMap.getOrDefault(t.getId(), "dev")));
             }
@@ -229,6 +235,7 @@ public class StatisticsService {
         taskInfo.put("assignee_name", u.getName());
         taskInfo.put("progress", t.getProgress() != null ? t.getProgress() : 0);
         taskInfo.put("status", t.getStatus());
+        taskInfo.put("updated_at", t.getUpdatedAt() != null ? t.getUpdatedAt().toString() : null);
         taskInfo.put("pending_bugs", pendingBugsByTask.getOrDefault(t.getId(), 0L));
         taskInfo.put("task_type", taskType);
         double devPerf = parseDoubleSafe(t.getPerformance());

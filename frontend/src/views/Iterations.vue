@@ -1,21 +1,9 @@
 <template>
   <AppLayout title="发布迭代管理" subtitle="管理发布迭代与版本计划">
     <div class="iterations-page">
-      <section class="hero-card">
-        <div>
-          <div class="section-kicker">发布迭代</div>
-          <h2 class="hero-title">迭代管理</h2>
-          <p class="hero-subtitle">管理发布迭代与版本计划，跟踪每个迭代关联的需求交付进度。</p>
-        </div>
-        <div class="hero-stat">
-          <span class="hero-stat-value">{{ iterations.length }}</span>
-          <span class="hero-stat-label">迭代总数</span>
-        </div>
-      </section>
-
       <section class="section-card">
         <div class="list-header">
-          <h3>迭代列表</h3>
+          <h3>迭代列表（共 {{ iterations.length }} 个）</h3>
           <n-button v-if="authStore.isPM" type="primary" size="small" @click="openCreate">新建迭代</n-button>
         </div>
         <n-data-table

@@ -28,9 +28,9 @@
             <div class="section-header">
               <h3>待测试任务（{{ filteredTasks.length }}）</h3>
               <div class="filter-row">
-                <span class="filter-label">端</span><n-select v-model:value="filterTerminal" :options="terminalOptions" placeholder="全部端" clearable style="width:120px" />
-                <span class="filter-label">系统</span><n-select v-model:value="filterSystem" :options="systemOptions" placeholder="全部系统" clearable style="width:140px" />
-                <span class="filter-label">需求</span><n-input v-model:value="filterRequirement" placeholder="需求编号" clearable style="width:140px" />
+                <div class="filter-item"><span class="filter-label">终端</span><n-select v-model:value="filterTerminal" :options="terminalOptions" placeholder="全部端" clearable style="width:110px" /></div>
+                <div class="filter-item"><span class="filter-label">系统</span><n-select v-model:value="filterSystem" :options="systemOptions" placeholder="全部系统" clearable style="width:140px" /></div>
+                <div class="filter-item"><span class="filter-label">需求</span><n-input v-model:value="filterRequirement" placeholder="需求编号" clearable style="width:140px" /></div>
               </div>
             </div>
             <div v-if="filteredTasks.length === 0" class="empty-state">暂无待测试任务</div>
@@ -446,9 +446,10 @@ onMounted(() => { loadData(); loadRequirements(); loadUsers(); loadSystems(); lo
 .preview-item { position: relative; width: 80px; height: 80px; }
 .preview-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
 .preview-remove { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0; font-size: 12px; border-radius: 50%; }
-.filter-row { display: flex; gap: 8px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+.filter-row { display: flex; gap: 12px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+.filter-item { display: flex; align-items: center; gap: 6px; }
 .filter-label { font-size: 12px; color: #64748b; white-space: nowrap; }
-.filter-row .n-select, .filter-row .n-input { flex: 1; min-width: 100px; }
+.filter-row .n-select, .filter-row .n-input { flex: none; }
 .task-item-meta { display: flex; gap: 12px; margin-top: 4px; font-size: 11px; color: #94a3b8; }
 .task-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tester-name { color:#6366f1; font-weight:700; }

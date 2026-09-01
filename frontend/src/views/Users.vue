@@ -1,19 +1,9 @@
 <template>
   <AppLayout>
     <div class="page-shell">
-      <section class="hero-card">
-        <div>
-          <div class="section-kicker">协作成员</div>
-          <h2 class="hero-title">用户管理</h2>
-        </div>
-        <div class="hero-stat">
-          <span class="hero-stat-value">{{ users.length }}</span>
-          <span class="hero-stat-label">用户总数</span>
-        </div>
-      </section>
-
       <div class="list-container">
         <div class="toolbar">
+          <span class="toolbar-count">共 {{ users.length }} 名成员</span>
           <n-button type="primary" size="small" @click="openCreate">
             新增用户
           </n-button>
@@ -257,5 +247,6 @@ onMounted(() => { loadUsers(); loadSkills() })
 .hero-stat-value { display: block; font-size: 22px; font-weight: 700; color: #0f172a; }
 .hero-stat-label { display: block; margin-top: 2px; font-size: 12px; color: #64748b; }
 .list-container { background: white; border-radius: 16px; padding: 0 8px 8px; border: 1px solid #e5e7eb; overflow-x: auto; }
-.toolbar { padding: 12px 8px; display: flex; justify-content: flex-end; }
+.toolbar { padding: 12px 8px; display: flex; justify-content: space-between; align-items: center; }
+.toolbar-count { font-size: 13px; font-weight: 600; color: #64748b; }
 </style>

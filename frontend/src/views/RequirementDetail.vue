@@ -13,6 +13,19 @@
         </n-button>
       </div>
 
+      <!-- 需求不存在/加载失败 -->
+      <div v-if="loadFailed" class="not-found-state">
+        <div class="not-found-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="width:40px;height:40px">
+            <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/><line x1="8.5" y1="11" x2="13.5" y2="11"/>
+          </svg>
+        </div>
+        <h3>需求不存在或已被删除</h3>
+        <p>该需求可能已被移除，或当前账号无权查看</p>
+        <n-button type="primary" round @click="$router.push({ path: '/requirements' })">返回需求列表</n-button>
+      </div>
+
+      <template v-else>
       <!-- Header -->
       <section class="header-card">
         <div class="header-top">
@@ -277,6 +290,7 @@
           </div>
         </div>
       </section>
+      </template>
     </div>
 
     <BugDetailDrawer v-model:show="showBugDetail" :bug-id="selectedBugId" @refresh="loadReq" />
@@ -452,6 +466,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const req = ref({})
+const loadFailed = ref(false)
 const users = ref([])
 const iterations = ref([])
 const editingField = ref(null)
@@ -1176,6 +1191,7 @@ async function loadReq() {
   try {
     const data = await getRequirement(id)
     req.value = data
+    loadFailed.value = false
     localDescription.value = data.description || ''
     localNotes.value = data.notes || ''
     localProgressNotes.value = data.progress_notes || ''
@@ -1183,6 +1199,7 @@ async function loadReq() {
     await loadTasks()
   } catch (e) {
     console.error(e)
+    loadFailed.value = true
   }
 }
 
@@ -1202,6 +1219,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.not-found-state {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 70px 20px; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px;
+}
+.not-found-state .not-found-icon { color: #cbd5e1; }
+.not-found-state h3 { margin: 6px 0 0; font-size: 16px; font-weight: 700; color: #334155; }
+.not-found-state p { margin: 0 0 12px; font-size: 13px; color: #94a3b8; }
 .detail-page {
   display: flex;
   flex-direction: column;
